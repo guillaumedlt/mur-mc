@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   Bag,
@@ -19,48 +19,62 @@ import {
 } from "@/lib/auth";
 import { seedDemoCandidate } from "@/lib/candidate-store";
 import { seedDemoEmployer } from "@/lib/employer-store";
+import { signUpAction, signInAction } from "@/lib/auth-actions";
 
 type Mode = "signin" | "signup";
 type Props = { mode: Mode };
 
 export function ConnexionForm({ mode }: Props) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [role, setRole] = useState<Role>("candidate");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(
+    searchParams.get("error") === "confirmation_failed"
+      ? "La confirmation a echoue. Reessayez."
+      : null,
+  );
+  const [confirmationSent, setConfirmationSent] = useState(false);
 
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const base = role === "candidate" ? DEMO_CANDIDATE : DEMO_EMPLOYER;
-    const finalUser = {
-      ...base,
-      name: mode === "signup" && name ? name : base.name,
-      email: email || base.email,
-      initials:
-        mode === "signup" && name
-          ? name
-              .split(" ")
-              .map((n) => n[0])
-              .filter(Boolean)
-              .slice(0, 2)
-              .join("")
-              .toUpperCase()
-          : base.initials,
-    };
-    signIn(finalUser);
-    if (role === "candidate") {
-      seedDemoCandidate({ fullName: finalUser.name, email: finalUser.email });
-      router.push("/candidat");
-    } else if (finalUser.companyId) {
-      seedDemoEmployer({
-        companyId: finalUser.companyId,
-        recruiterName: finalUser.name,
-      });
-      router.push("/recruteur");
-    } else {
-      // Nouveau recruteur sans entreprise : onboarding
-      router.push("/recruteur/onboarding");
+    setError(null);
+    setLoading(true);
+
+    try {
+      const formData = new FormData();
+      formData.set("email", email);
+      formData.set("password", password);
+      formData.set("role", role);
+      if (name) formData.set("fullName", name);
+
+      if (mode === "signup") {
+        const result = await signUpAction(formData);
+        if (result.error) {
+          setError(result.error);
+          setLoading(false);
+          return;
+        }
+        // Email de confirmation envoye
+        setConfirmationSent(true);
+        setLoading(false);
+        return;
+      }
+
+      // signInAction fait un redirect() cote serveur en cas de succes
+      // Si on arrive ici, c'est qu'il y a une erreur
+      const result = await signInAction(formData);
+      if (result.error) {
+        setError(result.error);
+        setLoading(false);
+      }
+    } catch {
+      // Le redirect() de Next.js lance une erreur NEXT_REDIRECT — c'est normal
+      // Si c'est une vraie erreur, on la montre
+      setLoading(false);
     }
   };
 
@@ -83,6 +97,49 @@ export function ConnexionForm({ mode }: Props) {
       : role === "candidate"
         ? "Créer mon compte candidat"
         : "Créer mon compte recruteur";
+
+  // Ecran de confirmation email
+  if (confirmationSent) {
+    return (
+      <div className="max-w-[500px] mx-auto bg-white border border-[var(--border)] rounded-2xl p-8 sm:p-10 text-center">
+        <span className="size-14 rounded-2xl bg-[var(--accent)]/10 text-[var(--accent)] inline-flex items-center justify-center">
+          <Mail width={26} height={26} strokeWidth={1.8} />
+        </span>
+        <h2 className="font-display text-[24px] sm:text-[28px] tracking-[-0.015em] text-foreground mt-5">
+          Verifiez votre email
+        </h2>
+        <p className="text-[14px] text-muted-foreground mt-3 max-w-sm mx-auto leading-relaxed">
+          Un email de confirmation a ete envoye a{" "}
+          <span className="font-medium text-foreground">{email}</span>.
+          Cliquez sur le lien dans l&apos;email pour activer votre compte.
+        </p>
+        <div className="mt-6 p-4 rounded-xl bg-[var(--background-alt)] border border-[var(--border)] text-[12.5px] text-foreground/70 leading-snug">
+          Pensez a verifier vos spams. L&apos;email vient de{" "}
+          <span className="font-mono text-foreground/85">noreply@mur.mc</span>
+        </div>
+        <div className="flex items-center justify-center gap-3 mt-7">
+          <Link
+            href="/connexion"
+            className="h-10 px-5 rounded-full bg-foreground text-background text-[13px] font-medium hover:bg-foreground/85 transition-colors flex items-center"
+          >
+            Se connecter
+          </Link>
+          <button
+            type="button"
+            onClick={() => {
+              setConfirmationSent(false);
+              setEmail("");
+              setPassword("");
+              setName("");
+            }}
+            className="h-10 px-5 rounded-full border border-[var(--border)] bg-white text-[13px] text-foreground/85 hover:bg-[var(--background-alt)] transition-colors flex items-center"
+          >
+            Modifier l&apos;email
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-3 items-stretch">
@@ -173,21 +230,30 @@ export function ConnexionForm({ mode }: Props) {
                 type="button"
                 className="text-[11.5px] text-foreground/55 hover:text-foreground transition-colors"
               >
-                Mot de passe oublié&nbsp;?
+                Mot de passe oublie&nbsp;?
               </button>
+            </div>
+          )}
+
+          {error && (
+            <div className="rounded-xl bg-destructive/10 border border-destructive/20 px-3.5 py-2.5 text-[12.5px] text-destructive">
+              {error}
             </div>
           )}
 
           <button
             type="submit"
-            className="mt-2 h-11 rounded-xl bg-foreground text-background text-[13.5px] font-medium hover:bg-foreground/85 transition-colors flex items-center justify-center gap-2"
+            disabled={loading}
+            className="mt-2 h-11 rounded-xl bg-foreground text-background text-[13.5px] font-medium hover:bg-foreground/85 disabled:opacity-60 disabled:cursor-wait transition-colors flex items-center justify-center gap-2"
           >
-            {role === "candidate" ? (
+            {loading ? (
+              <span className="size-4 border-2 border-background/30 border-t-background rounded-full animate-spin" />
+            ) : role === "candidate" ? (
               <UserIcon width={14} height={14} strokeWidth={2} />
             ) : (
               <Bag width={14} height={14} strokeWidth={2} />
             )}
-            {submitLabel}
+            {loading ? "Chargement..." : submitLabel}
           </button>
         </form>
 
