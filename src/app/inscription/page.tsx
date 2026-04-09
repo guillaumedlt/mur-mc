@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { allJobs } from "@/lib/data";
 import { Shell } from "@/components/wall/shell";
 import { ConnexionForm } from "@/components/wall/connexion-form";
@@ -15,7 +16,9 @@ export default function InscriptionPage() {
   return (
     <Shell jobs={allJobs}>
       <div className="max-w-[1100px] mx-auto">
-        <ConnexionForm mode="signup" />
+        <Suspense>
+          <ConnexionForm mode="signup" />
+        </Suspense>
       </div>
     </Shell>
   );
