@@ -6,10 +6,16 @@
 
 @theme inline {
   --color-background: var(--background);
+  --color-background-alt: var(--background-alt);
   --color-foreground: var(--foreground);
+  --color-tertiary-foreground: var(--tertiary-foreground);
+  --color-night: var(--night);
+  --color-night-foreground: var(--night-foreground);
+  --color-destructive-foreground: var(--destructive-foreground);
   --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-display: var(--font-display);
+  --font-heading: var(--font-display);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -49,24 +55,51 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  /* ─── Palette éditoriale définitive ─────────────────── */
+  /* #FAFAF7 */
+  --background: oklch(0.984 0.003 90);
+  /* #F2F0EA */
+  --background-alt: oklch(0.953 0.008 90);
+  /* #0A0A0A */
+  --foreground: oklch(0.13 0 0);
+  /* #FAFAF7 */
+  --card: oklch(0.984 0.003 90);
+  --card-foreground: oklch(0.13 0 0);
+  --popover: oklch(0.984 0.003 90);
+  --popover-foreground: oklch(0.13 0 0);
+  --primary: oklch(0.13 0 0);
+  --primary-foreground: oklch(0.984 0.003 90);
+  /* #F2F0EA */
+  --secondary: oklch(0.953 0.008 90);
+  --secondary-foreground: oklch(0.13 0 0);
+  --muted: oklch(0.953 0.008 90);
+  /* #6B6B6B */
+  --muted-foreground: oklch(0.51 0 0);
+  /* #A8A8A8 */
+  --tertiary-foreground: oklch(0.713 0 0);
+
+  /* Bleu d'encre #1C3D5A */
+  --accent: oklch(0.355 0.066 247);
+  --accent-hover: oklch(0.295 0.066 247);
+  --accent-foreground: oklch(0.984 0.003 90);
+
+  /* Rouge d'exception #B22234 — réservé aux mentions Nouveau / Urgent */
+  --destructive: oklch(0.493 0.214 25);
+  --destructive-foreground: oklch(0.984 0.003 90);
+
+  /* Bleu nuit #0F1E3D — bannière email uniquement */
+  --night: oklch(0.196 0.062 263);
+  --night-foreground: oklch(0.984 0.003 90);
+
+  /* #E8E6E0 */
+  --border: oklch(0.917 0.005 90);
+  --input: oklch(0.917 0.005 90);
+  --ring: oklch(0.355 0.066 247);
+
+  --radius: 0.5rem; /* 8px par défaut pour boutons / inputs */
+
+  /* Easing signature — ease-out expo */
+  --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -128,3 +161,521 @@
     @apply font-sans;
   }
 }
+
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display), Georgia, "Times New Roman", serif;
+    font-feature-settings: "ss01", "ss02";
+  }
+  .font-mono {
+    font-family: var(--font-mono), ui-monospace, "SF Mono", Menlo, monospace;
+  }
+
+  /* Label éditorial : 12px, uppercase, tracking +8% */
+  .ed-label {
+    @apply text-[12px] font-medium uppercase tracking-[0.08em] text-muted-foreground;
+  }
+
+  /* Le seul shadow autorisé sur le site, uniquement sur hover. */
+  .ed-shadow-hover {
+    transition: box-shadow 300ms var(--ease-expo);
+  }
+  .ed-shadow-hover:hover {
+    box-shadow: 0 4px 24px oklch(0.13 0 0 / 0.06);
+  }
+
+  /* Hero : un seul grand cercle bleu Méditerranée flou, en haut-droite,
+     débordant du viewport, à 8% d'opacité. Une respiration chromatique. */
+  .ed-hero-circle {
+    background: radial-gradient(
+      circle 720px at 100% 0%,
+      oklch(0.355 0.066 247 / 0.08),
+      transparent 70%
+    );
+  }
+
+  /* Sector tile : fond uni qui apparaît au hover, couleur via CSS var. */
+  .hw-tile-bg {
+    background: var(--tile-color);
+  }
+}
+
+/* ─── Wall : grille d'offres ─────────────────────────── */
+
+/* Cascade d'apparition au premier rendu (40ms stagger via --i) */
+@keyframes wall-card-in {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.wall-card {
+  --bar-color: var(--accent);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, #ffffff 0%, #fdfcf9 100%);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 22px 22px 18px 22px;
+  text-decoration: none;
+  color: inherit;
+  min-height: 252px;
+  transition:
+    transform 300ms var(--ease-expo),
+    border-color 250ms var(--ease-expo),
+    box-shadow 300ms var(--ease-expo);
+  animation: wall-card-in 500ms var(--ease-expo) both;
+  animation-delay: calc(var(--i, 0) * 40ms);
+  view-transition-name: var(--vt-name, none);
+}
+.wall-card:hover {
+  border-color: oklch(0.85 0.005 90);
+  box-shadow:
+    0 1px 0 rgba(10, 10, 10, 0.02),
+    0 8px 32px -12px oklch(0.13 0 0 / 0.12),
+    0 0 0 4px oklch(0.13 0 0 / 0.025);
+}
+.wall-card:hover .wall-card-title {
+  color: var(--accent);
+}
+.wall-card:hover .wall-card-arrow {
+  transform: translate(3px, -3px);
+}
+.wall-card:hover .wall-card-bar {
+  transform: scaleX(1);
+}
+
+.wall-card-bar {
+  position: absolute;
+  top: 0;
+  left: 22px;
+  right: 22px;
+  height: 3px;
+  background: var(--bar-color);
+  border-radius: 0 0 4px 4px;
+  transform: scaleX(0.35);
+  transform-origin: left center;
+  transition: transform 350ms var(--ease-expo);
+}
+
+.wall-card-title {
+  transition: color 250ms var(--ease-expo);
+}
+.wall-card-arrow {
+  display: inline-flex;
+  transition: transform 300ms var(--ease-expo);
+}
+
+/* Variante éditoriale */
+.wall-card.is-editorial {
+  background: linear-gradient(180deg, var(--background-alt) 0%, #f6f4ee 100%);
+}
+
+/* ─── Badges (pills Linear-style) ──────────────────────── */
+.wall-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  border: 1px solid var(--border);
+  background: #ffffff;
+  color: var(--foreground);
+  white-space: nowrap;
+}
+.wall-badge[data-tone="accent"] {
+  background: oklch(0.355 0.066 247 / 0.08);
+  border-color: oklch(0.355 0.066 247 / 0.2);
+  color: var(--accent);
+}
+.wall-badge[data-tone="muted"] {
+  background: var(--background-alt);
+  border-color: transparent;
+  color: var(--muted-foreground);
+}
+.wall-badge[data-tone="fresh"] {
+  background: oklch(0.92 0.12 145 / 0.18);
+  border-color: oklch(0.55 0.15 145 / 0.25);
+  color: oklch(0.42 0.13 145);
+}
+.wall-badge[data-tone="danger"] {
+  background: oklch(0.493 0.214 25 / 0.08);
+  border-color: oklch(0.493 0.214 25 / 0.2);
+  color: oklch(0.45 0.18 25);
+}
+.wall-badge[data-tone="bar"] {
+  background: color-mix(in oklab, var(--bar-color) 10%, white);
+  border-color: color-mix(in oklab, var(--bar-color) 25%, transparent);
+  color: var(--bar-color);
+}
+.wall-badge svg {
+  width: 11px;
+  height: 11px;
+  stroke-width: 2;
+}
+
+/* ─── Inputs Linear-style ──────────────────────────────── */
+.wall-input {
+  min-height: 38px;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px 0 14px;
+  gap: 10px;
+  transition: all 200ms var(--ease-expo);
+  box-shadow: 0 1px 0 rgba(10, 10, 10, 0.02);
+}
+.wall-input:hover {
+  border-color: oklch(0.82 0.005 90);
+}
+.wall-input:focus-within {
+  border-color: var(--accent);
+  box-shadow:
+    0 1px 0 rgba(10, 10, 10, 0.02),
+    0 0 0 3px oklch(0.355 0.066 247 / 0.12);
+}
+
+/* ─── Select unified ────────────────────────────────────── */
+.wall-select {
+  min-height: 38px;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  padding: 0 10px 0 14px;
+  gap: 8px;
+  transition: all 200ms var(--ease-expo);
+  box-shadow: 0 1px 0 rgba(10, 10, 10, 0.02);
+  cursor: pointer;
+  position: relative;
+  /* Fleche custom : chevron SVG en data URI */
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23999' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
+  appearance: none;
+  -webkit-appearance: none;
+  font-size: 13.5px;
+  color: var(--foreground);
+}
+.wall-select:hover {
+  border-color: oklch(0.82 0.005 90);
+}
+.wall-select:focus {
+  border-color: var(--accent);
+  box-shadow:
+    0 1px 0 rgba(10, 10, 10, 0.02),
+    0 0 0 3px oklch(0.355 0.066 247 / 0.12);
+  outline: none;
+}
+/* Variante pill (pour les toolbars) */
+.wall-select-pill {
+  min-height: 32px;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0 28px 0 12px;
+  font-size: 12px;
+  color: var(--foreground);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23999' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  transition: all 200ms var(--ease-expo);
+  box-shadow: 0 1px 0 rgba(10, 10, 10, 0.02);
+}
+.wall-select-pill:hover {
+  border-color: oklch(0.82 0.005 90);
+  color: var(--foreground);
+}
+.wall-select-pill:focus {
+  border-color: var(--accent);
+  box-shadow:
+    0 1px 0 rgba(10, 10, 10, 0.02),
+    0 0 0 3px oklch(0.355 0.066 247 / 0.12);
+  outline: none;
+}
+
+/* ─── Filtre row : pill au hover ───────────────────────── */
+.wall-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 150ms var(--ease-expo);
+}
+.wall-filter-row:hover {
+  background: rgba(10, 10, 10, 0.04);
+}
+.wall-filter-row[data-checked="true"] {
+  background: oklch(0.355 0.066 247 / 0.06);
+}
+
+.ed-label-sm {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  font-weight: 600;
+  color: var(--tertiary-foreground);
+}
+
+/* Filtres : checkbox custom 16px arrondie */
+.wall-check {
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid oklch(0.85 0.005 90);
+  border-radius: 5px;
+  background: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 150ms var(--ease-expo);
+}
+.wall-check[data-checked="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.wall-check[data-checked="true"]::after {
+  content: "";
+  width: 8px;
+  height: 4px;
+  border-left: 1.75px solid #ffffff;
+  border-bottom: 1.75px solid #ffffff;
+  transform: rotate(-45deg) translate(0, -1px);
+}
+.wall-check[data-radio="true"] {
+  border-radius: 999px;
+}
+.wall-check[data-radio="true"][data-checked="true"]::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border: none;
+  border-radius: 999px;
+  background: #ffffff;
+  transform: none;
+}
+
+/* Densité de grille */
+.wall-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+@media (min-width: 900px) {
+  .wall-grid[data-density="comfortable"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .wall-grid[data-density="standard"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .wall-grid[data-density="dense"] {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1280px) {
+  .wall-grid[data-density="comfortable"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .wall-grid[data-density="standard"] {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .wall-grid[data-density="dense"] {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+.wall-grid[data-density="dense"] .wall-card {
+  min-height: 220px;
+  padding: 18px 18px 16px 22px;
+}
+.wall-grid[data-density="dense"] .wall-card-title {
+  font-size: 18px;
+}
+
+/* Liste : 1 colonne, cards horizontales compactes */
+.wall-grid[data-density="list"] {
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+.wall-grid[data-density="list"] .wall-card {
+  min-height: auto;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 18px;
+  border-radius: 14px;
+}
+.wall-grid[data-density="list"] .wall-card-bar {
+  left: 14px;
+  right: 14px;
+}
+.wall-grid[data-density="list"] .wall-card-title {
+  font-size: 16px;
+}
+/* En mode liste, on cache la description, le footer, le spacer,
+   et les badges du mode grille pour garder la card compacte. */
+.wall-grid[data-density="list"] .wall-card [data-list-hide] {
+  display: none;
+}
+/* En mode liste, le row de meta liste-only apparaît. */
+.wall-grid[data-density="list"] .wall-card .wall-card-list-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+/* En mode liste, la zone titre+company ne prend pas toute la largeur :
+   on la laisse shrink dans le flex row. */
+.wall-grid[data-density="list"] .wall-card .wall-card-info {
+  min-width: 0;
+  flex: 1;
+}
+.wall-grid[data-density="list"] .wall-card .wall-card-info h3 {
+  margin-top: 0;
+  line-clamp: 1;
+  -webkit-line-clamp: 1;
+}
+/* Le logo est plus petit en mode liste */
+.wall-grid[data-density="list"] .wall-card .wall-card-info p {
+  margin-top: 2px;
+}
+
+/* Masque de fondu haut/bas : le contenu s'estompe avant d'atteindre les
+   coins arrondis, pour qu'on ne voie jamais une carte à moitié coupée
+   par l'arrondi du conteneur. */
+.wall-fade-edges {
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 18px,
+    #000 calc(100% - 18px),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 18px,
+    #000 calc(100% - 18px),
+    transparent 100%
+  );
+}
+
+/* Scrollbar fine, inset, qui ne casse pas l'arrondi de la carte */
+.wall-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  scrollbar-gutter: stable;
+  transition: scrollbar-color 250ms var(--ease-expo);
+}
+.wall-scroll:hover,
+.wall-scroll:focus-within {
+  scrollbar-color: oklch(0.85 0.005 90) transparent;
+}
+.wall-scroll::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.wall-scroll::-webkit-scrollbar-track {
+  background: transparent;
+  border: none;
+}
+.wall-scroll::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  transition: background-color 250ms var(--ease-expo);
+}
+.wall-scroll:hover::-webkit-scrollbar-thumb,
+.wall-scroll:focus-within::-webkit-scrollbar-thumb {
+  background-color: oklch(0.85 0.005 90);
+  background-clip: padding-box;
+}
+.wall-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: oklch(0.72 0.005 90);
+  background-clip: padding-box;
+}
+.wall-scroll::-webkit-scrollbar-button {
+  display: none;
+  height: 0;
+  width: 0;
+}
+
+/* View transition pour le détail */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 400ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ─── Print : on ne garde que le document CV ───────────── */
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm 12mm;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+  }
+
+  /* Cache tout par défaut */
+  body * {
+    visibility: hidden;
+  }
+
+  /* Affiche uniquement le document CV et son contenu */
+  #cv-document,
+  #cv-document * {
+    visibility: visible;
+  }
+
+  /* Place le CV en haut, pleine largeur, sans card border */
+  #cv-document {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+  }
+
+  /* Cache la toolbar (boutons retour / télécharger) */
+  .cv-toolbar {
+    display: none !important;
+  }
+
+  /* Évite que les sections soient coupées au milieu */
+  #cv-document section,
+  #cv-document li {
+    break-inside: avoid;
+  }
+
+  /* Anim cards à la cascade : on retire les delays pour éviter le flash */
+  .wall-card {
+    animation: none !important;
+  }
+}
+
