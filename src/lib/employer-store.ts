@@ -901,7 +901,14 @@ export function seedDemoEmployer(args: {
   recruiterName: string;
 }): void {
   ensureLoaded();
-  if (cached.jobs.length > 0 && cached.applications.length > 0) return;
+  // Idempotent : ne reseed que si le store est vide ou tres incomplet.
+  // Si le recruteur a deja des jobs ET des applications ET des candidats, on skip.
+  if (
+    cached.jobs.length > 0 &&
+    cached.applications.length > 0 &&
+    cached.candidates.length > 0
+  )
+    return;
 
   const day = 24 * 60 * 60 * 1000;
   const now = Date.now();

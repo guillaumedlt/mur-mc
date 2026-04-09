@@ -93,16 +93,19 @@ export function Wall({ jobs }: Props) {
       return true;
     });
 
+    // Si le sort est "match" mais l'user n'est pas candidat, fallback sur "recent"
+    const effectiveSort = sort === "match" && !isCandidate ? "recent" : sort;
+
     list.sort((a, b) => {
-      if (sort === "match" && isCandidate) {
+      if (effectiveSort === "match" && isCandidate) {
         return (
           computeMatchScore(b, profile) - computeMatchScore(a, profile)
         );
       }
-      if (sort === "recent")
+      if (effectiveSort === "recent")
         return b.postedAt.localeCompare(a.postedAt);
-      if (sort === "old") return a.postedAt.localeCompare(b.postedAt);
-      if (sort === "company")
+      if (effectiveSort === "old") return a.postedAt.localeCompare(b.postedAt);
+      if (effectiveSort === "company")
         return a.company.name.localeCompare(b.company.name);
       return a.type.localeCompare(b.type);
     });

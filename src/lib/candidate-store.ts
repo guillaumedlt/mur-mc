@@ -425,15 +425,11 @@ export function seedDemoCandidate(args: {
   email: string;
 }): void {
   ensureLoaded();
-  // Reseed si déjà semé MAIS sans expériences/skills (migration douce).
-  const alreadySeeded =
-    cached.applications.length > 0 || cached.profile.headline;
-  if (
-    alreadySeeded &&
-    cached.profile.experiences.length > 0 &&
-    cached.profile.skills.length > 0
-  )
-    return;
+  // Idempotent : ne reseed que si le store est vide ou incomplet.
+  // On considere "complet" = applications + experiences + skills tous presents.
+  const hasApps = cached.applications.length >= 3;
+  const hasProfile = cached.profile.experiences.length > 0 && cached.profile.skills.length > 0;
+  if (hasApps && hasProfile) return;
 
   const now = Date.now();
   const day = 24 * 60 * 60 * 1000;
