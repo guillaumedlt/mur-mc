@@ -82,8 +82,10 @@ function breadcrumbJsonLd() {
 }
 
 export default function StoriesPage() {
-  const featured = stories.find((s) => s.featured) ?? stories[0];
-  const rest = stories.filter((s) => s.id !== featured.id);
+  const featured = stories.find((s) => s.featured) ?? stories[0] ?? null;
+  const rest = featured
+    ? stories.filter((s) => s.id !== featured.id)
+    : [];
   const sideStories = rest.slice(0, 2);
   const grid = rest.slice(2);
   const categories = Array.from(new Set(stories.map((s) => s.category)));
@@ -121,29 +123,46 @@ export default function StoriesPage() {
           </div>
         </header>
 
-        {/* Hero section : feature (2/3) + 2 side cards (1/3) */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-3 mb-3">
-          <div className="lg:col-span-3">
-            <StoryCard story={featured} variant="feature" />
+        {stories.length === 0 ? (
+          <div className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-16 text-center">
+            <p className="font-display italic text-[18px] text-foreground">
+              Aucun article pour l&apos;instant.
+            </p>
+            <p className="text-[13px] text-muted-foreground mt-2">
+              Les premiers articles arrivent bientot.
+            </p>
           </div>
-          <div className="lg:col-span-2 flex flex-col gap-3">
-            {sideStories.map((s) => (
-              <StoryCard key={s.id} story={s} variant="horizontal" />
-            ))}
-          </div>
-        </div>
+        ) : (
+          <>
+            {/* Hero section : feature (2/3) + 2 side cards (1/3) */}
+            {featured && (
+              <div className="grid grid-cols-1 lg:grid-cols-5 gap-3 mb-3">
+                <div className="lg:col-span-3">
+                  <StoryCard story={featured} variant="feature" />
+                </div>
+                <div className="lg:col-span-2 flex flex-col gap-3">
+                  {sideStories.map((s) => (
+                    <StoryCard key={s.id} story={s} variant="horizontal" />
+                  ))}
+                </div>
+              </div>
+            )}
 
-        {/* Section "Tous les articles" */}
-        <div className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-6 lg:py-7">
-          <h2 className="font-display text-[22px] tracking-[-0.01em] text-foreground mb-5">
-            Tous les articles
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {grid.map((s) => (
-              <StoryCard key={s.id} story={s} variant="standard" />
-            ))}
-          </div>
-        </div>
+            {/* Section "Tous les articles" */}
+            {grid.length > 0 && (
+              <div className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-6 lg:py-7">
+                <h2 className="font-display text-[22px] tracking-[-0.01em] text-foreground mb-5">
+                  Tous les articles
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {grid.map((s) => (
+                    <StoryCard key={s.id} story={s} variant="standard" />
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </Shell>
   );
