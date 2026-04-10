@@ -250,7 +250,7 @@ export function Wall({ jobs }: Props) {
           </div>
 
           {/* Featured hero */}
-          <FeaturedJobs jobs={featuredJobs} />
+          <FeaturedJobs jobs={featuredJobs} density={density} />
 
           {/* Grille standard */}
           {standardJobs.length === 0 && featuredJobs.length === 0 ? (
