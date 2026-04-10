@@ -13,7 +13,6 @@ import {
 } from "iconoir-react";
 import { type AuthUser, type Role, signIn as localSignIn } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/client";
-import { signUpAction, signInAction } from "@/lib/auth-actions";
 
 type Mode = "signin" | "signup";
 type Props = { mode: Mode };
@@ -33,87 +32,106 @@ export function ConnexionForm({ mode }: Props) {
   );
   const [confirmationSent, setConfirmationSent] = useState(false);
 
+  const supabase = createClient();
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
     try {
-      const formData = new FormData();
-      formData.set("email", email);
-      formData.set("password", password);
-      formData.set("role", role);
-      if (name) formData.set("fullName", name);
-
       if (mode === "signup") {
-        const result = await signUpAction(formData);
-        if (result.error) {
-          setError(result.error);
+        // ─── Inscription ───────────────────────────────
+        const { error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              full_name: name || email.split("@")[0],
+              role,
+            },
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
+          },
+        });
+
+        if (signUpError) {
+          setError(
+            signUpError.message.includes("already registered")
+              ? "Cet email est deja utilise. Connectez-vous."
+              : signUpError.message,
+          );
           setLoading(false);
           return;
         }
-        // Email de confirmation envoye
+
         setConfirmationSent(true);
         setLoading(false);
         return;
       }
 
-      const result = await signInAction(formData);
-      if (result.error) {
-        setError(result.error);
+      // ─── Connexion ─────────────────────────────────
+      const { data, error: signInError } =
+        await supabase.auth.signInWithPassword({ email, password });
+
+      if (signInError) {
+        setError(
+          signInError.message.includes("Invalid login")
+            ? "Email ou mot de passe incorrect."
+            : signInError.message,
+        );
         setLoading(false);
         return;
       }
 
-      // Pre-sync : remplir le store local AVANT le redirect
-      // pour que la page de destination n'ait pas a attendre le sync
-      const nameParts = (name || email.split("@")[0]).split(" ").filter(Boolean);
-      const initials = nameParts.length >= 2
-        ? `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`.toUpperCase()
-        : (name || email).slice(0, 2).toUpperCase();
+      const user = data.user;
+      if (!user) {
+        setError("Erreur inattendue. Reessayez.");
+        setLoading(false);
+        return;
+      }
+
+      // Sync dans le store local AVANT le redirect
+      const userRole =
+        (user.user_metadata?.role as Role) ?? role;
+      const fullName =
+        user.user_metadata?.full_name ?? email.split("@")[0];
+      const parts = fullName.split(" ").filter(Boolean);
+      const initials =
+        parts.length >= 2
+          ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
+          : fullName.slice(0, 2).toUpperCase();
 
       const authUser: AuthUser = {
-        id: "pending",
-        name: name || email.split("@")[0],
-        email,
-        role: result.role as Role ?? role,
+        id: user.id,
+        name: fullName,
+        email: user.email ?? email,
+        role: userRole,
         initials,
-        avatarColor: result.role === "employer" ? "#7c1d2c" : "#1C3D5A",
+        avatarColor: userRole === "employer" ? "#7c1d2c" : "#1C3D5A",
       };
 
-      // Charger le vrai user id + company en parallele
-      const supabase = createClient();
-      const { data: { user: sbUser } } = await supabase.auth.getUser();
-      if (sbUser) {
-        authUser.id = sbUser.id;
-        authUser.name = sbUser.user_metadata?.full_name ?? authUser.name;
-
-        if (result.role === "employer") {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("company_id")
-            .eq("id", sbUser.id)
+      // Pour les employers, charger company_id
+      if (userRole === "employer") {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("company_id")
+          .eq("id", user.id)
+          .single();
+        if (profile?.company_id) {
+          authUser.companyId = profile.company_id;
+          const { data: company } = await supabase
+            .from("companies")
+            .select("name")
+            .eq("id", profile.company_id)
             .single();
-          if (profile?.company_id) {
-            authUser.companyId = profile.company_id;
-            const { data: company } = await supabase
-              .from("companies")
-              .select("name")
-              .eq("id", profile.company_id)
-              .single();
-            if (company) authUser.companyName = company.name;
-          }
+          if (company) authUser.companyName = company.name;
         }
       }
 
       localSignIn(authUser);
 
       // Redirect
-      if (result.role === "employer") {
-        router.push("/recruteur");
-      } else {
-        router.push("/candidat");
-      }
+      router.push(userRole === "employer" ? "/recruteur" : "/candidat");
     } catch (err) {
       setError("Une erreur est survenue. Reessayez.");
       setLoading(false);
