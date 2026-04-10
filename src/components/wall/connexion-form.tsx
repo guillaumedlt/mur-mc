@@ -11,7 +11,8 @@ import {
   Sparks,
   User as UserIcon,
 } from "iconoir-react";
-import { type Role } from "@/lib/auth";
+import { type AuthUser, type Role, signIn as localSignIn } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/client";
 import { signUpAction, signInAction } from "@/lib/auth-actions";
 
 type Mode = "signin" | "signup";
@@ -63,7 +64,51 @@ export function ConnexionForm({ mode }: Props) {
         setLoading(false);
         return;
       }
-      // Login reussi — redirect cote client
+
+      // Pre-sync : remplir le store local AVANT le redirect
+      // pour que la page de destination n'ait pas a attendre le sync
+      const nameParts = (name || email.split("@")[0]).split(" ").filter(Boolean);
+      const initials = nameParts.length >= 2
+        ? `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`.toUpperCase()
+        : (name || email).slice(0, 2).toUpperCase();
+
+      const authUser: AuthUser = {
+        id: "pending",
+        name: name || email.split("@")[0],
+        email,
+        role: result.role as Role ?? role,
+        initials,
+        avatarColor: result.role === "employer" ? "#7c1d2c" : "#1C3D5A",
+      };
+
+      // Charger le vrai user id + company en parallele
+      const supabase = createClient();
+      const { data: { user: sbUser } } = await supabase.auth.getUser();
+      if (sbUser) {
+        authUser.id = sbUser.id;
+        authUser.name = sbUser.user_metadata?.full_name ?? authUser.name;
+
+        if (result.role === "employer") {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("company_id")
+            .eq("id", sbUser.id)
+            .single();
+          if (profile?.company_id) {
+            authUser.companyId = profile.company_id;
+            const { data: company } = await supabase
+              .from("companies")
+              .select("name")
+              .eq("id", profile.company_id)
+              .single();
+            if (company) authUser.companyName = company.name;
+          }
+        }
+      }
+
+      localSignIn(authUser);
+
+      // Redirect
       if (result.role === "employer") {
         router.push("/recruteur");
       } else {

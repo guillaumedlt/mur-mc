@@ -28,14 +28,20 @@ export function SupabaseAuthSync() {
   useEffect(() => {
     const supabase = createClient();
 
-    // 1. Sync initiale : verifier s'il y a une session Supabase active
+    // Sync initiale : si le store local est deja rempli (pre-sync du login form),
+    // on marque comme synced immediatement et on skip les requetes.
     const syncSession = async () => {
+      // Si le store local est deja rempli, on est bon — juste marquer synced
+      if (localUser) {
+        markAuthSynced();
+        return;
+      }
+
       const {
         data: { user },
       } = await supabase.auth.getUser();
 
       if (user) {
-        // Session Supabase active → sync dans le store local
         const role = (user.user_metadata?.role as "candidate" | "employer") ?? "candidate";
         const fullName =
           user.user_metadata?.full_name ??
@@ -54,12 +60,9 @@ export function SupabaseAuthSync() {
           role,
           initials,
           avatarColor: role === "employer" ? "#7c1d2c" : "#1C3D5A",
-          // Pour les employers, on cherchera le company_id dans le profil
-          companyId: undefined,
-          companyName: undefined,
         };
 
-        // Charger le profil depuis Supabase pour avoir company_id
+        // Pour les employers, charger company_id + name en parallele
         if (role === "employer") {
           const { data: profile } = await supabase
             .from("profiles")
@@ -69,23 +72,17 @@ export function SupabaseAuthSync() {
 
           if (profile?.company_id) {
             authUser.companyId = profile.company_id;
-
-            // Charger le nom de l'entreprise
             const { data: company } = await supabase
               .from("companies")
               .select("name")
               .eq("id", profile.company_id)
               .single();
-
-            if (company) {
-              authUser.companyName = company.name;
-            }
+            if (company) authUser.companyName = company.name;
           }
         }
 
         signIn(authUser);
-      } else if (!user) {
-        // Pas de session Supabase → clear le store local si besoin
+      } else {
         if (localUser) signOut();
         markAuthSynced();
       }
