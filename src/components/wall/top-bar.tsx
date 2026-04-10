@@ -12,6 +12,7 @@ import {
 import { signOut, useUser } from "@/lib/auth";
 import { resetCandidate } from "@/lib/candidate-store";
 import { resetEmployer } from "@/lib/employer-store";
+import { createClient } from "@/lib/supabase/client";
 import { NotificationsBell } from "./notifications-bell";
 import { UserAvatar } from "./user-avatar";
 
@@ -233,6 +234,8 @@ export function TopBar({ count, query, setQuery, onOpenPalette }: Props) {
                     resetCandidate();
                     resetEmployer();
                     signOut();
+                    // Deconnexion Supabase aussi
+                    createClient().auth.signOut();
                     setMenuOpen(false);
                   }}
                   className="w-full text-left px-3 py-1.5 text-[13px] text-foreground/70 hover:bg-[var(--background-alt)] hover:text-foreground rounded-lg mx-1 flex items-center gap-2 mt-1 border-t border-[var(--border)] pt-2"

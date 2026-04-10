@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   Bag,
@@ -18,7 +18,6 @@ type Mode = "signin" | "signup";
 type Props = { mode: Mode };
 
 export function ConnexionForm({ mode }: Props) {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [role, setRole] = useState<Role>("candidate");
   const [name, setName] = useState("");

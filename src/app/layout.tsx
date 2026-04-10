@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Fraunces, JetBrains_Mono } from "next/font/google";
+import { SupabaseAuthSync } from "@/components/wall/supabase-auth-sync";
 import "./globals.css";
 
 const inter = Inter({
@@ -98,6 +99,7 @@ export default function RootLayout({
       className={`${inter.variable} ${fraunces.variable} ${jetBrains.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-background text-foreground font-sans">
+        <SupabaseAuthSync />
         {children}
       </body>
     </html>
