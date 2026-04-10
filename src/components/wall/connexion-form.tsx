@@ -11,14 +11,7 @@ import {
   Sparks,
   User as UserIcon,
 } from "iconoir-react";
-import {
-  type Role,
-  DEMO_CANDIDATE,
-  DEMO_EMPLOYER,
-  signIn,
-} from "@/lib/auth";
-import { seedDemoCandidate } from "@/lib/candidate-store";
-import { seedDemoEmployer } from "@/lib/employer-store";
+import { type Role } from "@/lib/auth";
 import { signUpAction, signInAction } from "@/lib/auth-actions";
 
 type Mode = "signin" | "signup";
@@ -76,17 +69,6 @@ export function ConnexionForm({ mode }: Props) {
       // Si c'est une vraie erreur, on la montre
       setLoading(false);
     }
-  };
-
-  const onDemo = (r: Role) => {
-    const u = r === "candidate" ? DEMO_CANDIDATE : DEMO_EMPLOYER;
-    signIn(u);
-    if (r === "candidate") {
-      seedDemoCandidate({ fullName: u.name, email: u.email });
-    } else if (u.companyId) {
-      seedDemoEmployer({ companyId: u.companyId, recruiterName: u.name });
-    }
-    router.push(r === "candidate" ? "/candidat" : "/recruteur");
   };
 
   const submitLabel =
@@ -256,35 +238,6 @@ export function ConnexionForm({ mode }: Props) {
             {loading ? "Chargement..." : submitLabel}
           </button>
         </form>
-
-        {/* Séparateur "ou" */}
-        <div className="flex items-center gap-3 mt-7 w-full max-w-[400px] mx-auto">
-          <div className="flex-1 h-px bg-[var(--border)]" />
-          <span className="text-[10.5px] uppercase tracking-[0.12em] text-foreground/45 font-medium">
-            ou en démo
-          </span>
-          <div className="flex-1 h-px bg-[var(--border)]" />
-        </div>
-
-        {/* Démo accounts */}
-        <div className="grid grid-cols-2 gap-2 mt-4 w-full max-w-[400px] mx-auto">
-          <button
-            type="button"
-            onClick={() => onDemo("candidate")}
-            className="h-10 rounded-xl border border-[var(--border)] bg-white text-[12.5px] text-foreground/85 hover:bg-[var(--background-alt)] hover:text-foreground transition-colors flex items-center justify-center gap-1.5"
-          >
-            <Sparks width={12} height={12} strokeWidth={2} />
-            Candidat
-          </button>
-          <button
-            type="button"
-            onClick={() => onDemo("employer")}
-            className="h-10 rounded-xl border border-[var(--border)] bg-white text-[12.5px] text-foreground/85 hover:bg-[var(--background-alt)] hover:text-foreground transition-colors flex items-center justify-center gap-1.5"
-          >
-            <Sparks width={12} height={12} strokeWidth={2} />
-            Recruteur
-          </button>
-        </div>
 
         {/* Footer link */}
         <p className="text-[12.5px] text-center text-foreground/60 mt-7">

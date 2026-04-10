@@ -104,24 +104,4 @@ export function signOut(): void {
   emit();
 }
 
-/* ─── Comptes démo (préremplis dans la page connexion) ──────────── */
-
-export const DEMO_CANDIDATE: AuthUser = {
-  id: "u-cam",
-  name: "Camille Laurent",
-  email: "camille.laurent@example.mc",
-  role: "candidate",
-  initials: "CL",
-  avatarColor: "#1C3D5A",
-};
-
-export const DEMO_EMPLOYER: AuthUser = {
-  id: "u-pierre",
-  name: "Pierre Reynaud",
-  email: "p.reynaud@montecarlosbm.com",
-  role: "employer",
-  initials: "PR",
-  avatarColor: "#7c1d2c",
-  companyId: "c3",
-  companyName: "Monte-Carlo Société des Bains de Mer",
-};
+/* Comptes demo supprimes — l'auth passe par Supabase. */
