@@ -16,7 +16,7 @@ import {
   UserCircle,
 } from "iconoir-react";
 import type { Job } from "@/lib/data";
-import { useUser } from "@/lib/auth";
+import { useAuthLoading, useUser } from "@/lib/auth";
 import {
   type ApplicationStatus,
   matchScore,
@@ -32,21 +32,30 @@ type Props = { jobs: Job[] };
 
 export function CandidateDashboard({ jobs }: Props) {
   const user = useUser();
+  const loading = useAuthLoading();
   const router = useRouter();
   const { profile, applications, savedJobIds } = useCandidate();
 
   useEffect(() => {
-    if (user === null) {
-      const t = window.setTimeout(() => router.replace("/connexion"), 50);
+    if (!loading && user === null) {
+      const t = window.setTimeout(() => router.replace("/connexion"), 100);
       return () => window.clearTimeout(t);
     }
-  }, [user, router]);
+  }, [user, loading, router]);
+
+  if (loading) {
+    return (
+      <div className="max-w-[1100px] mx-auto bg-white border border-[var(--border)] rounded-2xl p-12 flex items-center justify-center">
+        <span className="size-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   if (!user || user.role !== "candidate") {
     return (
       <div className="max-w-[1100px] mx-auto bg-white border border-[var(--border)] rounded-2xl p-12 text-center">
         <p className="font-display italic text-[18px] text-foreground">
-          Connecte-toi côté candidat pour accéder à ton espace.
+          Connecte-toi cote candidat pour acceder a ton espace.
         </p>
         <Link
           href="/connexion"

@@ -2,7 +2,13 @@
 
 import { useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { type AuthUser, signIn, signOut, useUser } from "@/lib/auth";
+import {
+  type AuthUser,
+  markAuthSynced,
+  signIn,
+  signOut,
+  useUser,
+} from "@/lib/auth";
 
 /**
  * Composant invisible qui synchronise la session Supabase Auth
@@ -28,8 +34,8 @@ export function SupabaseAuthSync() {
         data: { user },
       } = await supabase.auth.getUser();
 
-      if (user && !localUser) {
-        // Session Supabase active mais pas dans le store local → sync
+      if (user) {
+        // Session Supabase active → sync dans le store local
         const role = (user.user_metadata?.role as "candidate" | "employer") ?? "candidate";
         const fullName =
           user.user_metadata?.full_name ??
@@ -78,9 +84,10 @@ export function SupabaseAuthSync() {
         }
 
         signIn(authUser);
-      } else if (!user && localUser) {
-        // Pas de session Supabase mais store local rempli → desync
-        signOut();
+      } else if (!user) {
+        // Pas de session Supabase → clear le store local si besoin
+        if (localUser) signOut();
+        markAuthSynced();
       }
     };
 

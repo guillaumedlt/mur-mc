@@ -1,13 +1,10 @@
 "use client";
 
 /**
- * Auth fake côté client : on stocke le user dans localStorage et on
- * expose un hook React qui re-rend tous les composants abonnés quand
- * l'état change. C'est suffisant pour faire tourner la démo (postuler,
- * publier une offre, dashboard…) sans backend pour le moment.
- *
- * Quand on branchera Supabase, il suffira de remplacer ces fonctions
- * par les vraies appels — la signature reste la même.
+ * Auth store cote client : on stocke le user dans localStorage et on
+ * expose un hook React qui re-rend tous les composants abonnes quand
+ * l'etat change. Sert de pont entre Supabase Auth (serveur) et les
+ * composants client (useUser, EmployerShell, etc.).
  */
 
 import { useSyncExternalStore } from "react";
@@ -21,7 +18,6 @@ export type AuthUser = {
   role: Role;
   initials: string;
   avatarColor: string;
-  /** Pour les employeurs : entreprise dont ils dépendent. */
   companyId?: string;
   companyName?: string;
 };
@@ -30,6 +26,13 @@ const STORAGE_KEY = "mur.user";
 
 let cached: AuthUser | null = null;
 let loaded = false;
+/**
+ * `syncing` = true tant que SupabaseAuthSync n'a pas termine
+ * son premier check. Pendant ce temps, useUser() retourne null
+ * mais useAuthLoading() retourne true → les shells affichent
+ * un skeleton au lieu de "Connecte-toi".
+ */
+let syncing = true;
 const subscribers = new Set<() => void>();
 
 function loadFromStorage(): AuthUser | null {
@@ -55,8 +58,6 @@ function emit() {
 function subscribe(cb: () => void): () => void {
   ensureLoaded();
   subscribers.add(cb);
-  // Sync entre onglets : écoute les changements localStorage venus
-  // d'une autre fenêtre.
   const onStorage = (e: StorageEvent) => {
     if (e.key === STORAGE_KEY) {
       cached = loadFromStorage();
@@ -79,25 +80,43 @@ function getServerSnapshot(): AuthUser | null {
   return null;
 }
 
-/** Hook : retourne l'utilisateur courant ou `null` si déconnecté. */
 export function useUser(): AuthUser | null {
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }
 
-/** Connecte un utilisateur (persisté localStorage). */
+/**
+ * Retourne true tant que le sync Supabase n'a pas termine.
+ * Les shells doivent afficher un loader pendant ce temps,
+ * PAS le message "Connecte-toi".
+ */
+export function useAuthLoading(): boolean {
+  return useSyncExternalStore(
+    subscribe,
+    () => syncing,
+    () => true, // cote serveur on est toujours "loading"
+  );
+}
+
+/** Appele par SupabaseAuthSync une fois le premier check fait. */
+export function markAuthSynced(): void {
+  syncing = false;
+  emit();
+}
+
 export function signIn(user: AuthUser): void {
   cached = user;
   loaded = true;
+  syncing = false;
   if (typeof window !== "undefined") {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
   }
   emit();
 }
 
-/** Déconnecte l'utilisateur courant. */
 export function signOut(): void {
   cached = null;
   loaded = true;
+  syncing = false;
   if (typeof window !== "undefined") {
     window.localStorage.removeItem(STORAGE_KEY);
   }
