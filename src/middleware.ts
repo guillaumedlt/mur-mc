@@ -37,6 +37,9 @@ export async function middleware(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
 
+  // /deconnexion doit toujours etre accessible (pas de redirect)
+  if (pathname === "/deconnexion") return supabaseResponse;
+
   // Si deja connecte via Supabase et visite /connexion ou /inscription → redirect
   const isAuthPage =
     pathname === "/connexion" || pathname === "/inscription";

@@ -30,12 +30,19 @@ export function EmployerShell({ children }: Props) {
     }
   }, [user, loading, router]);
 
-  // Pendant le sync Supabase, afficher un skeleton
+  // Pendant le sync Supabase, afficher un skeleton avec un lien de secours
   if (loading) {
     return (
       <Shell jobs={allJobs}>
-        <div className="max-w-[1100px] mx-auto bg-white border border-[var(--border)] rounded-2xl p-12 flex items-center justify-center">
+        <div className="max-w-[1100px] mx-auto bg-white border border-[var(--border)] rounded-2xl p-12 flex flex-col items-center justify-center gap-4">
           <span className="size-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin" />
+          <p className="text-[12px] text-muted-foreground">Chargement...</p>
+          <Link
+            href="/deconnexion"
+            className="text-[11px] text-foreground/40 hover:text-foreground transition-colors"
+          >
+            Se deconnecter
+          </Link>
         </div>
       </Shell>
     );
