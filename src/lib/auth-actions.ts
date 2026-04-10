@@ -1,11 +1,12 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
 export type AuthResult = {
   error?: string;
   success?: boolean;
+  /** Role du user apres login reussi (pour redirect cote client). */
+  role?: string;
 };
 
 /**
@@ -75,25 +76,22 @@ export async function signInAction(formData: FormData): Promise<AuthResult> {
     return { error: error.message };
   }
 
-  // Redirect cote serveur apres login reussi
-  // On determine la destination en fonction du role stocke dans user_metadata
-  const { data: { user } } = await supabase.auth.getUser();
+  // Retourner le role pour que le client fasse le redirect
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   const role = user?.user_metadata?.role;
 
-  if (role === "employer") {
-    redirect("/recruteur");
-  } else {
-    redirect("/candidat");
-  }
+  return { success: true, role: role ?? "candidate" };
 }
 
 /**
  * Deconnexion.
  */
-export async function signOutAction(): Promise<void> {
+export async function signOutAction(): Promise<AuthResult> {
   const supabase = await createClient();
   await supabase.auth.signOut();
-  redirect("/");
+  return { success: true };
 }
 
 /**

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   Bag,
@@ -18,6 +18,7 @@ type Mode = "signin" | "signup";
 type Props = { mode: Mode };
 
 export function ConnexionForm({ mode }: Props) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [role, setRole] = useState<Role>("candidate");
   const [name, setName] = useState("");
@@ -56,17 +57,24 @@ export function ConnexionForm({ mode }: Props) {
         return;
       }
 
-      // signInAction fait un redirect() cote serveur en cas de succes
-      // Si on arrive ici, c'est qu'il y a une erreur
       const result = await signInAction(formData);
       if (result.error) {
         setError(result.error);
         setLoading(false);
+        return;
       }
-    } catch {
-      // Le redirect() de Next.js lance une erreur NEXT_REDIRECT — c'est normal
-      // Si c'est une vraie erreur, on la montre
+      // Login reussi — redirect cote client
+      if (result.role === "employer") {
+        router.push("/recruteur");
+      } else {
+        router.push("/candidat");
+      }
+    } catch (err) {
+      setError("Une erreur est survenue. Reessayez.");
       setLoading(false);
+      if (typeof window !== "undefined") {
+        window.console.error("Auth error:", err);
+      }
     }
   };
 
