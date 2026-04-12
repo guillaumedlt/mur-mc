@@ -32,7 +32,7 @@ import { MatchPill } from "@/components/wall/match-pill";
 
 const SITE_URL = "https://mur.mc";
 
-export const revalidate = 60;
+export const revalidate = 300;
 
 export async function generateMetadata(
   props: PageProps<"/jobs/[slug]">,

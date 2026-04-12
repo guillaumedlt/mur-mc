@@ -1,11 +1,20 @@
 import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 
 /**
  * API Route : genere un message recruteur via Claude API.
  * POST /api/ai/generate-message
  * Body: { templateId, candidateName, recruiterName, jobTitle }
+ * Protegee : requiert un user Supabase authentifie.
  */
 export async function POST(request: Request) {
+  // Auth check
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Non authentifie" }, { status: 401 });
+  }
+
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return NextResponse.json(

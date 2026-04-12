@@ -169,7 +169,7 @@ export function ConnexionForm({ mode }: Props) {
           Pensez a verifier vos spams. L&apos;email vient de{" "}
           <span className="font-mono text-foreground/85">noreply@mur.mc</span>
         </div>
-        <div className="flex items-center justify-center gap-3 mt-7">
+        <div className="flex items-center justify-center gap-3 mt-7 flex-wrap">
           <Link
             href="/connexion"
             className="h-10 px-5 rounded-full bg-foreground text-background text-[13px] font-medium hover:bg-foreground/85 transition-colors flex items-center"
@@ -178,13 +178,24 @@ export function ConnexionForm({ mode }: Props) {
           </Link>
           <button
             type="button"
+            onClick={async () => {
+              // Renvoyer l'email de confirmation
+              const sb = (await import("@/lib/supabase/client")).createClient();
+              await sb.auth.resend({ type: "signup", email });
+            }}
+            className="h-10 px-5 rounded-full border border-[var(--border)] bg-white text-[13px] text-foreground/85 hover:bg-[var(--background-alt)] transition-colors flex items-center"
+          >
+            Renvoyer l&apos;email
+          </button>
+          <button
+            type="button"
             onClick={() => {
               setConfirmationSent(false);
               setEmail("");
               setPassword("");
               setName("");
             }}
-            className="h-10 px-5 rounded-full border border-[var(--border)] bg-white text-[13px] text-foreground/85 hover:bg-[var(--background-alt)] transition-colors flex items-center"
+            className="text-[12px] text-foreground/55 hover:text-foreground transition-colors"
           >
             Modifier l&apos;email
           </button>

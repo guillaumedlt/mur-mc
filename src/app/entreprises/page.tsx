@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/entreprises" },
 };
 
-export const revalidate = 60;
+export const revalidate = 300;
 
 export default async function EntreprisesPage() {
   const [companies, jobs] = await Promise.all([

@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 };
 
 // Revalidate toutes les 60s pour que les nouvelles offres apparaissent
-export const revalidate = 60;
+export const revalidate = 300;
 
 export default async function Page() {
   const jobs = await fetchAllJobs();
