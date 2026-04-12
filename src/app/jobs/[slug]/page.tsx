@@ -17,6 +17,7 @@ import {
   UserCircle,
 } from "iconoir-react";
 import {
+  type Job,
   companyBarColor,
   daysSincePosted,
   formatSalary,
@@ -69,7 +70,7 @@ export async function generateMetadata(
   };
 }
 
-function jobJsonLd(job: ReturnType<typeof getJob>) {
+function jobJsonLd(job: Job | null) {
   if (!job) return null;
   const employmentType =
     {
