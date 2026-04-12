@@ -23,19 +23,18 @@ import {
   onboardingProgress,
   useEmployer,
 } from "@/lib/employer-store";
-import { companies } from "@/lib/data";
-import { CompanyLogo } from "../company-logo";
+import { useMyJobs } from "@/lib/supabase/use-my-jobs";
 import { MiniStats } from "./mini-stats";
 import { ApplicationStatusPill } from "./status-pill";
 
 export function EmployerDashboard() {
   const user = useUser();
-  const { jobs, applications, candidates, companyProfile, onboarding } = useEmployer();
+  const { applications, candidates, companyProfile, onboarding } = useEmployer();
+  const { jobs: supabaseJobs, loading: jobsLoading } = useMyJobs();
 
-  const company = useMemo(
-    () => companies.find((c) => c.id === user?.companyId),
-    [user?.companyId],
-  );
+  // Utiliser les offres Supabase comme source de verite
+  const jobCount = supabaseJobs.length;
+  const publishedCount = supabaseJobs.filter((j) => j.status === "published").length;
 
   const breakdown = useMemo(() => {
     const out: Record<EmployerApplicationStatus, number> = {
@@ -50,10 +49,9 @@ export function EmployerDashboard() {
     return out;
   }, [applications]);
 
-  const totalApps = applications.length;
-  const totalViews = jobs.reduce((s, j) => s + j.views, 0);
+  const totalApps = supabaseJobs.reduce((s, j) => s + j.applicationsCount, 0) || applications.length;
+  const totalViews = supabaseJobs.reduce((s, j) => s + (j.views ?? 0), 0);
   const interviewing = breakdown.interview + breakdown.offer;
-  const publishedJobs = jobs.filter((j) => j.status === "published").length;
 
   // Top 5 candidats à traiter : received/reviewed avec match score le plus haut
   const toTreat = useMemo(
@@ -80,14 +78,14 @@ export function EmployerDashboard() {
     };
     const out: Row[] = [];
     for (const app of applications) {
-      const job = jobs.find((j) => j.id === app.jobId);
+      const sbJob = supabaseJobs.find((j: { id: string }) => j.id === app.jobId);
       const cand = candidates.find((c) => c.id === app.candidateId);
-      if (!job || !cand) continue;
+      if (!cand) continue;
       for (const e of app.events) {
         out.push({
           appId: app.id,
-          jobId: job.id,
-          jobTitle: job.title,
+          jobId: app.jobId,
+          jobTitle: sbJob?.title ?? "Offre",
           candidateName: cand.fullName,
           candidateInitials: cand.initials,
           candidateColor: cand.avatarColor,
@@ -98,11 +96,11 @@ export function EmployerDashboard() {
       }
     }
     return out.sort((a, b) => b.at.localeCompare(a.at)).slice(0, 8);
-  }, [applications, jobs, candidates]);
+  }, [applications, supabaseJobs, candidates]);
 
   if (!user) return null;
   const displayName =
-    companyProfile?.tagline ?? company?.tagline ?? "Console recruteur";
+    companyProfile?.tagline ?? user.companyName ?? "Console recruteur";
 
   return (
     <div className="max-w-[1100px] mx-auto">
@@ -110,16 +108,14 @@ export function EmployerDashboard() {
       <header className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-6 lg:py-7 mb-3">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="flex items-start gap-4 min-w-0">
-            {company && (
-              <CompanyLogo
-                name={company.name}
-                domain={company.domain}
-                color={company.logoColor}
-                initials={company.initials}
-                size={56}
-                radius={16}
-              />
-            )}
+            <span
+              className="size-14 rounded-2xl flex items-center justify-center text-white font-display text-[18px] font-medium ring-1 ring-black/5 shadow-[0_2px_10px_-2px_rgba(10,10,10,0.18)] shrink-0"
+              style={{
+                background: `linear-gradient(155deg, ${user.avatarColor}, #122a3f)`,
+              }}
+            >
+              {user.initials}
+            </span>
             <div className="min-w-0">
               <p className="ed-label-sm">Mon espace recruteur</p>
               <h1 className="font-display text-[22px] sm:text-[26px] lg:text-[28px] tracking-[-0.015em] text-foreground mt-1">
@@ -148,8 +144,8 @@ export function EmployerDashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
         <MiniStats
           icon={Bag}
-          label="Offres publiées"
-          value={publishedJobs}
+          label="Offres publiees"
+          value={jobsLoading ? "..." : publishedCount}
           tone="accent"
         />
         <MiniStats
@@ -217,8 +213,8 @@ export function EmployerDashboard() {
               <ul className="flex flex-col">
                 {toTreat.map((app) => {
                   const cand = candidates.find((c) => c.id === app.candidateId);
-                  const job = jobs.find((j) => j.id === app.jobId);
-                  if (!cand || !job) return null;
+                  const sbJob = supabaseJobs.find((j: { id: string }) => j.id === app.jobId);
+                  if (!cand) return null;
                   return (
                     <li key={app.id}>
                       <Link
@@ -239,7 +235,7 @@ export function EmployerDashboard() {
                             {cand.fullName}
                           </div>
                           <div className="text-[11.5px] text-muted-foreground truncate">
-                            {cand.headline} · {job.title}
+                            {cand.headline} · {sbJob?.title ?? "Offre"}
                           </div>
                         </div>
                         <span className="wall-badge" data-tone="accent">
@@ -269,7 +265,7 @@ export function EmployerDashboard() {
                 href="/recruteur/offres"
                 icon={Bag}
                 label="Mes offres"
-                hint={`${jobs.length} au total`}
+                hint={`${jobCount} au total`}
               />
               <ActionLink
                 href="/recruteur/candidats"

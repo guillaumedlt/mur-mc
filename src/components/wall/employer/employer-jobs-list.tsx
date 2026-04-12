@@ -9,12 +9,8 @@ import {
   Group,
   PlusCircle,
 } from "iconoir-react";
-import {
-  type EmployerJob,
-  type EmployerJobStatus,
-  applicationsForJob,
-  useEmployer,
-} from "@/lib/employer-store";
+import { type EmployerJobStatus } from "@/lib/employer-store";
+import { useMyJobs } from "@/lib/supabase/use-my-jobs";
 import { JobStatusPill } from "./status-pill";
 import { EmployerEmptyState } from "./employer-empty-state";
 
@@ -30,35 +26,35 @@ const FILTERS: Array<{ key: Filter; label: string }> = [
 ];
 
 export function EmployerJobsList() {
-  const { jobs, applications } = useEmployer();
+  const { jobs: supabaseJobs, loading } = useMyJobs();
   const [filter, setFilter] = useState<Filter>("all");
   const [sort, setSort] = useState<SortKey>("recent");
 
   const counts = useMemo(() => {
     const c: Record<Filter, number> = {
-      all: jobs.length,
+      all: supabaseJobs.length,
       published: 0,
       paused: 0,
       draft: 0,
       closed: 0,
     };
-    for (const j of jobs) c[j.status]++;
+    for (const j of supabaseJobs) {
+      const s = j.status as Filter;
+      if (s in c) c[s]++;
+    }
     return c;
-  }, [jobs]);
+  }, [supabaseJobs]);
 
   const filtered = useMemo(() => {
-    let list = jobs;
+    let list = supabaseJobs;
     if (filter !== "all") list = list.filter((j) => j.status === filter);
     list = [...list].sort((a, b) => {
-      if (sort === "recent") return b.createdAt.localeCompare(a.createdAt);
-      if (sort === "views") return b.views - a.views;
-      // applications count
-      const aCount = applications.filter((x) => x.jobId === a.id).length;
-      const bCount = applications.filter((x) => x.jobId === b.id).length;
-      return bCount - aCount;
+      if (sort === "recent") return b.created_at.localeCompare(a.created_at);
+      if (sort === "views") return (b.views ?? 0) - (a.views ?? 0);
+      return b.applicationsCount - a.applicationsCount;
     });
     return list;
-  }, [jobs, applications, filter, sort]);
+  }, [supabaseJobs, filter, sort]);
 
   return (
     <div className="max-w-[1100px] mx-auto">
@@ -127,15 +123,19 @@ export function EmployerJobsList() {
       </div>
 
       {/* List */}
-      {filtered.length === 0 ? (
+      {loading ? (
+        <div className="bg-white border border-[var(--border)] rounded-2xl p-12 flex items-center justify-center">
+          <span className="size-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin" />
+        </div>
+      ) : filtered.length === 0 ? (
         <EmployerEmptyState
           icon={Bag}
           title={
-            jobs.length === 0
-              ? "Aucune offre publiée pour l'instant."
-              : "Aucune offre ne correspond à ce filtre."
+            supabaseJobs.length === 0
+              ? "Aucune offre publiee pour l'instant."
+              : "Aucune offre ne correspond a ce filtre."
           }
-          description="Publie ta première offre pour commencer à recevoir des candidatures."
+          description="Publie ta premiere offre pour commencer a recevoir des candidatures."
           ctaLabel="Publier une offre"
           ctaHref="/recruteur/publier"
         />
@@ -150,12 +150,11 @@ export function EmployerJobsList() {
   );
 }
 
-function JobRow({ job }: { job: EmployerJob }) {
-  const apps = applicationsForJob(job.id);
-  const inProgress = apps.filter((a) =>
-    ["received", "reviewed", "interview", "offer"].includes(a.status),
-  ).length;
-
+function JobRow({
+  job,
+}: {
+  job: { id: string; slug: string; title: string; type: string; sector: string; location: string; status: string; views: number; applicationsCount: number };
+}) {
   return (
     <Link
       href={`/recruteur/offres/${job.id}`}
@@ -167,7 +166,7 @@ function JobRow({ job }: { job: EmployerJob }) {
             <h3 className="font-display text-[16px] leading-tight tracking-[-0.005em] text-foreground line-clamp-1 group-hover:text-[var(--accent)] transition-colors">
               {job.title}
             </h3>
-            <JobStatusPill status={job.status} />
+            <JobStatusPill status={job.status as EmployerJobStatus} />
           </div>
           <div className="text-[11.5px] text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
             <span>{job.type}</span>
@@ -179,11 +178,11 @@ function JobRow({ job }: { job: EmployerJob }) {
         </div>
 
         <span className="wall-badge hidden md:inline-flex" data-tone="muted">
-          <Eye /> {job.views.toLocaleString("fr-FR")}
+          <Eye /> {(job.views ?? 0).toLocaleString("fr-FR")}
         </span>
 
-        <span className="wall-badge" data-tone={inProgress > 0 ? "accent" : "muted"}>
-          <Group /> {apps.length}
+        <span className="wall-badge" data-tone={job.applicationsCount > 0 ? "accent" : "muted"}>
+          <Group /> {job.applicationsCount}
         </span>
 
         <span className="size-7 rounded-full border border-[var(--border)] bg-white flex items-center justify-center text-foreground/60 group-hover:text-[var(--accent)] group-hover:border-[var(--accent)]/40 transition-colors shrink-0 justify-self-end">

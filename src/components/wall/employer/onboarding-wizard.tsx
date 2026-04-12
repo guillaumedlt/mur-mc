@@ -42,6 +42,18 @@ export function OnboardingWizard() {
   const user = useUser();
   const router = useRouter();
   const { onboarding } = useEmployer();
+
+  // Si l'onboarding est deja complete ou skip, redirect vers le dashboard
+  const isComplete =
+    onboarding.completed.includes("company_created") ||
+    onboarding.skippedAt;
+
+  useEffect(() => {
+    if (isComplete) {
+      router.replace("/recruteur");
+    }
+  }, [isComplete, router]);
+
   const [step, setStep] = useState<WizardStep>("company");
 
   // Company creation fields
