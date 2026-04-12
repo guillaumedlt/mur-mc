@@ -152,15 +152,37 @@ export function CandidateMessageModal({
 
   if (!open) return null;
 
-  const applyTemplate = (template: Template) => {
+  const applyTemplate = async (template: Template) => {
     setSelectedTemplate(template);
     setGenerating(true);
-    // Simule un petit delai IA (300ms)
-    window.setTimeout(() => {
+
+    try {
+      // Appel API Claude pour generer le message
+      const res = await fetch("/api/ai/generate-message", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          templateId: template.id,
+          candidateName,
+          recruiterName,
+          jobTitle,
+        }),
+      });
+
+      if (res.ok) {
+        const { text: aiText } = await res.json();
+        setText(aiText);
+      } else {
+        // Fallback sur le template statique si l'API echoue
+        setText(template.generate(candidateName, recruiterName, jobTitle));
+      }
+    } catch {
+      // Fallback
       setText(template.generate(candidateName, recruiterName, jobTitle));
-      setGenerating(false);
-      inputRef.current?.focus();
-    }, 400);
+    }
+
+    setGenerating(false);
+    inputRef.current?.focus();
   };
 
   const onSend = (e: React.FormEvent) => {

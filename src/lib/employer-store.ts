@@ -1392,49 +1392,22 @@ export function onboardingProgress(): {
  * retournerait des suggestions de description, positionnement, secteur.
  * En vrai, on appellerait Claude API avec le contenu du site web.
  */
-export function scanCompanyDomain(domain: string): Promise<NonNullable<OnboardingState["aiSuggestion"]>> {
-  return new Promise((resolve) => {
-    // Simule un delai reseau de 1.5s
-    window.setTimeout(() => {
-      const domainLower = domain.toLowerCase();
+export async function scanCompanyDomain(domain: string): Promise<NonNullable<OnboardingState["aiSuggestion"]>> {
+  try {
+    // Appel API Claude via la route /api/ai/scan-company
+    const res = await fetch("/api/ai/scan-company", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ domain }),
+    });
 
-      // Suggestions pre-ecrites par domaine connu
-      const suggestions: Record<string, NonNullable<OnboardingState["aiSuggestion"]>> = {
-        "montecarlosbm.com": {
-          description:
-            "Groupe historique fonde en 1863, la Societe des Bains de Mer opere l'Hotel de Paris, l'Hotel Hermitage, le Monte-Carlo Beach, le Casino de Monte-Carlo, et plusieurs restaurants etoiles Michelin. Premier employeur prive de la Principaute avec plus de 4 000 collaborateurs.",
-          positioning:
-            "Leader inconteste de l'hotellerie ultra-luxe a Monaco. Positionnement unique : un groupe integre qui gere a la fois l'hebergement, la restauration, le gaming et l'evenementiel sur un territoire de 2 km².",
-          sector: "Hotellerie & Restauration",
-          size: "200-500",
-          founded: "1863",
-        },
-      };
-
-      const match = suggestions[domainLower];
-      if (match) {
-        ensureLoaded();
-        cached = {
-          ...cached,
-          onboarding: {
-            ...cached.onboarding,
-            scannedDomain: domain,
-            aiSuggestion: match,
-          },
-        };
-        persist();
-        emit();
-        resolve(match);
-        return;
-      }
-
-      // Suggestion generique pour les domaines inconnus
-      const generic: NonNullable<OnboardingState["aiSuggestion"]> = {
-        description: `Entreprise basee a Monaco, ${domain} opere dans un environnement international exigeant. Nous analysons actuellement votre site web pour affiner cette description.`,
-        positioning:
-          "Acteur monegasque reconnu dans son secteur, avec une clientele internationale et des standards de qualite eleves.",
-        sector: "Tech & Digital",
-        size: "10-50",
+    if (res.ok) {
+      const data = await res.json();
+      const result: NonNullable<OnboardingState["aiSuggestion"]> = {
+        description: data.description ?? undefined,
+        positioning: data.positioning ?? undefined,
+        sector: data.sector ?? undefined,
+        size: data.size ?? undefined,
       };
 
       ensureLoaded();
@@ -1443,14 +1416,37 @@ export function scanCompanyDomain(domain: string): Promise<NonNullable<Onboardin
         onboarding: {
           ...cached.onboarding,
           scannedDomain: domain,
-          aiSuggestion: generic,
+          aiSuggestion: result,
         },
       };
       persist();
       emit();
-      resolve(generic);
-    }, 1500);
-  });
+      return result;
+    }
+  } catch {
+    // Fallback silencieux
+  }
+
+  // Fallback generique si l'API echoue
+  const generic: NonNullable<OnboardingState["aiSuggestion"]> = {
+    description: `Entreprise basee a Monaco, ${domain} opere dans un environnement international exigeant.`,
+    positioning: "Acteur monegasque reconnu dans son secteur.",
+    sector: "Autre",
+    size: "10-50",
+  };
+
+  ensureLoaded();
+  cached = {
+    ...cached,
+    onboarding: {
+      ...cached.onboarding,
+      scannedDomain: domain,
+      aiSuggestion: generic,
+    },
+  };
+  persist();
+  emit();
+  return generic;
 }
 
 /* ─── Blocks CRUD ────────────────────────────────────────────────── */

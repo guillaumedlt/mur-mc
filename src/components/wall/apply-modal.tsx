@@ -45,8 +45,10 @@ export function ApplyModal({ job, user, open, onClose }: Props) {
   const score = matchScore(job, profile);
   const hasCv = !!profile.cv;
 
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // 1. Sauver dans le store local (pour le dashboard candidat)
     createApplication({
       jobId: job.id,
       jobSlug: job.slug,
@@ -61,6 +63,29 @@ export function ApplyModal({ job, user, open, onClose }: Props) {
       companyInitials: job.company.initials,
       coverLetter: coverLetter.trim() || undefined,
     });
+
+    // 2. Inserer dans Supabase (pour que le recruteur voie la candidature)
+    if (user) {
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      await supabase.from("applications").insert({
+        job_id: job.id,
+        candidate_id: user.id,
+        status: "received",
+        cover_letter: coverLetter.trim() || null,
+        source: "platform",
+        match_score: score,
+      });
+      await supabase.from("application_events").insert({
+        application_id: job.id, // sera corrige quand on aura l'id
+        type: "received",
+        text: coverLetter.trim()
+          ? "Candidature recue avec lettre de motivation"
+          : "Candidature recue",
+        by_name: user.name,
+      });
+    }
+
     setSent(true);
   };
 

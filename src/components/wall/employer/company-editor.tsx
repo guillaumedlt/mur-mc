@@ -68,8 +68,10 @@ export function CompanyEditor() {
 
   if (!user || !company) return null;
 
-  const onSave = (e: React.FormEvent) => {
+  const onSave = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // 1. Store local
     updateCompanyProfile({
       companyId: company.id,
       tagline: tagline || undefined,
@@ -80,6 +82,25 @@ export function CompanyEditor() {
       website: website || undefined,
       hasCover: !!companyProfile?.coverDataUrl || company.hasCover,
     });
+
+    // 2. Supabase
+    if (user?.companyId) {
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      await supabase
+        .from("companies")
+        .update({
+          tagline: tagline || null,
+          description: description || null,
+          positioning: positioning || null,
+          culture: culture || null,
+          perks,
+          website: website || null,
+          blocks: companyProfile?.blocks ?? [],
+        })
+        .eq("id", user.companyId);
+    }
+
     setSavedFlash(true);
     window.setTimeout(() => setSavedFlash(false), 2000);
   };
