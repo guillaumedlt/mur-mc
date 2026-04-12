@@ -121,8 +121,10 @@ function ProfileForm({ user }: { user: NonNullable<ReturnType<typeof useUser>> }
 
   const completion = profileCompletion(profile);
 
-  const onSave = (e: React.FormEvent) => {
+  const onSave = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // 1. Sauver dans localStorage
     updateProfile({
       fullName,
       email,
@@ -140,6 +142,31 @@ function ProfileForm({ user }: { user: NonNullable<ReturnType<typeof useUser>> }
       linkedinUrl: linkedinUrl || undefined,
       websiteUrl: websiteUrl || undefined,
     });
+
+    // 2. Persister aussi dans Supabase (profil)
+    if (user) {
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      await supabase
+        .from("profiles")
+        .update({
+          full_name: fullName || undefined,
+          phone: phone || null,
+          location: location || null,
+          headline: headline || null,
+          bio: bio || null,
+          experience_years: experienceYears
+            ? Math.max(0, parseInt(experienceYears, 10))
+            : null,
+          skills,
+          languages,
+          sectors,
+          linkedin_url: linkedinUrl || null,
+          website_url: websiteUrl || null,
+        })
+        .eq("id", user.id);
+    }
+
     setSavedFlash(true);
     window.setTimeout(() => setSavedFlash(false), 2000);
   };

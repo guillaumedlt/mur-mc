@@ -21,6 +21,8 @@ import {
   updateCompanyProfile,
   useEmployer,
 } from "@/lib/employer-store";
+import { createClient } from "@/lib/supabase/client";
+import { signIn as localSignIn } from "@/lib/auth";
 import type { Sector } from "@/lib/data";
 
 const SECTORS: Sector[] = [
@@ -83,17 +85,62 @@ export function OnboardingWizard() {
 
   if (!user || user.role !== "employer") return null;
 
-  const onCreateCompany = (e: React.FormEvent) => {
+  const onCreateCompany = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!companyName.trim()) return;
 
+    // Insert dans Supabase
+    const supabase = createClient();
+    const slug = companyName
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "")
+      .slice(0, 50) + "-" + Date.now().toString(36).slice(-4);
+
+    const { data: newCompany } = await supabase
+      .from("companies")
+      .insert({
+        slug,
+        name: companyName.trim(),
+        sector,
+        size,
+        location: location || "Monaco",
+        website: website || null,
+        logo_color: "#1C3D5A",
+        initials: companyName
+          .trim()
+          .split(" ")
+          .map((w: string) => w[0])
+          .join("")
+          .toUpperCase()
+          .slice(0, 3),
+      })
+      .select("id, name")
+      .single();
+
+    if (newCompany) {
+      // Lier le recruteur a l'entreprise
+      await supabase
+        .from("profiles")
+        .update({ company_id: newCompany.id, team_role: "admin" })
+        .eq("id", user.id);
+
+      // Mettre a jour le store local avec le company_id
+      localSignIn({
+        ...user,
+        companyId: newCompany.id,
+        companyName: newCompany.name,
+      });
+    }
+
     updateCompanyProfile({
-      companyId: user.companyId ?? "new",
+      companyId: newCompany?.id ?? "new",
       website: website || undefined,
     });
     completeOnboardingStep("company_created");
 
-    // Si un site web est fourni, on lance le scan IA
     if (website.trim()) {
       setStep("scan");
       setScanning(true);
@@ -112,8 +159,10 @@ export function OnboardingWizard() {
     setStep("profile");
   };
 
-  const onSaveProfile = (e: React.FormEvent) => {
+  const onSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Persister dans le store local
     updateCompanyProfile({
       companyId: user.companyId ?? "new",
       description: description || undefined,
@@ -121,6 +170,21 @@ export function OnboardingWizard() {
       tagline: tagline || undefined,
       website: website || undefined,
     });
+
+    // Persister dans Supabase
+    if (user.companyId) {
+      const supabase = createClient();
+      await supabase
+        .from("companies")
+        .update({
+          description: description || null,
+          positioning: positioning || null,
+          tagline: tagline || null,
+          website: website || null,
+        })
+        .eq("id", user.companyId);
+    }
+
     completeOnboardingStep("profile_completed");
     setStep("done");
   };

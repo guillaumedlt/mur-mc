@@ -28,14 +28,23 @@ export function Footer() {
         >
           Magazine
         </Link>
+        <Link
+          href="/tarifs"
+          className="hover:text-foreground transition-colors"
+        >
+          Tarifs
+        </Link>
+        <Link
+          href="/a-propos"
+          className="hover:text-foreground transition-colors"
+        >
+          A propos
+        </Link>
         <a
           href="mailto:contact@mur.mc"
           className="hover:text-foreground transition-colors"
         >
           Contact
-        </a>
-        <a href="#" className="hover:text-foreground transition-colors">
-          Mentions légales
         </a>
       </nav>
     </footer>
