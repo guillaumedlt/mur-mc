@@ -206,12 +206,34 @@ function SuccessView({ job, onClose }: { job: Job; onClose: () => void }) {
         <BadgeCheck width={26} height={26} strokeWidth={2} />
       </span>
       <h2 className="font-display text-[24px] tracking-[-0.015em] text-foreground mt-4">
-        Candidature envoyée !
+        Candidature envoyee !
       </h2>
       <p className="text-[13.5px] text-muted-foreground mt-2 max-w-sm mx-auto">
-        {job.company.name} reçoit ton profil. Tu seras notifié·e par email du
-        suivi, et tu peux le consulter à tout moment dans tes candidatures.
+        {job.company.name} recoit ton profil. Tu seras notifie par email du
+        suivi.
       </p>
+
+      {/* Booster */}
+      <div className="mt-5 rounded-xl border border-[var(--accent)]/20 bg-[var(--accent)]/[0.04] p-4 max-w-sm mx-auto text-left">
+        <div className="flex items-center gap-2 mb-1.5">
+          <Sparks width={14} height={14} strokeWidth={2} className="text-[var(--accent)]" />
+          <span className="text-[13px] font-semibold text-foreground">
+            Booster ma candidature
+          </span>
+        </div>
+        <p className="text-[12px] text-muted-foreground leading-snug">
+          Mettez votre profil en avant aupres de {job.company.name} pour
+          3x plus de chances d&apos;etre vu.
+        </p>
+        <button
+          type="button"
+          className="mt-2.5 h-8 px-3.5 rounded-full bg-[var(--accent)] text-background text-[12px] font-medium hover:bg-[var(--accent)]/85 transition-colors flex items-center gap-1.5"
+        >
+          <Sparks width={11} height={11} strokeWidth={2} />
+          Booster — 9 EUR
+        </button>
+      </div>
+
       <div className="flex items-center justify-center gap-2 mt-6">
         <Link
           href="/candidat/candidatures"

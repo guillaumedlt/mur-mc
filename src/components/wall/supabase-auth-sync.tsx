@@ -9,6 +9,7 @@ import {
   signOut,
   useUser,
 } from "@/lib/auth";
+import { updateProfile, useCandidate } from "@/lib/candidate-store";
 
 /**
  * Composant invisible : sync la session Supabase dans le store localStorage.
@@ -17,6 +18,7 @@ import {
  */
 export function SupabaseAuthSync() {
   const localUser = useUser();
+  const { profile } = useCandidate();
 
   useEffect(() => {
     // Si le store local est deja rempli, on est bon
@@ -74,6 +76,14 @@ export function SupabaseAuthSync() {
       }
 
       signIn(authUser);
+
+      // Init le profil candidat si vide
+      if (role === "candidate" && !profile.fullName) {
+        updateProfile({
+          fullName: authUser.name,
+          email: authUser.email,
+        });
+      }
     };
 
     sync();

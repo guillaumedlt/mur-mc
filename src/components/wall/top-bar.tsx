@@ -163,6 +163,31 @@ export function TopBar({ count, query, setQuery, onOpenPalette }: Props) {
                   </div>
                 </div>
 
+                {/* Mobile nav links (hidden on lg where topbar shows them) */}
+                <div className="lg:hidden border-b border-[var(--border)] pb-1 mb-1">
+                  <Link
+                    href="/"
+                    onClick={() => setMenuOpen(false)}
+                    className="block px-3 py-1.5 text-[13px] text-foreground/85 hover:bg-[var(--background-alt)] hover:text-foreground rounded-lg mx-1"
+                  >
+                    Offres
+                  </Link>
+                  <Link
+                    href="/entreprises"
+                    onClick={() => setMenuOpen(false)}
+                    className="block px-3 py-1.5 text-[13px] text-foreground/85 hover:bg-[var(--background-alt)] hover:text-foreground rounded-lg mx-1"
+                  >
+                    Entreprises
+                  </Link>
+                  <Link
+                    href="/stories"
+                    onClick={() => setMenuOpen(false)}
+                    className="block px-3 py-1.5 text-[13px] text-foreground/85 hover:bg-[var(--background-alt)] hover:text-foreground rounded-lg mx-1"
+                  >
+                    Magazine
+                  </Link>
+                </div>
+
                 <Link
                   href={user.role === "employer" ? "/recruteur" : "/candidat"}
                   onClick={() => setMenuOpen(false)}

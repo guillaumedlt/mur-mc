@@ -16,6 +16,7 @@ import { JobCard } from "./job-card";
 import { FeaturedJobs } from "./featured-jobs";
 import { CommandPalette } from "./command-palette";
 import { Footer } from "./footer";
+import { AlertModal } from "./alert-modal";
 import {
   type Density,
   type Filters,
@@ -338,10 +339,12 @@ function DensityToggle({
 }
 
 function EmptyState({ onReset }: { onReset: () => void }) {
+  const [alertOpen, setAlertOpen] = useState(false);
+
   return (
     <div className="flex flex-col items-center justify-center text-center py-24">
       <p className="font-display italic text-[20px] text-foreground max-w-md">
-        Aucune offre ne correspond à ces critères.
+        Aucune offre ne correspond a ces criteres.
       </p>
       <div className="mt-6 flex items-center gap-6 text-[13px]">
         <button
@@ -349,16 +352,22 @@ function EmptyState({ onReset }: { onReset: () => void }) {
           onClick={onReset}
           className="text-[var(--accent)] hover:underline underline-offset-4"
         >
-          Élargir les filtres
+          Elargir les filtres
         </button>
         <span className="text-[var(--tertiary-foreground)]">·</span>
         <button
           type="button"
+          onClick={() => setAlertOpen(true)}
           className="text-[var(--accent)] hover:underline underline-offset-4"
         >
-          Créer une alerte pour cette recherche
+          Creer une alerte pour cette recherche
         </button>
       </div>
+      <AlertModal
+        open={alertOpen}
+        onClose={() => setAlertOpen(false)}
+        criteria="Criteres de recherche actuels"
+      />
     </div>
   );
 }
