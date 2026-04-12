@@ -94,6 +94,12 @@ export function TopBar({ count, query, setQuery, onOpenPalette }: Props) {
 
         <nav className="hidden lg:flex items-center gap-1 text-[13px]">
           <Link
+            href="/"
+            className="px-2.5 py-1.5 rounded-lg text-foreground/75 hover:text-foreground hover:bg-foreground/5 transition-colors"
+          >
+            Offres
+          </Link>
+          <Link
             href="/entreprises"
             className="px-2.5 py-1.5 rounded-lg text-foreground/75 hover:text-foreground hover:bg-foreground/5 transition-colors"
           >

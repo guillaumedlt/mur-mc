@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, BadgeCheck, Sparks } from "iconoir-react";
+import { ArrowLeft, BadgeCheck, Rocket, Sparks } from "iconoir-react";
 import { useUser } from "@/lib/auth";
 import {
   type EmployerJob,
@@ -25,7 +25,7 @@ const CONTRACTS: JobType[] = [
   "Alternance",
   "Saison",
 ];
-const SECTORS: Sector[] = [
+const SECTORS: string[] = [
   "Banque & Finance",
   "Yachting",
   "Hôtellerie & Restauration",
@@ -36,6 +36,20 @@ const SECTORS: Sector[] = [
   "Sport & Bien-être",
   "Événementiel",
   "Famille / Office",
+  "Assurance",
+  "Audit & Conseil",
+  "BTP & Construction",
+  "Commerce & Distribution",
+  "Communication & Marketing",
+  "Comptabilité",
+  "Éducation & Formation",
+  "Industrie",
+  "Logistique & Transport",
+  "Médical & Santé",
+  "Ressources Humaines",
+  "Sécurité",
+  "Services à la personne",
+  "Autre",
 ];
 const LEVELS: ExperienceLevel[] = [
   "Junior",
@@ -44,7 +58,12 @@ const LEVELS: ExperienceLevel[] = [
   "Manager",
   "Direction",
 ];
-const REMOTES: EmployerJob["remote"][] = ["Sur site", "Hybride", "Full remote"];
+const REMOTES = [
+  "Sur site",
+  "Hybride",
+  "Télétravail partiel",
+  "Télétravail",
+];
 const WORK_TIMES: WorkTime[] = ["Temps plein", "Temps partiel"];
 
 type Props = { existing?: EmployerJob; onCancel?: () => void };
@@ -57,11 +76,11 @@ export function PublishJobForm({ existing, onCancel }: Props) {
   const [title, setTitle] = useState(existing?.title ?? "");
   const [contract, setContract] = useState<JobType>(existing?.type ?? "CDI");
   const [level, setLevel] = useState<ExperienceLevel>(existing?.level ?? "Confirmé");
-  const [sector, setSector] = useState<Sector>(
+  const [sector, setSector] = useState(
     existing?.sector ?? "Hôtellerie & Restauration",
   );
   const [location, setLocation] = useState(existing?.location ?? "Monaco");
-  const [remote, setRemote] = useState<EmployerJob["remote"]>(
+  const [remote, setRemote] = useState(
     existing?.remote ?? "Sur site",
   );
   const [workTime, setWorkTime] = useState<WorkTime>(
@@ -76,6 +95,24 @@ export function PublishJobForm({ existing, onCancel }: Props) {
   const [salaryMax, setSalaryMax] = useState<string>(
     existing?.salaryMax ? String(existing.salaryMax) : "",
   );
+
+  const [aiGenerating, setAiGenerating] = useState(false);
+
+  const generateWithAi = () => {
+    if (!title.trim()) return;
+    setAiGenerating(true);
+    // Fake AI generation (simule un delai de 800ms)
+    window.setTimeout(() => {
+      const t = title.trim();
+      setShortDesc(
+        `Nous recherchons un(e) ${t} pour rejoindre notre equipe a ${location || "Monaco"}. Poste en ${contract}, ${remote.toLowerCase()}.`,
+      );
+      setDescription(
+        `Dans le cadre de notre developpement, nous recherchons un(e) ${t}.\n\nVous integrerez une equipe dynamique et participerez activement a la croissance de l'entreprise. Ce poste est une opportunite unique de contribuer a des projets ambitieux dans un environnement stimulant.\n\nVotre mission principale sera de [decrire les missions specifiques du poste]. Vous serez egalement amene(e) a [decrire les responsabilites secondaires].\n\nNous offrons un cadre de travail exceptionnel a Monaco, avec des avantages competitifs et des perspectives d'evolution.`,
+      );
+      setAiGenerating(false);
+    }, 800);
+  };
 
   if (!user || user.role !== "employer" || !user.companyId) {
     return (
@@ -163,6 +200,27 @@ export function PublishJobForm({ existing, onCancel }: Props) {
             « {submitted.title} » est désormais visible dans ta liste d&apos;offres.
             Tu peux suivre les candidatures dans le pipeline.
           </p>
+          {/* Booster */}
+          <div className="mt-6 rounded-2xl border border-[var(--accent)]/20 bg-[var(--accent)]/[0.04] p-5 max-w-md mx-auto">
+            <div className="flex items-center gap-2 mb-2">
+              <Rocket width={16} height={16} strokeWidth={2} className="text-[var(--accent)]" />
+              <span className="text-[13px] font-semibold text-foreground">
+                Booster mon offre
+              </span>
+            </div>
+            <p className="text-[12.5px] text-muted-foreground leading-snug">
+              Mettez votre offre en avant sur le mur pour 3x plus de visibilite.
+              Les offres boostees apparaissent en tete et dans la section « Mises en avant ».
+            </p>
+            <button
+              type="button"
+              className="mt-3 h-9 px-4 rounded-full bg-[var(--accent)] text-background text-[12.5px] font-medium hover:bg-[var(--accent)]/85 transition-colors flex items-center gap-1.5"
+            >
+              <Rocket width={12} height={12} strokeWidth={2} />
+              Booster — a partir de 49 EUR
+            </button>
+          </div>
+
           <div className="flex items-center justify-center gap-2 mt-6 flex-wrap">
             <Link
               href={`/recruteur/offres/${submitted.id}`}
@@ -278,7 +336,7 @@ export function PublishJobForm({ existing, onCancel }: Props) {
         </FormRow>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormRow label="Salaire min (€/an)" hint="optionnel">
+          <FormRow label="Salaire min brut (€/an)" hint="optionnel">
             <Input
               type="number"
               placeholder="35000"
@@ -286,7 +344,7 @@ export function PublishJobForm({ existing, onCancel }: Props) {
               onChange={setSalaryMin}
             />
           </FormRow>
-          <FormRow label="Salaire max (€/an)" hint="optionnel">
+          <FormRow label="Salaire max brut (€/an)" hint="optionnel">
             <Input
               type="number"
               placeholder="48000"
@@ -296,7 +354,37 @@ export function PublishJobForm({ existing, onCancel }: Props) {
           </FormRow>
         </div>
 
-        <FormRow label="Accroche éditoriale" hint="2-3 lignes max — l'extrait visible sur le mur">
+        {/* AI Generate */}
+        <div className="rounded-xl border border-[var(--accent)]/20 bg-[var(--accent)]/[0.04] p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Sparks width={14} height={14} strokeWidth={2} className="text-[var(--accent)]" />
+              <div>
+                <div className="text-[13px] font-medium text-foreground">
+                  Formuler l&apos;offre par l&apos;IA
+                </div>
+                <div className="text-[11.5px] text-muted-foreground">
+                  Genere automatiquement l&apos;accroche et la description a partir du titre.
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              disabled={!title.trim() || aiGenerating}
+              onClick={generateWithAi}
+              className="h-9 px-4 rounded-full bg-[var(--accent)] text-background text-[12.5px] font-medium hover:bg-[var(--accent)]/85 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5 shrink-0"
+            >
+              {aiGenerating ? (
+                <span className="size-3.5 border-2 border-background/30 border-t-background rounded-full animate-spin" />
+              ) : (
+                <Sparks width={12} height={12} strokeWidth={2} />
+              )}
+              {aiGenerating ? "Generation..." : "Generer"}
+            </button>
+          </div>
+        </div>
+
+        <FormRow label="Accroche editoriale" hint="2-3 lignes max — l'extrait visible sur le mur. Ex : « Rejoignez notre equipe pour construire des SaaS B2B innovants. Stack moderne, equipe senior. »">
           <Textarea
             placeholder="Reprise d'un portefeuille de 60 familles UHNW. Équipe senior, environnement entrepreneurial."
             value={shortDesc}
@@ -305,7 +393,7 @@ export function PublishJobForm({ existing, onCancel }: Props) {
           />
         </FormRow>
 
-        <FormRow label="Description complète" hint="Missions, profil recherché, avantages…">
+        <FormRow label="Description complete" hint="Decrivez le poste, les missions, le profil recherche et les avantages. Ex : « Dans le cadre de notre developpement, nous recherchons... »">
           <Textarea
             placeholder="Présentez le poste en détail…"
             value={description}

@@ -14,7 +14,7 @@ export function Footer() {
       </span>
       <nav className="flex items-center gap-4">
         <Link href="/" className="hover:text-foreground transition-colors">
-          Mur
+          Offres
         </Link>
         <Link
           href="/entreprises"
