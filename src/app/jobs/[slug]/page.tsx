@@ -17,14 +17,12 @@ import {
   UserCircle,
 } from "iconoir-react";
 import {
-  allJobs,
   companyBarColor,
   daysSincePosted,
   formatSalary,
-  getJob,
   relativeDate,
-  similarJobs,
 } from "@/lib/data";
+import { fetchAllJobs, fetchJobBySlug } from "@/lib/supabase/queries";
 import { CompanyLogo } from "@/components/wall/company-logo";
 import { Shell } from "@/components/wall/shell";
 import { ApplyButton } from "@/components/wall/apply-button";
@@ -33,15 +31,13 @@ import { MatchPill } from "@/components/wall/match-pill";
 
 const SITE_URL = "https://mur.mc";
 
-export function generateStaticParams() {
-  return allJobs.map((j) => ({ slug: j.slug }));
-}
+export const revalidate = 60;
 
 export async function generateMetadata(
   props: PageProps<"/jobs/[slug]">,
 ): Promise<Metadata> {
   const { slug } = await props.params;
-  const job = getJob(slug);
+  const job = await fetchJobBySlug(slug);
   if (!job) {
     return { title: "Offre introuvable" };
   }
@@ -141,13 +137,17 @@ function jobJsonLd(job: ReturnType<typeof getJob>) {
 
 export default async function JobPage(props: PageProps<"/jobs/[slug]">) {
   const { slug } = await props.params;
-  const job = getJob(slug);
+  const job = await fetchJobBySlug(slug);
   if (!job) notFound();
 
   const bar = companyBarColor(job.company.id);
   const salary = formatSalary(job);
   const ld = jobJsonLd(job);
-  const related = similarJobs(job, 3);
+  // Offres similaires : meme secteur, exclure l'offre courante
+  const allJobs = await fetchAllJobs();
+  const related = allJobs
+    .filter((j) => j.id !== job.id && j.sector === job.sector)
+    .slice(0, 3);
   const fresh = daysSincePosted(job.postedAt) <= 1;
 
   return (

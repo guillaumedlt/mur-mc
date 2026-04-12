@@ -9,6 +9,7 @@ import {
   type EmployerJob,
   createJob,
 } from "@/lib/employer-store";
+import { createClient } from "@/lib/supabase/client";
 import type {
   ExperienceLevel,
   JobType,
@@ -86,8 +87,10 @@ export function PublishJobForm({ existing, onCancel }: Props) {
     );
   }
 
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // 1. Sauver dans le store local (pour le dashboard recruteur)
     const job = createJob({
       companyId: user.companyId ?? "",
       title,
@@ -108,6 +111,41 @@ export function PublishJobForm({ existing, onCancel }: Props) {
       benefits: [],
       tags: [],
     });
+
+    // 2. Inserer aussi dans Supabase (pour que l'offre soit visible publiquement)
+    const supabase = createClient();
+    const slug = title
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "")
+      .slice(0, 50) + "-" + Date.now().toString(36).slice(-5);
+
+    await supabase.from("jobs").insert({
+      company_id: user.companyId,
+      slug,
+      title,
+      type: contract,
+      level,
+      sector,
+      location,
+      remote,
+      work_time: workTime,
+      lang,
+      languages: lang === "fr" ? ["Français"] : ["Anglais"],
+      salary_min: salaryMin ? parseInt(salaryMin, 10) : null,
+      salary_max: salaryMax ? parseInt(salaryMax, 10) : null,
+      short_description: shortDesc,
+      description,
+      responsibilities: [],
+      requirements: [],
+      benefits: [],
+      tags: [],
+      status: "published",
+      featured: false,
+    });
+
     setSubmitted(job);
   };
 

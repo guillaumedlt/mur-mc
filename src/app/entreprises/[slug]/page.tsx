@@ -2,27 +2,24 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "iconoir-react";
-import {
-  type Company,
-  allJobs,
-  companies,
-  getCompany,
-  jobsForCompany,
-} from "@/lib/data";
+import type { Company } from "@/lib/data";
 import { Shell } from "@/components/wall/shell";
 import { CompanyPublicView } from "@/components/wall/company-public-view";
+import {
+  fetchAllJobs,
+  fetchCompanyBySlug,
+  fetchJobsForCompany,
+} from "@/lib/supabase/queries";
 
 const SITE_URL = "https://mur.mc";
 
-export function generateStaticParams() {
-  return companies.map((c) => ({ slug: c.slug }));
-}
+export const revalidate = 60;
 
 export async function generateMetadata(
   props: PageProps<"/entreprises/[slug]">,
 ): Promise<Metadata> {
   const { slug } = await props.params;
-  const company = getCompany(slug);
+  const company = await fetchCompanyBySlug(slug);
   if (!company) return { title: "Entreprise introuvable" };
   return {
     title: company.name,
@@ -34,9 +31,7 @@ export async function generateMetadata(
       description: company.tagline || company.description,
       url: `${SITE_URL}/entreprises/${company.slug}`,
       siteName: "Mur.mc",
-      images: company.hasCover
-        ? [coverUrl(company)]
-        : undefined,
+      images: company.hasCover ? [coverUrl(company)] : undefined,
     },
   };
 }
@@ -49,10 +44,13 @@ export default async function CompanyPage(
   props: PageProps<"/entreprises/[slug]">,
 ) {
   const { slug } = await props.params;
-  const company = getCompany(slug);
+  const company = await fetchCompanyBySlug(slug);
   if (!company) notFound();
 
-  const openings = jobsForCompany(company.id);
+  const [openings, allJobs] = await Promise.all([
+    fetchJobsForCompany(company.id),
+    fetchAllJobs(),
+  ]);
 
   return (
     <Shell jobs={allJobs}>

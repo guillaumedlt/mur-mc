@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { allJobs, companies, jobCountByCompany } from "@/lib/data";
 import { Shell } from "@/components/wall/shell";
 import { CompaniesExplorer } from "@/components/wall/companies-explorer";
+import { fetchAllCompanies, fetchAllJobs } from "@/lib/supabase/queries";
 
 export const metadata: Metadata = {
   title: "Entreprises qui recrutent à Monaco",
@@ -10,10 +10,22 @@ export const metadata: Metadata = {
   alternates: { canonical: "/entreprises" },
 };
 
-export default function EntreprisesPage() {
-  const counts = jobCountByCompany();
+export const revalidate = 60;
+
+export default async function EntreprisesPage() {
+  const [companies, jobs] = await Promise.all([
+    fetchAllCompanies(),
+    fetchAllJobs(),
+  ]);
+
+  // Compter les offres par entreprise
+  const counts: Record<string, number> = {};
+  for (const j of jobs) {
+    counts[j.company.id] = (counts[j.company.id] ?? 0) + 1;
+  }
+
   return (
-    <Shell jobs={allJobs}>
+    <Shell jobs={jobs}>
       <CompaniesExplorer companies={companies} counts={counts} />
     </Shell>
   );
