@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
+  Bag,
   BadgeCheck,
   EditPencil,
   Mail,
@@ -265,6 +266,48 @@ export function ManualCandidateDetail({ id }: Props) {
           <div className="bg-white border border-[var(--border)] rounded-2xl p-5">
             <p className="ed-label-sm mb-3">Evaluation</p>
             <StarRating value={mc.rating} onChange={onRatingChange} />
+          </div>
+
+          {/* Offre associee */}
+          <div className="bg-white border border-[var(--border)] rounded-2xl p-5">
+            <p className="ed-label-sm mb-3">Offre associee</p>
+            {job ? (
+              <Link
+                href={`/recruteur/offres/${job.id}`}
+                className="flex items-start gap-2.5 p-2.5 -mx-1 rounded-lg hover:bg-[var(--background-alt)] transition-colors group"
+              >
+                <Bag width={14} height={14} strokeWidth={2} className="mt-0.5 text-foreground/50 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <div className="text-[13px] font-medium text-foreground group-hover:text-[var(--accent)] transition-colors line-clamp-2">
+                    {job.title}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground mt-0.5">
+                    {job.type} · {job.status === "published" ? "Publiee" : job.status}
+                  </div>
+                </div>
+              </Link>
+            ) : (
+              <p className="text-[12.5px] text-muted-foreground mb-2">
+                Aucune offre associee.
+              </p>
+            )}
+            <select
+              value={mc.jobId ?? ""}
+              onChange={async (e) => {
+                await updateManualCandidateSupabase(mc.id, {
+                  job_id: e.target.value || null,
+                });
+                refetch();
+              }}
+              className="wall-select h-9 w-full mt-2 text-[12.5px]"
+            >
+              <option value="">Aucune offre</option>
+              {jobs.map((j) => (
+                <option key={j.id} value={j.id}>
+                  {j.title}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Actions */}
