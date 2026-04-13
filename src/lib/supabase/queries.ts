@@ -134,6 +134,9 @@ function mapCompany(row: any): Company {
     website: row.website ?? undefined,
     founded: row.founded ?? undefined,
     perks: row.perks ?? [],
+    logoUrl: row.logo_url ?? undefined,
+    coverUrl: row.cover_url ?? undefined,
+    blocks: Array.isArray(row.blocks) ? row.blocks : [],
   };
 }
 

@@ -8,7 +8,10 @@ import {
   Camera,
   Globe,
   Page,
+  PlaySolid,
+  PlusCircle,
   Trash,
+  Xmark,
 } from "iconoir-react";
 import { useUser } from "@/lib/auth";
 import { useMyCompany, updateCompanySupabase } from "@/lib/supabase/use-my-company";
@@ -32,6 +35,13 @@ export function CompanyEditor() {
   const [perksInput, setPerksInput] = useState("");
   const [perks, setPerks] = useState<string[]>([]);
 
+  // Gallery photos (data URLs)
+  const [photos, setPhotos] = useState<string[]>([]);
+  const photoRef = useRef<HTMLInputElement>(null);
+  // Video URLs (YouTube/Vimeo embeds)
+  const [videos, setVideos] = useState<string[]>([]);
+  const [videoInput, setVideoInput] = useState("");
+
   // Logo & cover as data URLs (local preview before save)
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
@@ -49,6 +59,14 @@ export function CompanyEditor() {
     setPerks(company?.perks ?? []);
     setLogoPreview(company?.logo_url ?? null);
     setCoverPreview(company?.cover_url ?? null);
+    // Load photos/videos from blocks
+    const blocks = (company?.blocks ?? []) as Array<{ type: string; images?: string[]; content?: string }>;
+    const galleryBlock = blocks.find((b) => b.type === "gallery");
+    setPhotos(galleryBlock?.images ?? []);
+    const videoUrls = blocks
+      .filter((b) => b.type === "video" && b.content)
+      .map((b) => b.content as string);
+    setVideos(videoUrls);
   }
 
   if (companyLoading) {
@@ -92,8 +110,33 @@ export function CompanyEditor() {
     setPerksInput("");
   };
 
+  const onPhotoAdd = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    for (const file of files) {
+      const dataUrl = await resizeImage(file, { maxWidth: 800, maxHeight: 600, quality: 0.85 });
+      setPhotos((prev) => [...prev, dataUrl]);
+    }
+    if (photoRef.current) photoRef.current.value = "";
+  };
+
+  const addVideo = () => {
+    const url = videoInput.trim();
+    if (!url) return;
+    setVideos((prev) => [...prev, url]);
+    setVideoInput("");
+  };
+
   const onSave = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Build blocks from photos + videos
+    const blocks: Array<Record<string, unknown>> = [];
+    if (photos.length > 0) {
+      blocks.push({ id: "gallery-1", type: "gallery", title: "Nos locaux", images: photos });
+    }
+    for (let i = 0; i < videos.length; i++) {
+      blocks.push({ id: `video-${i}`, type: "video", title: "Video", content: videos[i] });
+    }
 
     await updateCompanySupabase(company.id, {
       tagline: tagline || null,
@@ -105,6 +148,7 @@ export function CompanyEditor() {
       logo_url: logoPreview || null,
       cover_url: coverPreview || null,
       has_cover: !!coverPreview,
+      blocks,
     });
 
     setSavedFlash(true);
@@ -398,6 +442,109 @@ export function CompanyEditor() {
                 disabled={!perksInput.trim()}
                 className="h-9 px-3 rounded-full border border-[var(--border)] bg-white text-[12px] text-foreground/75 hover:bg-[var(--background-alt)] disabled:opacity-40 transition-colors"
               >
+                Ajouter
+              </button>
+            </div>
+          </Card>
+          {/* Photos */}
+          <Card title="Galerie photos">
+            <p className="text-[12px] text-muted-foreground -mt-2 mb-2">
+              Montrez vos locaux, vos equipes, vos evenements — comme sur Welcome to the Jungle.
+            </p>
+            {photos.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                {photos.map((img, i) => (
+                  <div
+                    key={i}
+                    className="relative aspect-[4/3] rounded-xl overflow-hidden bg-[var(--background-alt)] group"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={img}
+                      alt={`Photo ${i + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setPhotos(photos.filter((_, j) => j !== i))}
+                      className="absolute top-1.5 right-1.5 size-7 rounded-full bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      aria-label="Supprimer"
+                    >
+                      <Xmark width={14} height={14} strokeWidth={2} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => photoRef.current?.click()}
+              className="w-full rounded-xl border border-dashed border-[var(--border)] bg-[var(--background-alt)]/50 hover:bg-[var(--background-alt)] transition-colors p-6 text-center"
+            >
+              <span className="size-10 rounded-xl bg-white border border-[var(--border)] inline-flex items-center justify-center text-foreground/55 mb-2">
+                <Camera width={16} height={16} strokeWidth={2} />
+              </span>
+              <div className="text-[13px] font-medium text-foreground">
+                Ajouter des photos
+              </div>
+              <div className="text-[11.5px] text-muted-foreground mt-0.5">
+                JPG/PNG — max 800px, selection multiple possible
+              </div>
+            </button>
+            <input
+              ref={photoRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={onPhotoAdd}
+            />
+          </Card>
+
+          {/* Videos */}
+          <Card title="Videos">
+            <p className="text-[12px] text-muted-foreground -mt-2 mb-2">
+              Collez des liens YouTube ou Vimeo pour presenter votre entreprise en video.
+            </p>
+            {videos.length > 0 && (
+              <ul className="flex flex-col gap-2 mb-2">
+                {videos.map((url, i) => (
+                  <li key={i} className="flex items-center gap-2 group">
+                    <span className="size-8 rounded-lg bg-[var(--background-alt)] border border-[var(--border)] flex items-center justify-center text-foreground/50 shrink-0">
+                      <PlaySolid width={10} height={10} />
+                    </span>
+                    <span className="flex-1 text-[12.5px] text-foreground truncate">
+                      {url}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setVideos(videos.filter((_, j) => j !== i))}
+                      className="size-7 rounded-full hover:bg-destructive/10 flex items-center justify-center text-foreground/30 hover:text-destructive transition-colors shrink-0"
+                    >
+                      <Trash width={11} height={11} strokeWidth={2} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="flex items-center gap-2">
+              <input
+                type="url"
+                value={videoInput}
+                onChange={(e) => setVideoInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") { e.preventDefault(); addVideo(); }
+                }}
+                placeholder="https://youtube.com/watch?v=... ou https://vimeo.com/..."
+                className="flex-1 wall-input h-9 text-[13px] placeholder:text-[var(--tertiary-foreground)]"
+              />
+              <button
+                type="button"
+                onClick={addVideo}
+                disabled={!videoInput.trim()}
+                className="h-9 px-3 rounded-full border border-[var(--border)] bg-white text-[12px] text-foreground/75 hover:bg-[var(--background-alt)] disabled:opacity-40 transition-colors flex items-center gap-1"
+              >
+                <PlusCircle width={12} height={12} strokeWidth={2} />
                 Ajouter
               </button>
             </div>

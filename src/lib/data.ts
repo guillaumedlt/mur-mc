@@ -43,6 +43,18 @@ export type Company = {
   website?: string;
   founded?: number;
   perks: string[];
+  logoUrl?: string;
+  coverUrl?: string;
+  blocks?: Array<{
+    id: string;
+    type: string;
+    title?: string;
+    content?: string;
+    images?: string[];
+    author?: string;
+    stats?: Array<{ label: string; value: string }>;
+    items?: string[];
+  }>;
 };
 
 export type Locale = "fr" | "en";

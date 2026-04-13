@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import Image from "next/image";
 import {
   Calendar,
@@ -11,54 +10,28 @@ import {
   Sparks,
 } from "iconoir-react";
 import type { Company, Job } from "@/lib/data";
-import { type CompanyBlock, getCompanyOverride } from "@/lib/employer-store";
 import { CompanyLogo } from "./company-logo";
 import { JobCard } from "./job-card";
+
+type CompanyBlock = NonNullable<Company["blocks"]>[number];
 
 type Props = {
   company: Company;
   openings: Job[];
 };
 
-function coverUrl(company: Company): string {
+function fallbackCover(company: Company): string {
   return `https://picsum.photos/seed/${company.slug}-cover/1600/520`;
 }
 
-function galleryUrls(company: Company): string[] {
-  return [1, 2, 3, 4].map(
-    (i) => `https://picsum.photos/seed/${company.slug}-${i}/800/600`,
-  );
-}
-
 export function CompanyPublicView({ company, openings }: Props) {
-  const override = getCompanyOverride(company.id);
+  const blocks = company.blocks ?? [];
+  const hasCover = company.hasCover || !!company.coverUrl;
 
-  const merged = useMemo<Company>(() => {
-    if (!override) return company;
-    return {
-      ...company,
-      tagline: override.tagline ?? company.tagline,
-      description: override.description ?? company.description,
-      positioning: override.positioning ?? company.positioning,
-      culture: override.culture ?? company.culture,
-      perks: override.perks ?? company.perks,
-      website: override.website ?? company.website,
-      hasCover: override.hasCover ?? company.hasCover,
-    };
-  }, [company, override]);
-
-  const coverOverride = override?.coverDataUrl;
-  const blocks = override?.blocks ?? [];
-
-  return merged.hasCover ? (
-    <RichCompany
-      company={merged}
-      openings={openings}
-      coverOverride={coverOverride}
-      blocks={blocks}
-    />
+  return hasCover ? (
+    <RichCompany company={company} openings={openings} blocks={blocks} />
   ) : (
-    <SimpleCompany company={merged} openings={openings} blocks={blocks} />
+    <SimpleCompany company={company} openings={openings} blocks={blocks} />
   );
 }
 
@@ -67,22 +40,20 @@ export function CompanyPublicView({ company, openings }: Props) {
 function RichCompany({
   company,
   openings,
-  coverOverride,
   blocks,
 }: {
   company: Company;
   openings: Job[];
-  coverOverride?: string;
   blocks: CompanyBlock[];
 }) {
-  const cover = coverOverride ?? coverUrl(company);
-  const gallery = galleryUrls(company);
+  const cover = company.coverUrl ?? fallbackCover(company);
+  const isDataUrl = cover.startsWith("data:");
 
   return (
     <div className="flex flex-col gap-3">
       <header className="bg-white border border-[var(--border)] rounded-2xl overflow-hidden">
         <div className="relative h-[180px] sm:h-[220px] lg:h-[260px] w-full">
-          {coverOverride ? (
+          {isDataUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={cover}
@@ -111,14 +82,23 @@ function RichCompany({
         <div className="px-5 sm:px-7 lg:px-9 pb-7 -mt-10 relative">
           <div className="flex items-end gap-3 sm:gap-5">
             <div className="rounded-[18px] sm:rounded-[22px] p-1 bg-white shadow-[0_8px_30px_-8px_rgba(10,10,10,0.25)] shrink-0">
-              <CompanyLogo
-                name={company.name}
-                domain={company.domain}
-                color={company.logoColor}
-                initials={company.initials}
-                size={64}
-                radius={14}
-              />
+              {company.logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={company.logoUrl}
+                  alt={company.name}
+                  className="size-16 rounded-[14px] object-cover"
+                />
+              ) : (
+                <CompanyLogo
+                  name={company.name}
+                  domain={company.domain}
+                  color={company.logoColor}
+                  initials={company.initials}
+                  size={64}
+                  radius={14}
+                />
+              )}
             </div>
             <div className="min-w-0 flex-1 pb-2">
               <p className="ed-label-sm">{company.sector}</p>
@@ -189,25 +169,6 @@ function RichCompany({
             )}
           </article>
           {blocks.length > 0 && <BlocksRenderer blocks={blocks} />}
-          <article className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-6 lg:py-8">
-            <p className="ed-label-sm mb-4">Au quotidien</p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-              {gallery.map((url, i) => (
-                <div
-                  key={url}
-                  className="relative aspect-[4/3] overflow-hidden rounded-xl bg-[var(--background-alt)]"
-                >
-                  <Image
-                    src={url}
-                    alt={`${company.name} — vie de bureau ${i + 1}`}
-                    fill
-                    sizes="(max-width: 640px) 50vw, 220px"
-                    className="object-cover hover:scale-[1.04] transition-transform duration-500 ease-out"
-                  />
-                </div>
-              ))}
-            </div>
-          </article>
         </div>
         <aside className="lg:sticky lg:top-[80px] flex flex-col gap-3">
           {company.perks && company.perks.length > 0 && (
@@ -627,7 +588,49 @@ function PublicBlock({ block }: { block: CompanyBlock }) {
       );
     }
 
+    case "video": {
+      const url = block.content;
+      if (!url) return null;
+      const embedUrl = getEmbedUrl(url);
+      if (!embedUrl) {
+        return (
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[13px] text-[var(--accent)] hover:underline underline-offset-2"
+          >
+            Voir la video
+          </a>
+        );
+      }
+      return (
+        <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black">
+          <iframe
+            src={embedUrl}
+            title={block.title ?? "Video"}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            className="absolute inset-0 w-full h-full"
+          />
+        </div>
+      );
+    }
+
     default:
       return null;
   }
+}
+
+/** Convert YouTube/Vimeo URLs to embeddable iframe URLs. */
+function getEmbedUrl(url: string): string | null {
+  // YouTube: youtube.com/watch?v=ID or youtu.be/ID
+  const ytMatch = url.match(
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
+  );
+  if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}`;
+  // Vimeo: vimeo.com/ID
+  const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+  if (vimeoMatch) return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+  return null;
 }
