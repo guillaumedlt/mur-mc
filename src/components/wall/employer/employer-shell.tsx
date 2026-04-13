@@ -4,7 +4,6 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Sparks } from "iconoir-react";
-import { allJobs } from "@/lib/data";
 import { useAuthLoading, useUser } from "@/lib/auth";
 import { ensureOwnership } from "@/lib/employer-store";
 import { Shell } from "../shell";
@@ -41,7 +40,7 @@ export function EmployerShell({ children }: Props) {
   // Pendant le sync Supabase
   if (loading) {
     return (
-      <Shell jobs={allJobs}>
+      <Shell jobs={[]}>
         <div className="max-w-[1100px] mx-auto bg-white border border-[var(--border)] rounded-2xl p-12 flex flex-col items-center justify-center gap-4">
           <span className="size-6 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin" />
           <p className="text-[12px] text-muted-foreground">Chargement...</p>
@@ -58,7 +57,7 @@ export function EmployerShell({ children }: Props) {
 
   if (!user || user.role !== "employer") {
     return (
-      <Shell jobs={allJobs}>
+      <Shell jobs={[]}>
         <div className="max-w-[1100px] mx-auto bg-white border border-[var(--border)] rounded-2xl p-12 text-center">
           <p className="font-display italic text-[18px] text-foreground">
             Connecte-toi côté recruteur pour accéder à cet espace.
@@ -77,7 +76,7 @@ export function EmployerShell({ children }: Props) {
   // Employer connecte mais pas encore d'entreprise → onboarding
   if (!user.companyId && pathname !== "/recruteur/onboarding") {
     return (
-      <Shell jobs={allJobs}>
+      <Shell jobs={[]}>
         <div className="max-w-[760px] mx-auto bg-white border border-[var(--border)] rounded-2xl p-12 text-center">
           <span className="size-14 rounded-2xl bg-[var(--accent)]/10 text-[var(--accent)] inline-flex items-center justify-center mb-4">
             <Sparks width={24} height={24} strokeWidth={1.8} />
@@ -101,7 +100,7 @@ export function EmployerShell({ children }: Props) {
   }
 
   return (
-    <Shell jobs={allJobs}>
+    <Shell jobs={[]}>
       <EmployerTabs />
       {children}
     </Shell>
