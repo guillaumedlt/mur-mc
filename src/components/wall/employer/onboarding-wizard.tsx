@@ -99,7 +99,7 @@ export function OnboardingWizard() {
       .replace(/(^-|-$)/g, "")
       .slice(0, 50) + "-" + Date.now().toString(36).slice(-4);
 
-    const { data: newCompany } = await supabase
+    const { data: newCompany, error: insertError } = await supabase
       .from("companies")
       .insert({
         slug,
@@ -120,12 +120,20 @@ export function OnboardingWizard() {
       .select("id, name")
       .single();
 
+    if (insertError) {
+      window.console.error("Company insert error:", insertError);
+    }
+
     if (newCompany) {
       // Lier le recruteur a l'entreprise
-      await supabase
+      const { error: linkError } = await supabase
         .from("profiles")
         .update({ company_id: newCompany.id, team_role: "admin" })
         .eq("id", user.id);
+
+      if (linkError) {
+        window.console.error("Profile link error:", linkError);
+      }
 
       // Mettre a jour le store local avec le company_id
       localSignIn({

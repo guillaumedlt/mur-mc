@@ -191,14 +191,31 @@ alter table application_events enable row level security;
 alter table saved_jobs enable row level security;
 alter table stories enable row level security;
 
--- Companies : lecture publique, ecriture par les membres
+-- Companies : lecture publique
 create policy "companies_read" on companies for select using (true);
-create policy "companies_write" on companies for all using (
+-- Companies : creation par tout employer authentifie (onboarding)
+create policy "companies_insert" on companies for insert with check (
+  exists (
+    select 1 from profiles
+    where profiles.id = auth.uid()
+    and profiles.role = 'employer'
+  )
+);
+-- Companies : update/delete par les membres admin/recruiter
+create policy "companies_update" on companies for update using (
   exists (
     select 1 from profiles
     where profiles.id = auth.uid()
     and profiles.company_id = companies.id
     and profiles.team_role in ('admin', 'recruiter')
+  )
+);
+create policy "companies_delete" on companies for delete using (
+  exists (
+    select 1 from profiles
+    where profiles.id = auth.uid()
+    and profiles.company_id = companies.id
+    and profiles.team_role = 'admin'
   )
 );
 
