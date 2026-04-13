@@ -11,33 +11,49 @@ import {
 } from "iconoir-react";
 import { useUser } from "@/lib/auth";
 import {
-  type TeamMember,
-  type TeamRole,
-  addTeamMember,
-  removeTeamMember,
-  teamRoleLabel,
-  updateTeamMember,
-  useEmployer,
-} from "@/lib/employer-store";
+  type TeamMemberRow,
+  useMyTeam,
+  updateMemberRole,
+  removeMemberFromCompany,
+} from "@/lib/supabase/use-my-team";
+import { createClient } from "@/lib/supabase/client";
+
+type TeamRole = "admin" | "recruiter" | "viewer";
+
+function teamRoleLabel(r: TeamRole): string {
+  switch (r) {
+    case "admin": return "Admin";
+    case "recruiter": return "Recruteur";
+    case "viewer": return "Lecteur";
+  }
+}
 
 export function TeamManagement() {
   const user = useUser();
-  const { team } = useEmployer();
+  const { members, loading, refetch } = useMyTeam();
   const [adding, setAdding] = useState(false);
 
   if (!user || user.role !== "employer") return null;
+
+  if (loading) {
+    return (
+      <div className="max-w-[900px] mx-auto bg-white border border-[var(--border)] rounded-2xl p-12 flex items-center justify-center">
+        <span className="size-5 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-[900px] mx-auto">
       <header className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-6 lg:py-7 mb-3">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <p className="ed-label-sm">Mon équipe</p>
+            <p className="ed-label-sm">Mon equipe</p>
             <h1 className="font-display text-[24px] sm:text-[28px] tracking-[-0.015em] text-foreground mt-1">
-              Gestion de l&apos;équipe
+              Gestion de l&apos;equipe
             </h1>
             <p className="text-[13.5px] text-muted-foreground mt-2">
-              {team.length} membre{team.length > 1 ? "s" : ""} ont accès à
+              {members.length} membre{members.length > 1 ? "s" : ""} ont acces a
               l&apos;espace recruteur de votre entreprise.
             </p>
           </div>
@@ -52,34 +68,60 @@ export function TeamManagement() {
         </div>
       </header>
 
-      {/* Roles explained */}
+      {/* Roles */}
       <div className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-5 mb-3">
-        <p className="ed-label-sm mb-3">Rôles disponibles</p>
+        <p className="ed-label-sm mb-3">Roles disponibles</p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <RoleCard
             role="admin"
-            description="Accès complet. Peut gérer l'équipe, les offres, les candidats et la fiche entreprise."
+            description="Acces complet. Peut gerer l'equipe, les offres, les candidats et la fiche entreprise."
           />
           <RoleCard
             role="recruiter"
-            description="Peut gérer les offres et les candidats. Ne peut pas modifier l'équipe ni la fiche entreprise."
+            description="Peut gerer les offres et les candidats. Ne peut pas modifier l'equipe ni la fiche entreprise."
           />
           <RoleCard
             role="viewer"
-            description="Accès en lecture seule. Peut consulter les offres, les candidats et les statistiques."
+            description="Acces en lecture seule. Peut consulter les offres, les candidats et les statistiques."
           />
         </div>
       </div>
 
       {/* Team list */}
       <div className="bg-white border border-[var(--border)] rounded-2xl divide-y divide-[var(--border)]">
-        {team.map((m) => (
-          <MemberRow key={m.id} member={m} isCurrentUser={m.id === "team-1"} />
-        ))}
+        {members.length === 0 ? (
+          <div className="px-5 py-8 text-center">
+            <p className="text-[13px] text-muted-foreground">
+              Aucun membre dans l&apos;equipe.
+            </p>
+          </div>
+        ) : (
+          members.map((m) => (
+            <MemberRow
+              key={m.id}
+              member={m}
+              isCurrentUser={m.id === user.id}
+              onRoleChange={async (role) => {
+                await updateMemberRole(m.id, role);
+                refetch();
+              }}
+              onRemove={async () => {
+                await removeMemberFromCompany(m.id);
+                refetch();
+              }}
+            />
+          ))
+        )}
       </div>
 
       {/* Add member modal */}
-      {adding && <AddMemberModal onClose={() => setAdding(false)} />}
+      {adding && (
+        <AddMemberModal
+          companyId={user.companyId ?? ""}
+          onClose={() => setAdding(false)}
+          onAdded={refetch}
+        />
+      )}
     </div>
   );
 }
@@ -106,9 +148,13 @@ function RoleCard({
 function MemberRow({
   member,
   isCurrentUser,
+  onRoleChange,
+  onRemove,
 }: {
-  member: TeamMember;
+  member: TeamMemberRow;
   isCurrentUser: boolean;
+  onRoleChange: (role: TeamRole) => void;
+  onRemove: () => void;
 }) {
   return (
     <div className="flex items-center gap-3 sm:gap-4 px-5 sm:px-7 py-4 hover:bg-[var(--background-alt)]/40 transition-colors">
@@ -140,34 +186,27 @@ function MemberRow({
       </div>
 
       <select
-        value={member.role}
-        onChange={(e) =>
-          updateTeamMember(member.id, { role: e.target.value as TeamRole })
-        }
+        value={member.teamRole}
+        onChange={(e) => onRoleChange(e.target.value as TeamRole)}
         disabled={isCurrentUser}
         className="wall-select-pill disabled:opacity-50 disabled:cursor-not-allowed"
-        aria-label="Rôle"
+        aria-label="Role"
       >
         <option value="admin">Admin</option>
         <option value="recruiter">Recruteur</option>
         <option value="viewer">Lecteur</option>
       </select>
 
-      {member.lastActiveAt && (
-        <span className="text-[10.5px] font-mono text-[var(--tertiary-foreground)] hidden md:block w-16 text-right">
-          {formatRelative(member.lastActiveAt)}
-        </span>
-      )}
+      <span className="text-[10.5px] font-mono text-[var(--tertiary-foreground)] hidden md:block w-24 text-right">
+        Depuis {formatDate(member.createdAt)}
+      </span>
 
       {!isCurrentUser && (
         <button
           type="button"
           onClick={() => {
-            if (
-              typeof window !== "undefined" &&
-              window.confirm(`Retirer ${member.fullName} de l'équipe ?`)
-            ) {
-              removeTeamMember(member.id);
+            if (window.confirm(`Retirer ${member.fullName} de l'equipe ?`)) {
+              onRemove();
             }
           }}
           className="size-8 rounded-full border border-[var(--border)] bg-white text-foreground/55 hover:text-destructive hover:border-destructive/30 transition-colors flex items-center justify-center shrink-0"
@@ -180,29 +219,45 @@ function MemberRow({
   );
 }
 
-function AddMemberModal({ onClose }: { onClose: () => void }) {
-  const [name, setName] = useState("");
+function AddMemberModal({
+  companyId,
+  onClose,
+  onAdded,
+}: {
+  companyId: string;
+  onClose: () => void;
+  onAdded: () => void;
+}) {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<TeamRole>("recruiter");
   const [done, setDone] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const palette = ["#1C3D5A", "#7c1d2c", "#0a4d3a", "#062b3e", "#6B4423"];
-
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !email.trim()) return;
-    const nameParts = name.trim().split(/\s+/);
-    addTeamMember({
-      fullName: name.trim(),
-      email: email.trim(),
-      role,
-      avatarColor: palette[Math.floor(Math.random() * palette.length)],
-      initials:
-        nameParts.length >= 2
-          ? `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`.toUpperCase()
-          : name.trim().slice(0, 2).toUpperCase(),
-    });
+    if (!email.trim()) return;
+    setError(null);
+
+    // Find the user by email in profiles and link them
+    const supabase = createClient();
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("email", email.trim())
+      .single();
+
+    if (!profile) {
+      setError("Aucun compte Mur.mc trouve avec cet email. L'utilisateur doit d'abord creer un compte.");
+      return;
+    }
+
+    await supabase
+      .from("profiles")
+      .update({ company_id: companyId, team_role: role })
+      .eq("id", profile.id);
+
     setDone(true);
+    onAdded();
   };
 
   return (
@@ -223,10 +278,10 @@ function AddMemberModal({ onClose }: { onClose: () => void }) {
               className="text-[var(--accent)] inline-block"
             />
             <p className="text-[15px] font-medium text-foreground mt-3">
-              Invitation envoyée
+              Membre ajoute
             </p>
             <p className="text-[12.5px] text-muted-foreground mt-1">
-              {email} recevra un email pour rejoindre l&apos;équipe (démo).
+              {email} a ete ajoute a votre equipe en tant que {teamRoleLabel(role)}.
             </p>
             <button
               type="button"
@@ -242,7 +297,7 @@ function AddMemberModal({ onClose }: { onClose: () => void }) {
               <div className="flex items-center gap-2">
                 <Group width={14} height={14} strokeWidth={2} />
                 <span className="text-[14px] font-medium text-foreground">
-                  Inviter un membre
+                  Ajouter un membre
                 </span>
               </div>
               <button
@@ -257,60 +312,54 @@ function AddMemberModal({ onClose }: { onClose: () => void }) {
             <div className="px-6 py-5 flex flex-col gap-3">
               <div className="flex flex-col gap-1.5">
                 <label className="text-[11px] uppercase tracking-[0.08em] font-semibold text-foreground/60">
-                  Nom complet
-                </label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Sophie Martin"
-                  required
-                  className="wall-input h-10 text-[13.5px] placeholder:text-[var(--tertiary-foreground)]"
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] uppercase tracking-[0.08em] font-semibold text-foreground/60">
-                  Email
+                  Email du membre
                 </label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="s.martin@montecarlosbm.com"
                   required
-                  className="wall-input h-10 text-[13.5px] placeholder:text-[var(--tertiary-foreground)]"
+                  placeholder="collegue@entreprise.com"
+                  className="wall-input flex-1 text-[13.5px] placeholder:text-[var(--tertiary-foreground)]"
                 />
+                <p className="text-[11px] text-muted-foreground">
+                  L&apos;utilisateur doit avoir un compte Mur.mc (recruteur).
+                </p>
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className="text-[11px] uppercase tracking-[0.08em] font-semibold text-foreground/60">
-                  Rôle
+                  Role
                 </label>
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value as TeamRole)}
-                  className="wall-select h-10"
+                  className="wall-select h-[38px]"
                 >
-                  <option value="admin">Admin — accès complet</option>
-                  <option value="recruiter">
-                    Recruteur — offres & candidats
-                  </option>
-                  <option value="viewer">Lecteur — consultation uniquement</option>
+                  <option value="admin">Admin</option>
+                  <option value="recruiter">Recruteur</option>
+                  <option value="viewer">Lecteur</option>
                 </select>
               </div>
+              {error && (
+                <div className="rounded-xl bg-destructive/10 border border-destructive/20 px-3.5 py-2.5 text-[12.5px] text-destructive">
+                  {error}
+                </div>
+              )}
             </div>
-            <div className="px-6 py-3 border-t border-[var(--border)] bg-[var(--background-alt)]/50 flex items-center justify-end gap-2">
+            <div className="px-6 py-4 border-t border-[var(--border)] flex justify-end gap-2">
               <button
                 type="button"
                 onClick={onClose}
-                className="text-[12.5px] text-foreground/65 hover:text-foreground transition-colors px-3"
+                className="h-9 px-3 rounded-full text-[12.5px] text-foreground/70 hover:text-foreground transition-colors"
               >
                 Annuler
               </button>
               <button
                 type="submit"
-                className="h-9 px-4 rounded-xl bg-foreground text-background text-[12.5px] font-medium hover:bg-foreground/85 transition-colors"
+                className="h-9 px-4 rounded-full bg-foreground text-background text-[12.5px] font-medium hover:bg-foreground/85 transition-colors flex items-center gap-1.5"
               >
-                Envoyer l&apos;invitation
+                <PlusCircle width={12} height={12} strokeWidth={2} />
+                Ajouter
               </button>
             </div>
           </form>
@@ -320,13 +369,9 @@ function AddMemberModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-function formatRelative(iso: string): string {
-  const d = new Date(iso);
-  const diff = Math.round(
-    (Date.now() - d.getTime()) / (1000 * 60 * 60 * 24),
-  );
-  if (diff <= 0) return "auj.";
-  if (diff === 1) return "hier";
-  if (diff < 7) return `${diff}j`;
-  return `${Math.round(diff / 7)}sem`;
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("fr-FR", {
+    month: "short",
+    year: "numeric",
+  });
 }
