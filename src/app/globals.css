@@ -630,7 +630,7 @@
 @media print {
   @page {
     size: A4;
-    margin: 14mm 12mm;
+    margin: 0;
   }
 
   html,
@@ -655,7 +655,7 @@
     inset: 0;
     width: 100%;
     margin: 0;
-    padding: 0 !important;
+    padding: 10mm 12mm !important;
     border: none !important;
     border-radius: 0 !important;
     box-shadow: none !important;
