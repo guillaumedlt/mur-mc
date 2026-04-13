@@ -103,7 +103,7 @@ create table if not exists applications (
   id uuid primary key default uuid_generate_v4(),
   job_id uuid not null references jobs(id) on delete cascade,
   candidate_id uuid not null references profiles(id) on delete cascade,
-  status text default 'received' check (status in ('received', 'reviewed', 'interview', 'offer', 'hired', 'rejected')),
+  status text default 'received' check (status in ('received', 'shortlisted', 'reviewed', 'interview', 'offer', 'hired', 'rejected')),
   match_score integer default 0,
   rating integer default 0,
   cover_letter text,

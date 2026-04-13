@@ -10,6 +10,7 @@ import type {
 
 export const KANBAN_STATUSES: EmployerApplicationStatus[] = [
   "received",
+  "shortlisted",
   "reviewed",
   "interview",
   "offer",
@@ -20,6 +21,8 @@ export function statusLabel(s: EmployerApplicationStatus): string {
   switch (s) {
     case "received":
       return "Recues";
+    case "shortlisted":
+      return "Pre-selectionnes";
     case "reviewed":
       return "CV consulte";
     case "interview":
@@ -39,6 +42,8 @@ export function statusTone(
   switch (s) {
     case "received":
       return "muted";
+    case "shortlisted":
+      return "accent";
     case "reviewed":
       return "accent";
     case "interview":

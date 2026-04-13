@@ -31,6 +31,7 @@ export function applicationsByStatus(
 ): Record<EmployerApplicationStatus, EmployerApplication[]> {
   const empty: Record<EmployerApplicationStatus, EmployerApplication[]> = {
     received: [],
+    shortlisted: [],
     reviewed: [],
     interview: [],
     offer: [],

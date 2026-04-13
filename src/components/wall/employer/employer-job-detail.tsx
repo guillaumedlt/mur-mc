@@ -42,7 +42,7 @@ export function EmployerJobDetail({ id }: Props) {
 
   const breakdown = useMemo(() => {
     const out: Record<EmployerApplicationStatus, number> = {
-      received: 0, reviewed: 0, interview: 0, offer: 0, hired: 0, rejected: 0,
+      received: 0, shortlisted: 0, reviewed: 0, interview: 0, offer: 0, hired: 0, rejected: 0,
     };
     for (const a of applications) out[a.status]++;
     for (const mc of manualCands) {
@@ -178,7 +178,7 @@ export function EmployerJobDetail({ id }: Props) {
             </div>
             {totalApps > 0 && (
               <div className="flex flex-col gap-2.5">
-                {(["received", "reviewed", "interview", "offer", "hired", "rejected"] as EmployerApplicationStatus[]).map(
+                {(["received", "shortlisted", "reviewed", "interview", "offer", "hired", "rejected"] as EmployerApplicationStatus[]).map(
                   (s) => {
                     const count = breakdown[s];
                     const pct = totalApps > 0 ? Math.round((count / totalApps) * 100) : 0;

@@ -24,7 +24,7 @@ import { StarRating } from "./star-rating";
 type Props = { id: string };
 
 const STATUSES: EmployerApplicationStatus[] = [
-  "received", "reviewed", "interview", "offer", "hired", "rejected",
+  "received", "shortlisted", "reviewed", "interview", "offer", "hired", "rejected",
 ];
 
 export function ManualCandidateDetail({ id }: Props) {

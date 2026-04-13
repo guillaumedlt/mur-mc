@@ -35,6 +35,7 @@ export type EmployerJob = {
 
 export type EmployerApplicationStatus =
   | "received"
+  | "shortlisted"
   | "reviewed"
   | "interview"
   | "offer"

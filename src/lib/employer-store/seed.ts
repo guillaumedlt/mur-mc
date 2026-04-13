@@ -204,6 +204,7 @@ export function seedDemoEmployer(args: {
     if (!orderCounters[job.id]) {
       orderCounters[job.id] = {
         received: 0,
+        shortlisted: 0,
         reviewed: 0,
         interview: 0,
         offer: 0,

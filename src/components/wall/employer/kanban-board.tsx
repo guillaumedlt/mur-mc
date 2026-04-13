@@ -66,7 +66,7 @@ export function KanbanBoard({ jobId }: Props) {
 
   const byStatus = useMemo(() => {
     const out: Record<EmployerApplicationStatus, EmployerApplication[]> = {
-      received: [], reviewed: [], interview: [], offer: [], hired: [], rejected: [],
+      received: [], shortlisted: [], reviewed: [], interview: [], offer: [], hired: [], rejected: [],
     };
     for (const app of allItems) out[app.status].push(app);
     for (const k of Object.keys(out) as EmployerApplicationStatus[]) {

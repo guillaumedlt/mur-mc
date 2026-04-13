@@ -120,7 +120,7 @@ export function KanbanPage({ jobId }: Props) {
       if (!cand) continue;
       const score = scoreCandidate(cand, job);
       if (score >= THRESHOLD) {
-        await moveApplicationSupabase(app.id, "reviewed", 0, "received", "Tri auto");
+        await moveApplicationSupabase(app.id, "shortlisted", 0, "received", "Tri auto");
         qualified++;
       } else {
         await moveApplicationSupabase(app.id, "rejected", 0, "received", "Tri auto");
@@ -133,7 +133,7 @@ export function KanbanPage({ jobId }: Props) {
       if (mc.status !== "received") continue;
       const score = scoreCandidate(mc, job);
       if (score >= THRESHOLD) {
-        await updateManualCandidateSupabase(mc.id, { status: "reviewed" });
+        await updateManualCandidateSupabase(mc.id, { status: "shortlisted" });
         qualified++;
       } else {
         await updateManualCandidateSupabase(mc.id, { status: "rejected" });
@@ -195,7 +195,7 @@ export function KanbanPage({ jobId }: Props) {
           <div className="mt-4 rounded-xl bg-[var(--accent)]/[0.06] border border-[var(--accent)]/20 px-4 py-3 flex items-center justify-between">
             <div className="text-[13px] text-foreground">
               <Sparks width={13} height={13} strokeWidth={2} className="inline -mt-0.5 mr-1.5 text-[var(--accent)]" />
-              Tri termine : <strong>{sortResult.qualified}</strong> qualifie{sortResult.qualified > 1 ? "s" : ""} (→ CV consulte),{" "}
+              Tri termine : <strong>{sortResult.qualified}</strong> pre-selectionne{sortResult.qualified > 1 ? "s" : ""},
               <strong>{sortResult.rejected}</strong> non retenu{sortResult.rejected > 1 ? "s" : ""} (→ Refuse)
             </div>
             <button

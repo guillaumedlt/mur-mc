@@ -90,7 +90,7 @@ export function EmployerDashboard() {
 
   const breakdown = useMemo(() => {
     const out: Record<EmployerApplicationStatus, number> = {
-      received: 0, reviewed: 0, interview: 0, offer: 0, hired: 0, rejected: 0,
+      received: 0, shortlisted: 0, reviewed: 0, interview: 0, offer: 0, hired: 0, rejected: 0,
     };
     for (const r of allRows) out[r.status]++;
     return out;
