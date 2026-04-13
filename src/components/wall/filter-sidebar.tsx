@@ -51,15 +51,29 @@ const SECTORS: Sector[] = [
   "Sport & Bien-être",
   "Événementiel",
   "Famille / Office",
+  "Assurance",
+  "Audit & Conseil",
+  "BTP & Construction",
+  "Commerce & Distribution",
+  "Communication & Marketing",
+  "Comptabilité",
+  "Éducation & Formation",
+  "Industrie",
+  "Logistique & Transport",
+  "Médical & Santé",
+  "Ressources Humaines",
+  "Sécurité",
+  "Services à la personne",
+  "Autre",
 ];
 
-// Sectors highlighted as quick chips at the top of the sidebar.
 const QUICK_SECTORS: Sector[] = [
   "Banque & Finance",
   "Yachting",
   "Tech & Digital",
   "Hôtellerie & Restauration",
   "Luxe & Retail",
+  "Communication & Marketing",
 ];
 
 const EXPERIENCE: { value: ExperienceBucket; label: string }[] = [

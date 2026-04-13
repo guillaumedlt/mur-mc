@@ -33,6 +33,20 @@ const SECTORS: Sector[] = [
   "Sport & Bien-être",
   "Événementiel",
   "Famille / Office",
+  "Assurance",
+  "Audit & Conseil",
+  "BTP & Construction",
+  "Commerce & Distribution",
+  "Communication & Marketing",
+  "Comptabilité",
+  "Éducation & Formation",
+  "Industrie",
+  "Logistique & Transport",
+  "Médical & Santé",
+  "Ressources Humaines",
+  "Sécurité",
+  "Services à la personne",
+  "Autre",
 ];
 
 const QUICK_SECTORS: Sector[] = [

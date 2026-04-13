@@ -23,7 +23,21 @@ export type Sector =
   | "Juridique"
   | "Sport & Bien-être"
   | "Événementiel"
-  | "Famille / Office";
+  | "Famille / Office"
+  | "Assurance"
+  | "Audit & Conseil"
+  | "BTP & Construction"
+  | "Commerce & Distribution"
+  | "Communication & Marketing"
+  | "Comptabilité"
+  | "Éducation & Formation"
+  | "Industrie"
+  | "Logistique & Transport"
+  | "Médical & Santé"
+  | "Ressources Humaines"
+  | "Sécurité"
+  | "Services à la personne"
+  | "Autre";
 
 export type Company = {
   id: string;
