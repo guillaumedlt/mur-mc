@@ -9,6 +9,7 @@
 
 import { useSyncExternalStore } from "react";
 import type { Job, Sector } from "./data";
+import { resizeImage } from "./resize-image";
 
 export type ApplicationStatus =
   | "sent"
@@ -219,30 +220,24 @@ export function updateProfile(patch: Partial<CandidateProfile>): void {
   emit();
 }
 
-export function setAvatarFromFile(file: File): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (typeof window === "undefined") return resolve();
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result;
-      if (typeof dataUrl !== "string") return reject(new Error("read failed"));
-      ensureLoaded();
-      cached = {
-        ...cached,
-        profile: { ...cached.profile, avatarDataUrl: dataUrl },
-      };
-      try {
-        persist();
-      } catch (e) {
-        // QuotaExceededError → image trop grosse
-        return reject(e as Error);
-      }
-      emit();
-      resolve();
-    };
-    reader.onerror = () => reject(reader.error ?? new Error("read failed"));
-    reader.readAsDataURL(file);
+export async function setAvatarFromFile(file: File): Promise<void> {
+  if (typeof window === "undefined") return;
+  const dataUrl = await resizeImage(file, {
+    maxWidth: 256,
+    maxHeight: 256,
+    quality: 0.85,
   });
+  ensureLoaded();
+  cached = {
+    ...cached,
+    profile: { ...cached.profile, avatarDataUrl: dataUrl },
+  };
+  try {
+    persist();
+  } catch (e) {
+    throw e as Error;
+  }
+  emit();
 }
 
 export function removeAvatar(): void {

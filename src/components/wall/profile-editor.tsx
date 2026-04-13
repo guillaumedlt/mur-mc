@@ -17,8 +17,8 @@ import {
   Lock,
   Mail,
   MapPin,
-  PageStar,
   Page,
+  PageStar,
   PlusCircle,
   Suitcase,
   Trash,
@@ -38,6 +38,8 @@ import {
 } from "@/lib/candidate-store";
 import type { Sector } from "@/lib/data";
 import { UserAvatar } from "./user-avatar";
+import { Card, Field, SkillChip, Textarea, formatBytes, formatRelative } from "./profile-primitives";
+import { ExperienceForm } from "./experience-form";
 
 const SECTORS: Sector[] = [
   "Banque & Finance",
@@ -85,9 +87,6 @@ export function ProfileEditor() {
     );
   }
 
-  // Le `key` remonte le formulaire si le profil change (login d'un autre
-  // user, seed démo, etc), ce qui réinitialise les useState locaux sans
-  // avoir besoin d'un useEffect de resync.
   return <ProfileForm key={profile.email || "empty"} user={user} />;
 }
 
@@ -124,7 +123,6 @@ function ProfileForm({ user }: { user: NonNullable<ReturnType<typeof useUser>> }
   const onSave = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 1. Sauver dans localStorage
     updateProfile({
       fullName,
       email,
@@ -143,7 +141,6 @@ function ProfileForm({ user }: { user: NonNullable<ReturnType<typeof useUser>> }
       websiteUrl: websiteUrl || undefined,
     });
 
-    // 2. Persister aussi dans Supabase (profil)
     if (user) {
       const { createClient } = await import("@/lib/supabase/client");
       const supabase = createClient();
@@ -385,7 +382,7 @@ function ProfileForm({ user }: { user: NonNullable<ReturnType<typeof useUser>> }
             </div>
           </Card>
 
-          {/* Expériences professionnelles */}
+          {/* Expériences */}
           <Card title="Expériences professionnelles" icon={Suitcase}>
             {experiences.length === 0 && (
               <div className="rounded-xl border border-dashed border-[var(--border)] bg-[var(--background-alt)]/40 p-6 text-center">
@@ -419,20 +416,7 @@ function ProfileForm({ user }: { user: NonNullable<ReturnType<typeof useUser>> }
           <Card title="Compétences" icon={Hashtag}>
             <div className="flex flex-wrap gap-1.5">
               {skills.map((s) => (
-                <span
-                  key={s}
-                  className="inline-flex items-center gap-1 h-7 pl-2.5 pr-1 rounded-full bg-[var(--background-alt)] border border-[var(--border)] text-[11.5px] text-foreground"
-                >
-                  {s}
-                  <button
-                    type="button"
-                    onClick={() => removeSkill(s)}
-                    className="size-4 rounded-full hover:bg-foreground/10 flex items-center justify-center text-foreground/50 hover:text-foreground transition-colors"
-                    aria-label={`Retirer ${s}`}
-                  >
-                    <Xmark width={10} height={10} strokeWidth={2.2} />
-                  </button>
-                </span>
+                <SkillChip key={s} skill={s} onRemove={() => removeSkill(s)} />
               ))}
               {skills.length === 0 && (
                 <p className="text-[12.5px] text-muted-foreground">
@@ -629,238 +613,4 @@ function ProfileForm({ user }: { user: NonNullable<ReturnType<typeof useUser>> }
       </form>
     </div>
   );
-}
-
-/* ─────────────── UI primitives ─────────────── */
-
-function Card({
-  title,
-  icon: Icon,
-  children,
-}: {
-  title: string;
-  icon?: React.ComponentType<React.SVGProps<SVGSVGElement>>;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="bg-white border border-[var(--border)] rounded-2xl px-7 py-6">
-      <div className="flex items-center gap-2 mb-4">
-        {Icon && (
-          <Icon
-            width={13}
-            height={13}
-            strokeWidth={2}
-            className="text-foreground/55"
-          />
-        )}
-        <h2 className="ed-label-sm">{title}</h2>
-      </div>
-      <div className="flex flex-col gap-3">{children}</div>
-    </section>
-  );
-}
-
-function Field({
-  icon: Icon,
-  type = "text",
-  placeholder,
-  value,
-  onChange,
-}: {
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
-  type?: string;
-  placeholder: string;
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  return (
-    <label className="wall-input h-11 cursor-text">
-      <Icon
-        width={14}
-        height={14}
-        strokeWidth={2}
-        className="text-[var(--tertiary-foreground)] shrink-0"
-      />
-      <input
-        type={type}
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="flex-1 bg-transparent outline-none text-[13.5px] placeholder:text-[var(--tertiary-foreground)]"
-      />
-    </label>
-  );
-}
-
-function Textarea({
-  placeholder,
-  value,
-  onChange,
-  rows = 4,
-}: {
-  placeholder: string;
-  value: string;
-  onChange: (v: string) => void;
-  rows?: number;
-}) {
-  return (
-    <textarea
-      placeholder={placeholder}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      rows={rows}
-      className="bg-white border border-[var(--border)] rounded-xl px-3.5 py-3 text-[13.5px] outline-none placeholder:text-[var(--tertiary-foreground)] focus:border-[var(--accent)] focus:shadow-[0_0_0_3px_oklch(0.355_0.066_247_/_0.12)] transition-all leading-[1.6] resize-y"
-    />
-  );
-}
-
-function ExperienceForm({
-  exp,
-  onChange,
-  onRemove,
-}: {
-  exp: Experience;
-  onChange: (patch: Partial<Experience>) => void;
-  onRemove: () => void;
-}) {
-  const yearOptions = (() => {
-    const current = new Date().getFullYear();
-    const years: number[] = [];
-    for (let y = current; y >= current - 40; y--) years.push(y);
-    return years;
-  })();
-
-  return (
-    <div className="rounded-xl border border-[var(--border)] bg-white p-4 flex flex-col gap-3">
-      <div className="flex items-start gap-3">
-        <span className="size-9 rounded-xl bg-[var(--background-alt)] border border-[var(--border)] flex items-center justify-center text-foreground/60 shrink-0">
-          <Suitcase width={14} height={14} strokeWidth={2} />
-        </span>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 flex-1 min-w-0">
-          <Field
-            icon={Building}
-            placeholder="Intitulé du poste"
-            value={exp.title}
-            onChange={(v) => onChange({ title: v })}
-          />
-          <Field
-            icon={Building}
-            placeholder="Entreprise"
-            value={exp.company}
-            onChange={(v) => onChange({ company: v })}
-          />
-        </div>
-        <button
-          type="button"
-          onClick={onRemove}
-          className="size-9 rounded-full hover:bg-foreground/5 text-foreground/40 hover:text-destructive transition-colors flex items-center justify-center shrink-0"
-          aria-label="Retirer cette expérience"
-        >
-          <Trash width={13} height={13} strokeWidth={2} />
-        </button>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pl-12">
-        <Field
-          icon={MapPin}
-          placeholder="Lieu (Monaco, Paris…)"
-          value={exp.location ?? ""}
-          onChange={(v) => onChange({ location: v })}
-        />
-
-        <YearSelect
-          value={exp.startYear}
-          onChange={(v) => onChange({ startYear: v })}
-          options={yearOptions}
-          label="Année de début"
-        />
-
-        {exp.current ? (
-          <div className="flex items-center gap-2 h-11 px-3.5 text-[12.5px] text-foreground/70">
-            <span>Jusqu&apos;à aujourd&apos;hui</span>
-          </div>
-        ) : (
-          <YearSelect
-            value={exp.endYear ?? new Date().getFullYear()}
-            onChange={(v) => onChange({ endYear: v })}
-            options={yearOptions}
-            label="Année de fin"
-          />
-        )}
-      </div>
-
-      <label className="flex items-center gap-2 pl-12 text-[12px] text-foreground/75 cursor-pointer select-none">
-        <span
-          className="wall-check"
-          data-checked={exp.current}
-        />
-        <input
-          type="checkbox"
-          checked={exp.current}
-          onChange={(e) =>
-            onChange({
-              current: e.target.checked,
-              endYear: e.target.checked ? undefined : exp.endYear ?? new Date().getFullYear(),
-            })
-          }
-          className="sr-only"
-        />
-        Poste actuel
-      </label>
-
-      <div className="pl-12">
-        <textarea
-          placeholder="Quelques lignes pour décrire ton rôle, tes réalisations, le contexte…"
-          value={exp.description ?? ""}
-          onChange={(e) => onChange({ description: e.target.value })}
-          rows={3}
-          className="w-full bg-white border border-[var(--border)] rounded-xl px-3.5 py-2.5 text-[13px] outline-none placeholder:text-[var(--tertiary-foreground)] focus:border-[var(--accent)] focus:shadow-[0_0_0_3px_oklch(0.355_0.066_247_/_0.12)] transition-all leading-[1.55] resize-y"
-        />
-      </div>
-    </div>
-  );
-}
-
-function YearSelect({
-  value,
-  onChange,
-  options,
-  label,
-}: {
-  value: number;
-  onChange: (v: number) => void;
-  options: number[];
-  label: string;
-}) {
-  return (
-    <select
-      aria-label={label}
-      value={value}
-      onChange={(e) => onChange(parseInt(e.target.value, 10))}
-      className="wall-select h-11"
-    >
-      {options.map((y) => (
-        <option key={y} value={y}>
-          {y}
-        </option>
-      ))}
-    </select>
-  );
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} o`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} Ko`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
-}
-
-function formatRelative(iso: string): string {
-  const d = new Date(iso);
-  const diffDays = Math.round(
-    (Date.now() - d.getTime()) / (1000 * 60 * 60 * 24),
-  );
-  if (diffDays <= 0) return "aujourd'hui";
-  if (diffDays === 1) return "hier";
-  if (diffDays < 30) return `il y a ${diffDays} j`;
-  return `il y a ${Math.round(diffDays / 30)} mois`;
 }

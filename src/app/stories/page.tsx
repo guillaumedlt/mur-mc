@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import { allJobs } from "@/lib/data";
-import { stories } from "@/lib/stories";
 import { Shell } from "@/components/wall/shell";
 import { StoryCard } from "@/components/wall/story-card";
+import { fetchAllJobs, fetchAllStories } from "@/lib/supabase/queries";
 
 const SITE_URL = "https://mur.mc";
 
@@ -36,7 +35,9 @@ export const metadata: Metadata = {
   },
 };
 
-function magazineJsonLd() {
+import type { Story } from "@/lib/stories";
+
+function magazineJsonLd(storyList: Story[]) {
   return {
     "@context": "https://schema.org",
     "@type": "Blog",
@@ -50,7 +51,7 @@ function magazineJsonLd() {
       name: "Mur.mc",
       url: SITE_URL,
     },
-    blogPost: stories.map((s) => ({
+    blogPost: storyList.map((s) => ({
       "@type": "BlogPosting",
       headline: s.title,
       url: `${SITE_URL}/stories/${s.slug}`,
@@ -81,7 +82,13 @@ function breadcrumbJsonLd() {
   };
 }
 
-export default function StoriesPage() {
+export const revalidate = 300;
+
+export default async function StoriesPage() {
+  const [stories, allJobs] = await Promise.all([
+    fetchAllStories(),
+    fetchAllJobs(),
+  ]);
   const featured = stories.find((s) => s.featured) ?? stories[0] ?? null;
   const rest = featured
     ? stories.filter((s) => s.id !== featured.id)
@@ -94,7 +101,7 @@ export default function StoriesPage() {
     <Shell jobs={allJobs}>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(magazineJsonLd()) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(magazineJsonLd(stories)) }}
       />
       <script
         type="application/ld+json"

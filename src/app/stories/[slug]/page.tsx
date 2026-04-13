@@ -3,29 +3,24 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Clock, ShareIos } from "iconoir-react";
-import { allJobs } from "@/lib/data";
 import {
   type Story,
   formatStoryDate,
-  getStory,
-  relatedStories,
   storyCover,
-  stories,
 } from "@/lib/stories";
 import { Shell } from "@/components/wall/shell";
 import { StoryCard } from "@/components/wall/story-card";
+import { fetchAllJobs, fetchAllStories, fetchStoryBySlug } from "@/lib/supabase/queries";
 
 const SITE_URL = "https://mur.mc";
 
-export function generateStaticParams() {
-  return stories.map((s) => ({ slug: s.slug }));
-}
+export const revalidate = 300;
 
 export async function generateMetadata(
   props: PageProps<"/stories/[slug]">,
 ): Promise<Metadata> {
   const { slug } = await props.params;
-  const story = getStory(slug);
+  const story = await fetchStoryBySlug(slug);
   if (!story) return { title: "Article introuvable" };
   const url = `${SITE_URL}/stories/${story.slug}`;
   const cover = storyCover(story, 1200, 630);
@@ -127,10 +122,21 @@ function breadcrumbJsonLd(story: Story) {
 
 export default async function StoryPage(props: PageProps<"/stories/[slug]">) {
   const { slug } = await props.params;
-  const story = getStory(slug);
+  const [story, allStories, allJobs] = await Promise.all([
+    fetchStoryBySlug(slug),
+    fetchAllStories(),
+    fetchAllJobs(),
+  ]);
   if (!story) notFound();
 
-  const related = relatedStories(story, 3);
+  const related = allStories
+    .filter((s) => s.id !== story.id && s.category === story.category)
+    .concat(
+      allStories.filter(
+        (s) => s.id !== story.id && s.category !== story.category,
+      ),
+    )
+    .slice(0, 3);
   const cover = storyCover(story, 1600, 900);
 
   return (

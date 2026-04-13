@@ -269,8 +269,16 @@ create policy "events_write" on application_events for insert with check (
 -- Saved jobs : chaque user gere les siens
 create policy "saved_own" on saved_jobs for all using (user_id = auth.uid());
 
--- Stories : lecture publique
+-- Stories : lecture publique, ecriture par les employeurs admin
 create policy "stories_read" on stories for select using (true);
+create policy "stories_write" on stories for all using (
+  exists (
+    select 1 from profiles
+    where profiles.id = auth.uid()
+    and profiles.role = 'employer'
+    and profiles.team_role in ('admin', 'recruiter')
+  )
+);
 
 -- ============================================================
 -- TRIGGERS pour updated_at auto

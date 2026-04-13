@@ -25,6 +25,7 @@ import {
   removeImageFromBlock,
   updateBlock,
 } from "@/lib/employer-store";
+import { resizeImage } from "@/lib/resize-image";
 
 type Props = {
   blocks: CompanyBlock[];
@@ -233,16 +234,15 @@ function ImageBlockEditor({ block }: { block: CompanyBlock }) {
   const ref = useRef<HTMLInputElement>(null);
   const image = block.images?.[0];
 
-  const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        updateBlock(block.id, { images: [reader.result] });
-      }
-    };
-    reader.readAsDataURL(file);
+    const dataUrl = await resizeImage(file, {
+      maxWidth: 800,
+      maxHeight: 600,
+      quality: 0.8,
+    });
+    updateBlock(block.id, { images: [dataUrl] });
   };
 
   return (
@@ -311,16 +311,15 @@ function GalleryBlockEditor({ block }: { block: CompanyBlock }) {
   const ref = useRef<HTMLInputElement>(null);
   const images = block.images ?? [];
 
-  const onFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     for (const file of files) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === "string") {
-          addImageToBlock(block.id, reader.result);
-        }
-      };
-      reader.readAsDataURL(file);
+      const dataUrl = await resizeImage(file, {
+        maxWidth: 800,
+        maxHeight: 600,
+        quality: 0.8,
+      });
+      addImageToBlock(block.id, dataUrl);
     }
   };
 

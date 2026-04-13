@@ -1,5 +1,6 @@
 import { createClient } from "./server";
 import type { Company, Job, Sector, Locale, WorkTime, JobType, ExperienceLevel } from "../data";
+import type { Story } from "../stories";
 
 /**
  * Charge toutes les offres publiees depuis Supabase, avec leur entreprise.
@@ -80,6 +81,37 @@ export async function fetchJobsForCompany(companyId: string): Promise<Job[]> {
   return data.map(mapJob);
 }
 
+/* ─── Stories ──────────────────────────────────────────────── */
+
+/**
+ * Charge tous les articles publies depuis Supabase.
+ */
+export async function fetchAllStories(): Promise<Story[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("stories")
+    .select("*")
+    .order("published_at", { ascending: false });
+
+  if (error || !data) return [];
+  return data.map(mapStory);
+}
+
+/**
+ * Charge un article par slug.
+ */
+export async function fetchStoryBySlug(slug: string): Promise<Story | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("stories")
+    .select("*")
+    .eq("slug", slug)
+    .single();
+
+  if (error || !data) return null;
+  return mapStory(data);
+}
+
 /* ─── Mappers DB row → type app ─────────────────────────── */
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -147,5 +179,25 @@ function mapJob(row: any): Job {
     benefits: row.benefits ?? [],
     featured: row.featured ?? false,
     urgent: row.urgent ?? false,
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapStory(row: any): Story {
+  return {
+    id: row.id,
+    slug: row.slug,
+    category: row.category ?? "Marché",
+    title: row.title,
+    excerpt: row.excerpt ?? "",
+    lead: row.lead ?? "",
+    body: Array.isArray(row.body) ? row.body : [],
+    authorName: row.author_name ?? "Mur.mc",
+    authorRole: row.author_role ?? "Rédaction",
+    publishedAt: row.published_at ?? new Date().toISOString(),
+    updatedAt: row.updated_at ?? undefined,
+    readingMinutes: row.reading_minutes ?? 5,
+    featured: row.featured ?? false,
+    tags: row.tags ?? [],
   };
 }

@@ -6,6 +6,7 @@ import {
   Bag,
   Building,
   Group,
+  Page,
   PlusCircle,
   ViewGrid,
 } from "iconoir-react";
@@ -16,6 +17,7 @@ const TABS = [
   { href: "/recruteur/candidats", label: "Candidats", icon: Group, exact: false },
   { href: "/recruteur/equipe", label: "Equipe", icon: Group, exact: true },
   { href: "/recruteur/entreprise", label: "Ma fiche entreprise", icon: Building, exact: true },
+  { href: "/recruteur/magazine", label: "Magazine", icon: Page, exact: true },
   { href: "/recruteur/publier", label: "Publier", icon: PlusCircle, exact: true },
 ] as const;
 

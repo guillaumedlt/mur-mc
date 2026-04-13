@@ -3,12 +3,22 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, BadgeCheck, Rocket, Sparks } from "iconoir-react";
+import {
+  ArrowLeft,
+  BadgeCheck,
+  Lock,
+  Mail,
+  PlusCircle,
+  Rocket,
+  Sparks,
+  Xmark,
+} from "iconoir-react";
 import { useUser } from "@/lib/auth";
 import {
   type EmployerJob,
   createJob,
 } from "@/lib/employer-store";
+import { useMyJobs } from "@/lib/supabase/use-my-jobs";
 import { createClient } from "@/lib/supabase/client";
 import type {
   ExperienceLevel,
@@ -16,6 +26,8 @@ import type {
   Sector,
   WorkTime,
 } from "@/lib/data";
+
+const FREE_JOB_LIMIT = 1;
 
 const CONTRACTS: JobType[] = [
   "CDI",
@@ -96,29 +108,146 @@ export function PublishJobForm({ existing, onCancel }: Props) {
     existing?.salaryMax ? String(existing.salaryMax) : "",
   );
 
-  const [aiGenerating, setAiGenerating] = useState(false);
+  const [responsibilities, setResponsibilities] = useState<string[]>(
+    existing?.responsibilities ?? [],
+  );
+  const [requirements, setRequirements] = useState<string[]>(
+    existing?.requirements ?? [],
+  );
+  const [benefits, setBenefits] = useState<string[]>(
+    existing?.benefits ?? [],
+  );
+  const [tags, setTags] = useState<string[]>(existing?.tags ?? []);
 
-  const generateWithAi = () => {
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [freePrompt, setFreePrompt] = useState("");
+  const [showPrompt, setShowPrompt] = useState(false);
+
+  const generateWithAi = async () => {
     if (!title.trim()) return;
     setAiGenerating(true);
-    // Fake AI generation (simule un delai de 800ms)
-    window.setTimeout(() => {
-      const t = title.trim();
-      setShortDesc(
-        `Nous recherchons un(e) ${t} pour rejoindre notre equipe a ${location || "Monaco"}. Poste en ${contract}, ${remote.toLowerCase()}.`,
+    setAiError(null);
+
+    try {
+      const res = await fetch("/api/ai/generate-job", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: title.trim(),
+          contract,
+          level,
+          sector,
+          location,
+          remote,
+          workTime,
+          salaryMin: salaryMin ? parseInt(salaryMin, 10) : undefined,
+          salaryMax: salaryMax ? parseInt(salaryMax, 10) : undefined,
+          companyName: user?.companyName ?? "",
+          lang,
+          freePrompt: freePrompt.trim() || undefined,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Erreur serveur" }));
+        throw new Error(err.error || "Erreur de generation");
+      }
+
+      const data = await res.json();
+
+      if (data.shortDescription) setShortDesc(data.shortDescription);
+      if (data.description) setDescription(data.description);
+      if (Array.isArray(data.responsibilities) && data.responsibilities.length > 0)
+        setResponsibilities(data.responsibilities);
+      if (Array.isArray(data.requirements) && data.requirements.length > 0)
+        setRequirements(data.requirements);
+      if (Array.isArray(data.benefits) && data.benefits.length > 0)
+        setBenefits(data.benefits);
+      if (Array.isArray(data.tags) && data.tags.length > 0)
+        setTags(data.tags);
+    } catch (err) {
+      setAiError(
+        err instanceof Error ? err.message : "Erreur lors de la generation",
       );
-      setDescription(
-        `Dans le cadre de notre developpement, nous recherchons un(e) ${t}.\n\nVous integrerez une equipe dynamique et participerez activement a la croissance de l'entreprise. Ce poste est une opportunite unique de contribuer a des projets ambitieux dans un environnement stimulant.\n\nVotre mission principale sera de [decrire les missions specifiques du poste]. Vous serez egalement amene(e) a [decrire les responsabilites secondaires].\n\nNous offrons un cadre de travail exceptionnel a Monaco, avec des avantages competitifs et des perspectives d'evolution.`,
-      );
+    } finally {
       setAiGenerating(false);
-    }, 800);
+    }
   };
 
-  if (!user || user.role !== "employer" || !user.companyId) {
+  const { jobs: existingJobs, loading: jobsLoading } = useMyJobs();
+
+  if (!user || user.role !== "employer") {
     return (
       <div className="max-w-[760px] mx-auto bg-white border border-[var(--border)] rounded-2xl p-12 text-center">
         <p className="font-display italic text-[18px] text-foreground">
           Connecte-toi côté recruteur pour publier une offre.
+        </p>
+        <Link
+          href="/connexion"
+          className="inline-flex h-10 mt-5 px-5 rounded-full bg-foreground text-background text-[13px] items-center"
+        >
+          Se connecter
+        </Link>
+      </div>
+    );
+  }
+
+  // Pas encore d'entreprise → rediriger vers l'onboarding
+  if (!user.companyId) {
+    return (
+      <div className="max-w-[760px] mx-auto bg-white border border-[var(--border)] rounded-2xl p-12 text-center">
+        <span className="size-14 rounded-2xl bg-[var(--accent)]/10 text-[var(--accent)] inline-flex items-center justify-center mb-4">
+          <Sparks width={24} height={24} strokeWidth={1.8} />
+        </span>
+        <h2 className="font-display text-[24px] tracking-[-0.015em] text-foreground">
+          Créez d&apos;abord votre entreprise
+        </h2>
+        <p className="text-[13.5px] text-muted-foreground mt-2 max-w-md mx-auto">
+          Pour publier une offre, vous devez d&apos;abord créer votre fiche entreprise. Ça prend moins de 2 minutes.
+        </p>
+        <Link
+          href="/recruteur/onboarding"
+          className="inline-flex h-10 mt-5 px-5 rounded-full bg-foreground text-background text-[13px] items-center gap-2"
+        >
+          <Sparks width={14} height={14} strokeWidth={2} />
+          Créer mon entreprise
+        </Link>
+      </div>
+    );
+  }
+
+  // Quota atteint → message upgrade
+  if (!existing && !jobsLoading && existingJobs.length >= FREE_JOB_LIMIT) {
+    return (
+      <div className="max-w-[760px] mx-auto bg-white border border-[var(--border)] rounded-2xl p-12 text-center">
+        <span className="size-14 rounded-2xl bg-foreground/5 text-foreground/60 inline-flex items-center justify-center mb-4">
+          <Lock width={24} height={24} strokeWidth={1.8} />
+        </span>
+        <h2 className="font-display text-[24px] tracking-[-0.015em] text-foreground">
+          Quota atteint
+        </h2>
+        <p className="text-[13.5px] text-muted-foreground mt-2 max-w-md mx-auto">
+          Vous avez atteint la limite de {FREE_JOB_LIMIT} offre{FREE_JOB_LIMIT > 1 ? "s" : ""} gratuite{FREE_JOB_LIMIT > 1 ? "s" : ""}.
+          Pour publier de nouvelles offres, passez à un forfait payant.
+        </p>
+        <div className="flex items-center justify-center gap-3 mt-6 flex-wrap">
+          <Link
+            href="/tarifs"
+            className="inline-flex h-10 px-5 rounded-full bg-foreground text-background text-[13px] font-medium items-center gap-2"
+          >
+            Voir les forfaits
+          </Link>
+          <a
+            href="mailto:contact@mur.mc?subject=Upgrade%20forfait%20recruteur"
+            className="inline-flex h-10 px-5 rounded-full border border-[var(--border)] bg-white text-[13px] text-foreground/85 hover:bg-[var(--background-alt)] items-center gap-2 transition-colors"
+          >
+            <Mail width={14} height={14} strokeWidth={2} />
+            Nous contacter
+          </a>
+        </div>
+        <p className="text-[11px] text-foreground/45 mt-4">
+          Vous avez {existingJobs.length} offre{existingJobs.length > 1 ? "s" : ""} publiée{existingJobs.length > 1 ? "s" : ""} sur {FREE_JOB_LIMIT} autorisée{FREE_JOB_LIMIT > 1 ? "s" : ""}
         </p>
       </div>
     );
@@ -143,10 +272,10 @@ export function PublishJobForm({ existing, onCancel }: Props) {
       salaryMax: salaryMax ? parseInt(salaryMax, 10) : undefined,
       shortDescription: shortDesc,
       description,
-      responsibilities: [],
-      requirements: [],
-      benefits: [],
-      tags: [],
+      responsibilities,
+      requirements,
+      benefits,
+      tags,
     });
 
     // 2. Inserer aussi dans Supabase (pour que l'offre soit visible publiquement)
@@ -175,10 +304,10 @@ export function PublishJobForm({ existing, onCancel }: Props) {
       salary_max: salaryMax ? parseInt(salaryMax, 10) : null,
       short_description: shortDesc,
       description,
-      responsibilities: [],
-      requirements: [],
-      benefits: [],
-      tags: [],
+      responsibilities,
+      requirements,
+      benefits,
+      tags,
       status: "published",
       featured: false,
     });
@@ -355,16 +484,18 @@ export function PublishJobForm({ existing, onCancel }: Props) {
         </div>
 
         {/* AI Generate */}
-        <div className="rounded-xl border border-[var(--accent)]/20 bg-[var(--accent)]/[0.04] p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <Sparks width={14} height={14} strokeWidth={2} className="text-[var(--accent)]" />
+        <div className="rounded-xl border border-[var(--accent)]/20 bg-[var(--accent)]/[0.04] p-4 flex flex-col gap-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-2.5">
+              <span className="size-9 rounded-xl bg-[var(--accent)]/15 text-[var(--accent)] flex items-center justify-center shrink-0 mt-0.5">
+                <Sparks width={16} height={16} strokeWidth={2} />
+              </span>
               <div>
                 <div className="text-[13px] font-medium text-foreground">
-                  Formuler l&apos;offre par l&apos;IA
+                  Rediger avec l&apos;IA
                 </div>
-                <div className="text-[11.5px] text-muted-foreground">
-                  Genere automatiquement l&apos;accroche et la description a partir du titre.
+                <div className="text-[11.5px] text-muted-foreground leading-snug mt-0.5">
+                  Genere l&apos;accroche, la description, les responsabilites, competences recherchees, avantages et tags a partir des infos saisies.
                 </div>
               </div>
             </div>
@@ -382,6 +513,32 @@ export function PublishJobForm({ existing, onCancel }: Props) {
               {aiGenerating ? "Generation..." : "Generer"}
             </button>
           </div>
+
+          {/* Toggle champ libre */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowPrompt(!showPrompt)}
+              className="text-[11.5px] text-[var(--accent)] hover:underline underline-offset-2"
+            >
+              {showPrompt ? "Masquer les precisions" : "Ajouter des precisions pour l'IA"}
+            </button>
+            {showPrompt && (
+              <textarea
+                value={freePrompt}
+                onChange={(e) => setFreePrompt(e.target.value)}
+                rows={3}
+                placeholder={"Ex : Mettre l'accent sur le service client haut de gamme, mentionner que c'est un poste de creation, insister sur le bilinguisme FR/EN, equipe de 12 personnes..."}
+                className="mt-2 w-full bg-white border border-[var(--border)] rounded-xl px-3.5 py-2.5 text-[13px] outline-none placeholder:text-[var(--tertiary-foreground)] focus:border-[var(--accent)] transition-all leading-[1.55] resize-y"
+              />
+            )}
+          </div>
+
+          {aiError && (
+            <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-3 py-2 text-[12px] text-destructive">
+              {aiError}
+            </div>
+          )}
         </div>
 
         <FormRow label="Accroche editoriale" hint="2-3 lignes max — l'extrait visible sur le mur. Ex : « Rejoignez notre equipe pour construire des SaaS B2B innovants. Stack moderne, equipe senior. »">
@@ -393,7 +550,7 @@ export function PublishJobForm({ existing, onCancel }: Props) {
           />
         </FormRow>
 
-        <FormRow label="Description complete" hint="Decrivez le poste, les missions, le profil recherche et les avantages. Ex : « Dans le cadre de notre developpement, nous recherchons... »">
+        <FormRow label="Description complete" hint="Decrivez le poste, les missions, le profil recherche et les avantages.">
           <Textarea
             placeholder="Présentez le poste en détail…"
             value={description}
@@ -401,6 +558,38 @@ export function PublishJobForm({ existing, onCancel }: Props) {
             rows={8}
           />
         </FormRow>
+
+        <EditableList
+          label="Responsabilités"
+          hint="Missions principales du poste"
+          items={responsibilities}
+          onChange={setResponsibilities}
+          placeholder="Ex : Gérer un portefeuille de 40 clients UHNW"
+        />
+
+        <EditableList
+          label="Profil recherché"
+          hint="Compétences, expérience, qualités requises"
+          items={requirements}
+          onChange={setRequirements}
+          placeholder="Ex : 5 ans d'expérience en banque privée"
+        />
+
+        <EditableList
+          label="Avantages"
+          hint="Ce que vous offrez au candidat"
+          items={benefits}
+          onChange={setBenefits}
+          placeholder="Ex : Mutuelle premium, 13e mois"
+        />
+
+        <EditableList
+          label="Tags"
+          hint="Mots-clés pour la recherche (SEO)"
+          items={tags}
+          onChange={setTags}
+          placeholder="Ex : wealth management, UHNW"
+        />
 
         <div className="flex items-center justify-between pt-4 border-t border-[var(--border)] gap-3 flex-wrap">
           <div className="flex items-center gap-2 text-[12px] text-foreground/60">
@@ -520,5 +709,82 @@ function Select<T extends string>({
         </option>
       ))}
     </select>
+  );
+}
+
+function EditableList({
+  label,
+  hint,
+  items,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  hint: string;
+  items: string[];
+  onChange: (items: string[]) => void;
+  placeholder: string;
+}) {
+  const [input, setInput] = useState("");
+
+  const add = () => {
+    const v = input.trim();
+    if (!v) return;
+    onChange([...items, v]);
+    setInput("");
+  };
+
+  return (
+    <FormRow label={label} hint={hint}>
+      {items.length > 0 && (
+        <ul className="flex flex-col gap-1.5">
+          {items.map((item, i) => (
+            <li key={i} className="flex items-start gap-2 group">
+              <input
+                type="text"
+                value={item}
+                onChange={(e) => {
+                  const next = [...items];
+                  next[i] = e.target.value;
+                  onChange(next);
+                }}
+                className="flex-1 bg-white border border-[var(--border)] rounded-lg px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)] transition-colors"
+              />
+              <button
+                type="button"
+                onClick={() => onChange(items.filter((_, j) => j !== i))}
+                className="size-7 rounded-full hover:bg-destructive/10 flex items-center justify-center text-foreground/30 hover:text-destructive transition-colors shrink-0 mt-0.5"
+              >
+                <Xmark width={12} height={12} strokeWidth={2} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="flex items-center gap-2">
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              add();
+            }
+          }}
+          placeholder={placeholder}
+          className="flex-1 wall-input h-9 text-[13px] placeholder:text-[var(--tertiary-foreground)]"
+        />
+        <button
+          type="button"
+          onClick={add}
+          disabled={!input.trim()}
+          className="h-9 px-3 rounded-full border border-[var(--border)] bg-white text-[12px] text-foreground/75 hover:bg-[var(--background-alt)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+        >
+          <PlusCircle width={12} height={12} strokeWidth={2} />
+          Ajouter
+        </button>
+      </div>
+    </FormRow>
   );
 }
