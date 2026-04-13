@@ -17,6 +17,41 @@ import { useUser } from "@/lib/auth";
 import { useMyCompany, updateCompanySupabase } from "@/lib/supabase/use-my-company";
 import { resizeImage } from "@/lib/resize-image";
 
+const SECTORS = [
+  "Banque & Finance",
+  "Yachting",
+  "Hotellerie & Restauration",
+  "Luxe & Retail",
+  "Tech & Digital",
+  "Immobilier",
+  "Juridique",
+  "Sport & Bien-etre",
+  "Evenementiel",
+  "Famille / Office",
+  "Assurance",
+  "Audit & Conseil",
+  "BTP & Construction",
+  "Commerce & Distribution",
+  "Communication & Marketing",
+  "Comptabilite",
+  "Education & Formation",
+  "Industrie",
+  "Logistique & Transport",
+  "Medical & Sante",
+  "Ressources Humaines",
+  "Securite",
+  "Services a la personne",
+  "Autre",
+];
+
+const SIZES = [
+  "1-10",
+  "10-50",
+  "50-200",
+  "200-500",
+  "500+",
+];
+
 export function CompanyEditor() {
   const user = useUser();
   const { company, loading: companyLoading, refetch } = useMyCompany();
@@ -26,7 +61,14 @@ export function CompanyEditor() {
   const [logoError, setLogoError] = useState<string | null>(null);
   const [coverError, setCoverError] = useState<string | null>(null);
 
-  // Form state
+  // Form state — identity
+  const [companyName, setCompanyName] = useState("");
+  const [sector, setSector] = useState("");
+  const [size, setSize] = useState("");
+  const [location, setLocation] = useState("");
+  const [founded, setFounded] = useState("");
+
+  // Form state — content
   const [tagline, setTagline] = useState("");
   const [description, setDescription] = useState("");
   const [positioning, setPositioning] = useState("");
@@ -51,6 +93,11 @@ export function CompanyEditor() {
   const [prevCompanyId, setPrevCompanyId] = useState<string | null>(null);
   if (companyId !== null && companyId !== prevCompanyId) {
     setPrevCompanyId(companyId);
+    setCompanyName(company?.name ?? "");
+    setSector(company?.sector ?? "");
+    setSize(company?.size ?? "");
+    setLocation(company?.location ?? "");
+    setFounded(company?.founded ? String(company.founded) : "");
     setTagline(company?.tagline ?? "");
     setDescription(company?.description ?? "");
     setPositioning(company?.positioning ?? "");
@@ -139,12 +186,24 @@ export function CompanyEditor() {
     }
 
     await updateCompanySupabase(company.id, {
+      name: companyName || company.name,
+      sector: sector || null,
+      size: size || null,
+      location: location || "Monaco",
+      founded: founded ? parseInt(founded, 10) : null,
+      initials: (companyName || company.name)
+        .split(" ")
+        .map((w: string) => w[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 3),
       tagline: tagline || null,
       description: description || null,
       positioning: positioning || null,
       culture: culture || null,
       perks,
       website: website || null,
+      domain: website ? website.replace(/^https?:\/\//, "").replace(/\/.*$/, "") : null,
       logo_url: logoPreview || null,
       cover_url: coverPreview || null,
       has_cover: !!coverPreview,
@@ -187,7 +246,7 @@ export function CompanyEditor() {
             <div className="min-w-0">
               <p className="ed-label-sm">Ma fiche entreprise</p>
               <h1 className="font-display text-[24px] sm:text-[28px] tracking-[-0.015em] text-foreground mt-1">
-                {company.name}
+                {companyName || company.name}
               </h1>
               <p className="text-[13px] text-muted-foreground mt-1">
                 Les modifications sont visibles sur la fiche publique apres enregistrement.
@@ -210,6 +269,80 @@ export function CompanyEditor() {
         className="grid grid-cols-1 lg:grid-cols-3 gap-3 items-start"
       >
         <div className="lg:col-span-2 flex flex-col gap-3">
+
+          {/* Identite */}
+          <Card title="Identite de l'entreprise">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormRow label="Nom de l'entreprise">
+                <input
+                  type="text"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  placeholder="Ex. Monte-Carlo SBM"
+                  className="wall-input flex-1 text-[13.5px] placeholder:text-[var(--tertiary-foreground)]"
+                />
+              </FormRow>
+              <FormRow label="Secteur">
+                <select
+                  value={sector}
+                  onChange={(e) => setSector(e.target.value)}
+                  className="wall-select h-[38px] w-full"
+                >
+                  <option value="">Choisir un secteur</option>
+                  {SECTORS.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </FormRow>
+              <FormRow label="Taille de l'entreprise">
+                <select
+                  value={size}
+                  onChange={(e) => setSize(e.target.value)}
+                  className="wall-select h-[38px] w-full"
+                >
+                  <option value="">Non renseignee</option>
+                  {SIZES.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </FormRow>
+              <FormRow label="Localisation">
+                <input
+                  type="text"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="Monaco"
+                  className="wall-input flex-1 text-[13.5px] placeholder:text-[var(--tertiary-foreground)]"
+                />
+              </FormRow>
+              <FormRow label="Annee de fondation" hint="optionnel">
+                <input
+                  type="number"
+                  value={founded}
+                  onChange={(e) => setFounded(e.target.value)}
+                  placeholder="Ex. 1863"
+                  className="wall-input flex-1 text-[13.5px] placeholder:text-[var(--tertiary-foreground)]"
+                />
+              </FormRow>
+              <FormRow label="Site web">
+                <div className="wall-input flex-1">
+                  <Globe
+                    width={14}
+                    height={14}
+                    strokeWidth={2}
+                    className="text-[var(--tertiary-foreground)] shrink-0"
+                  />
+                  <input
+                    type="text"
+                    value={website}
+                    onChange={(e) => setWebsite(e.target.value)}
+                    placeholder="montecarlosbm.com"
+                    className="flex-1 bg-transparent outline-none text-[13.5px] placeholder:text-[var(--tertiary-foreground)]"
+                  />
+                </div>
+              </FormRow>
+            </div>
+          </Card>
 
           {/* Logo */}
           <Card title="Logo de l'entreprise">
@@ -338,8 +471,8 @@ export function CompanyEditor() {
           </Card>
 
           {/* Infos principales */}
-          <Card title="Informations">
-            <FormRow label="Tagline" hint="Phrase d'accroche courte, visible en haut de la fiche">
+          <Card title="Accroche">
+            <FormRow label="Tagline" hint="Phrase d'accroche courte, affichee en overlay sur la couverture">
               <input
                 type="text"
                 value={tagline}
@@ -347,23 +480,6 @@ export function CompanyEditor() {
                 placeholder="Ex. Le groupe historique qui fait vivre Monte-Carlo"
                 className="wall-input flex-1 text-[13.5px] placeholder:text-[var(--tertiary-foreground)]"
               />
-            </FormRow>
-            <FormRow label="Site web">
-              <div className="wall-input flex-1">
-                <Globe
-                  width={14}
-                  height={14}
-                  strokeWidth={2}
-                  className="text-[var(--tertiary-foreground)] shrink-0"
-                />
-                <input
-                  type="text"
-                  value={website}
-                  onChange={(e) => setWebsite(e.target.value)}
-                  placeholder="montecarlosbm.com"
-                  className="flex-1 bg-transparent outline-none text-[13.5px] placeholder:text-[var(--tertiary-foreground)]"
-                />
-              </div>
             </FormRow>
           </Card>
 
@@ -579,24 +695,42 @@ export function CompanyEditor() {
 
           {/* Info box */}
           <div className="bg-white border border-[var(--border)] rounded-2xl p-5">
-            <p className="ed-label-sm mb-2">A propos</p>
+            <p className="ed-label-sm mb-2">Apercu</p>
             <dl className="flex flex-col gap-2 text-[12.5px]">
               <div className="flex justify-between">
                 <dt className="text-foreground/55">Nom</dt>
-                <dd className="text-foreground">{company.name}</dd>
+                <dd className="text-foreground">{companyName || company.name}</dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-foreground/55">Secteur</dt>
-                <dd className="text-foreground">{company.sector}</dd>
+                <dd className="text-foreground">{sector || "Non renseigne"}</dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-foreground/55">Taille</dt>
-                <dd className="text-foreground">{company.size || "Non renseignee"}</dd>
+                <dd className="text-foreground">{size || "Non renseignee"}</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-foreground/55">Localisation</dt>
-                <dd className="text-foreground">{company.location}</dd>
+                <dt className="text-foreground/55">Lieu</dt>
+                <dd className="text-foreground">{location || "Monaco"}</dd>
               </div>
+              {founded && (
+                <div className="flex justify-between">
+                  <dt className="text-foreground/55">Fondee</dt>
+                  <dd className="text-foreground">{founded}</dd>
+                </div>
+              )}
+              {photos.length > 0 && (
+                <div className="flex justify-between">
+                  <dt className="text-foreground/55">Photos</dt>
+                  <dd className="text-foreground">{photos.length}</dd>
+                </div>
+              )}
+              {videos.length > 0 && (
+                <div className="flex justify-between">
+                  <dt className="text-foreground/55">Videos</dt>
+                  <dd className="text-foreground">{videos.length}</dd>
+                </div>
+              )}
             </dl>
           </div>
         </aside>
