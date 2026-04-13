@@ -33,6 +33,11 @@ export function EmployerShell({ children }: Props) {
     }
   }, [user, loading, router]);
 
+  // Isoler le store par compte : reset si les donnees appartiennent a un autre user
+  useEffect(() => {
+    if (user) ensureOwnership(user.id);
+  }, [user]);
+
   // Pendant le sync Supabase
   if (loading) {
     return (
@@ -68,9 +73,6 @@ export function EmployerShell({ children }: Props) {
       </Shell>
     );
   }
-
-  // Isoler le store par compte : reset si les donnees appartiennent a un autre user
-  ensureOwnership(user.id);
 
   // Employer connecte mais pas encore d'entreprise → onboarding
   if (!user.companyId && pathname !== "/recruteur/onboarding") {

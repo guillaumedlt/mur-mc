@@ -120,31 +120,30 @@ export function OnboardingWizard() {
       .select("id, name")
       .single();
 
-    if (insertError) {
+    if (insertError || !newCompany) {
       window.console.error("Company insert error:", insertError);
+      return;
     }
 
-    if (newCompany) {
-      // Lier le recruteur a l'entreprise
-      const { error: linkError } = await supabase
-        .from("profiles")
-        .update({ company_id: newCompany.id, team_role: "admin" })
-        .eq("id", user.id);
+    // Lier le recruteur a l'entreprise
+    const { error: linkError } = await supabase
+      .from("profiles")
+      .update({ company_id: newCompany.id, team_role: "admin" })
+      .eq("id", user.id);
 
-      if (linkError) {
-        window.console.error("Profile link error:", linkError);
-      }
-
-      // Mettre a jour le store local avec le company_id
-      localSignIn({
-        ...user,
-        companyId: newCompany.id,
-        companyName: newCompany.name,
-      });
+    if (linkError) {
+      window.console.error("Profile link error:", linkError);
     }
+
+    // Mettre a jour le store local avec le company_id
+    localSignIn({
+      ...user,
+      companyId: newCompany.id,
+      companyName: newCompany.name,
+    });
 
     updateCompanyProfile({
-      companyId: newCompany?.id ?? "new",
+      companyId: newCompany.id,
       website: website || undefined,
     });
     completeOnboardingStep("company_created");

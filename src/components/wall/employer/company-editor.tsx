@@ -40,9 +40,10 @@ export function CompanyEditor() {
   const [website, setWebsite] = useState("");
 
   // Resync when company loads from Supabase
+  const companyId = company?.id ?? null;
   const [prevCompanyId, setPrevCompanyId] = useState<string | null>(null);
-  if (company?.id !== prevCompanyId) {
-    setPrevCompanyId(company?.id ?? null);
+  if (companyId !== null && companyId !== prevCompanyId) {
+    setPrevCompanyId(companyId);
     setTagline(company?.tagline ?? "");
     setDescription(company?.description ?? "");
     setPositioning(company?.positioning ?? "");
