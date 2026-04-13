@@ -10,30 +10,40 @@ import {
   Calendar,
   Eye,
   Mail,
-  PageStar,
   SendMail,
   Trash,
   UserCircle,
-  Xmark,
 } from "iconoir-react";
 import { useUser } from "@/lib/auth";
 import {
-  type ApplicationEvent,
-  type ApplicationEventType,
-  eventLabel,
+  type ApplicationStatus,
   statusLabel,
   statusTone,
-  useCandidate,
-  withdrawApplication,
 } from "@/lib/candidate-store";
+import {
+  useCandidateApplications,
+  withdrawApplicationSupabase,
+} from "@/lib/supabase/use-candidate-applications";
 import { CompanyLogo } from "./company-logo";
+
+function mapStatus(s: string): ApplicationStatus {
+  switch (s) {
+    case "received": return "sent";
+    case "reviewed": return "viewed";
+    case "interview": return "interview";
+    case "offer":
+    case "hired": return "accepted";
+    case "rejected": return "rejected";
+    default: return "sent";
+  }
+}
 
 type Props = { id: string };
 
 export function ApplicationDetail({ id }: Props) {
   const user = useUser();
   const router = useRouter();
-  const { applications } = useCandidate();
+  const { applications, loading, refetch } = useCandidateApplications();
   const app = applications.find((a) => a.id === id);
 
   useEffect(() => {
@@ -47,8 +57,16 @@ export function ApplicationDetail({ id }: Props) {
     return (
       <div className="max-w-[900px] mx-auto bg-white border border-[var(--border)] rounded-2xl p-12 text-center">
         <p className="font-display italic text-[18px] text-foreground">
-          Connecte-toi côté candidat pour voir cette candidature.
+          Connecte-toi cote candidat pour voir cette candidature.
         </p>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="max-w-[900px] mx-auto bg-white border border-[var(--border)] rounded-2xl p-12 flex items-center justify-center">
+        <span className="size-5 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin" />
       </div>
     );
   }
@@ -69,9 +87,9 @@ export function ApplicationDetail({ id }: Props) {
     );
   }
 
-  // Tri chronologique inverse pour le timeline (le plus récent en haut)
+  const displayStatus = mapStatus(app.status);
   const events = [...app.events].sort((a, b) =>
-    b.at.localeCompare(a.at),
+    b.createdAt.localeCompare(a.createdAt),
   );
 
   return (
@@ -90,7 +108,8 @@ export function ApplicationDetail({ id }: Props) {
           <CompanyLogo
             name={app.companyName}
             domain={app.companyDomain}
-            color={app.companyColor}
+            logoUrl={app.companyLogoUrl}
+            color={app.companyLogoColor}
             initials={app.companyInitials}
             size={60}
             radius={16}
@@ -107,14 +126,8 @@ export function ApplicationDetail({ id }: Props) {
               {app.jobTitle}
             </h1>
             <div className="flex flex-wrap items-center gap-2 mt-3">
-              <span className="wall-badge" data-tone={statusTone(app.status)}>
-                {statusLabel(app.status)}
-              </span>
-              <span className="wall-badge" data-tone="muted">
-                {app.jobType}
-              </span>
-              <span className="wall-badge" data-tone="muted">
-                {app.jobLocation}
+              <span className="wall-badge" data-tone={statusTone(displayStatus)}>
+                {statusLabel(displayStatus)}
               </span>
             </div>
           </div>
@@ -137,16 +150,47 @@ export function ApplicationDetail({ id }: Props) {
             Suivi de la candidature
           </h2>
 
-          <Timeline events={events} />
-
-          {/* Note */}
-          {app.note && (
-            <div className="mt-8 pt-6 border-t border-[var(--border)]">
-              <p className="ed-label-sm mb-2">Note</p>
-              <p className="text-[13.5px] text-foreground/85 italic font-display">
-                « {app.note} »
-              </p>
-            </div>
+          {events.length === 0 ? (
+            <p className="text-[13px] text-muted-foreground italic">
+              Aucun evenement pour l&apos;instant.
+            </p>
+          ) : (
+            <ol className="relative">
+              <span
+                className="absolute left-[15px] top-2 bottom-2 w-px bg-[var(--border)]"
+                aria-hidden
+              />
+              {events.map((evt) => (
+                <li key={evt.id} className="relative pl-11 pb-6 last:pb-0">
+                  <span className="absolute left-0 top-0.5 size-8 rounded-full bg-white border border-[var(--border)] flex items-center justify-center">
+                    <EventIcon type={evt.type} />
+                  </span>
+                  <div>
+                    <div className="flex items-baseline gap-2 flex-wrap">
+                      <h3 className="text-[14px] font-medium text-foreground">
+                        {eventTypeLabel(evt.type)}
+                      </h3>
+                      <time
+                        className="text-[11.5px] font-mono text-[var(--tertiary-foreground)]"
+                        dateTime={evt.createdAt}
+                      >
+                        {formatRelative(evt.createdAt)}
+                      </time>
+                    </div>
+                    {evt.by && (
+                      <p className="text-[12px] text-muted-foreground mt-0.5">
+                        {evt.by}
+                      </p>
+                    )}
+                    {evt.text && (
+                      <p className="text-[13px] mt-2 leading-[1.6] text-foreground/75">
+                        {evt.text}
+                      </p>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ol>
           )}
 
           {/* Cover letter */}
@@ -163,21 +207,11 @@ export function ApplicationDetail({ id }: Props) {
         {/* Sidebar */}
         <aside className="lg:sticky lg:top-[80px] flex flex-col gap-3">
           <div className="bg-white border border-[var(--border)] rounded-2xl p-5">
-            <p className="ed-label-sm mb-3">Détails</p>
+            <p className="ed-label-sm mb-3">Details</p>
             <dl className="flex flex-col gap-2 text-[13px]">
-              <Row
-                label="Postulé"
-                value={formatDate(app.appliedAt)}
-              />
-              <Row
-                label="Mis à jour"
-                value={formatRelative(app.updatedAt)}
-              />
-              <Row
-                label="Statut"
-                value={statusLabel(app.status)}
-              />
-              <Row label="Réf" value={app.id.slice(0, 12).toUpperCase()} />
+              <Row label="Postule" value={formatDate(app.appliedAt)} />
+              <Row label="Statut" value={statusLabel(displayStatus)} />
+              <Row label="Ref" value={app.id.slice(0, 12).toUpperCase()} />
             </dl>
           </div>
 
@@ -193,12 +227,10 @@ export function ApplicationDetail({ id }: Props) {
               </Link>
               <button
                 type="button"
-                onClick={() => {
-                  if (
-                    typeof window !== "undefined" &&
-                    window.confirm("Retirer cette candidature ?")
-                  ) {
-                    withdrawApplication(app.id);
+                onClick={async () => {
+                  if (window.confirm("Retirer cette candidature ?")) {
+                    await withdrawApplicationSupabase(app.id);
+                    refetch();
                     router.push("/candidat/candidatures");
                   }
                 }}
@@ -215,108 +247,52 @@ export function ApplicationDetail({ id }: Props) {
   );
 }
 
-/* ─────────────── Timeline UI ─────────────── */
+/* ─── Helpers ─── */
 
-function Timeline({ events }: { events: ApplicationEvent[] }) {
-  return (
-    <ol className="relative">
-      {/* Ligne verticale */}
-      <span
-        className="absolute left-[15px] top-2 bottom-2 w-px bg-[var(--border)]"
-        aria-hidden
-      />
-      {events.map((evt, i) => (
-        <li key={evt.id} className="relative pl-11 pb-6 last:pb-0">
-          <span className="absolute left-0 top-0.5 size-8 rounded-full bg-white border border-[var(--border)] flex items-center justify-center">
-            <EventIcon type={evt.type} />
-          </span>
-          <div>
-            <div className="flex items-baseline gap-2 flex-wrap">
-              <h3 className="text-[14px] font-medium text-foreground">
-                {eventLabel(evt.type)}
-              </h3>
-              <time
-                className="text-[11.5px] font-mono text-[var(--tertiary-foreground)]"
-                dateTime={evt.at}
-              >
-                {formatRelative(evt.at)}
-              </time>
-            </div>
-            {evt.by && (
-              <p className="text-[12px] text-muted-foreground mt-0.5">
-                {evt.by}
-              </p>
-            )}
-            {evt.text && (
-              <p
-                className={`text-[13px] mt-2 leading-[1.6] ${
-                  evt.type === "message"
-                    ? "rounded-xl bg-[var(--background-alt)] border border-[var(--border)] px-3.5 py-2.5 text-foreground/85 font-display italic"
-                    : "text-foreground/75"
-                }`}
-              >
-                {evt.type === "message" ? `« ${evt.text} »` : evt.text}
-              </p>
-            )}
-          </div>
-          {i === 0 && events.length > 1 && (
-            <span className="absolute -right-1 top-1.5 size-2 rounded-full bg-[var(--accent)] animate-pulse" />
-          )}
-        </li>
-      ))}
-    </ol>
-  );
-}
-
-function EventIcon({ type }: { type: ApplicationEventType }) {
-  const cls = "text-foreground/65";
+function EventIcon({ type }: { type: string }) {
+  const cls = "text-foreground/50";
   switch (type) {
-    case "applied":
-      return (
-        <SendMail width={13} height={13} strokeWidth={2} className={cls} />
-      );
+    case "received":
+      return <SendMail width={13} height={13} strokeWidth={2} className={cls} />;
     case "cv_viewed":
-      return (
-        <PageStar width={13} height={13} strokeWidth={2} className={cls} />
-      );
-    case "profile_viewed":
-      return (
-        <UserCircle width={13} height={13} strokeWidth={2} className={cls} />
-      );
-    case "message":
+      return <Eye width={13} height={13} strokeWidth={2} className={cls} />;
+    case "status_changed":
+      return <BadgeCheck width={13} height={13} strokeWidth={2} className={cls} />;
+    case "message_sent":
       return <Mail width={13} height={13} strokeWidth={2} className={cls} />;
     case "interview_scheduled":
-      return (
-        <Calendar width={13} height={13} strokeWidth={2} className={cls} />
-      );
-    case "accepted":
-      return (
-        <BadgeCheck
-          width={13}
-          height={13}
-          strokeWidth={2}
-          className="text-[oklch(0.42_0.13_145)]"
-        />
-      );
+      return <Calendar width={13} height={13} strokeWidth={2} className={cls} />;
+    case "offer_sent":
+      return <BadgeCheck width={13} height={13} strokeWidth={2} className="text-[var(--accent)]" />;
+    case "hired":
+      return <BadgeCheck width={13} height={13} strokeWidth={2} className="text-[var(--accent)]" />;
     case "rejected":
-      return (
-        <Xmark
-          width={13}
-          height={13}
-          strokeWidth={2.4}
-          className="text-destructive"
-        />
-      );
-    case "note":
-      return <Eye width={13} height={13} strokeWidth={2} className={cls} />;
+      return <Trash width={13} height={13} strokeWidth={2} className="text-destructive" />;
+    default:
+      return <UserCircle width={13} height={13} strokeWidth={2} className={cls} />;
   }
 }
 
-function Row({ label, value }: { label: string; value: React.ReactNode }) {
+function eventTypeLabel(type: string): string {
+  switch (type) {
+    case "received": return "Candidature recue";
+    case "cv_viewed": return "CV consulte";
+    case "status_changed": return "Statut modifie";
+    case "message_sent": return "Message du recruteur";
+    case "note_added": return "Note ajoutee";
+    case "interview_scheduled": return "Entretien planifie";
+    case "offer_sent": return "Offre envoyee";
+    case "hired": return "Embauche";
+    case "rejected": return "Refusee";
+    default: return type;
+  }
+}
+
+function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
       <dt className="text-foreground/55">{label}</dt>
-      <dd className="text-foreground text-right truncate">{value}</dd>
+      <dd className="text-foreground text-right">{value}</dd>
     </div>
   );
 }
@@ -324,19 +300,17 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("fr-FR", {
     day: "numeric",
-    month: "short",
+    month: "long",
     year: "numeric",
   });
 }
 
 function formatRelative(iso: string): string {
   const d = new Date(iso);
-  const diffDays = Math.round(
-    (Date.now() - d.getTime()) / (1000 * 60 * 60 * 24),
-  );
-  if (diffDays <= 0) return "aujourd'hui";
-  if (diffDays === 1) return "hier";
-  if (diffDays < 7) return `il y a ${diffDays} j`;
-  if (diffDays < 30) return `il y a ${Math.round(diffDays / 7)} sem`;
-  return `il y a ${Math.round(diffDays / 30)} mois`;
+  const diff = Math.round((Date.now() - d.getTime()) / (1000 * 60 * 60 * 24));
+  if (diff <= 0) return "aujourd'hui";
+  if (diff === 1) return "hier";
+  if (diff < 7) return `il y a ${diff}j`;
+  if (diff < 30) return `il y a ${Math.round(diff / 7)} sem.`;
+  return formatDate(iso);
 }
