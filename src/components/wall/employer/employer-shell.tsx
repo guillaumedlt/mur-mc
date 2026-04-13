@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Sparks } from "iconoir-react";
 import { allJobs } from "@/lib/data";
 import { useAuthLoading, useUser } from "@/lib/auth";
+import { ensureOwnership } from "@/lib/employer-store";
 import { Shell } from "../shell";
 import { EmployerTabs } from "./employer-tabs";
 
@@ -67,6 +68,9 @@ export function EmployerShell({ children }: Props) {
       </Shell>
     );
   }
+
+  // Isoler le store par compte : reset si les donnees appartiennent a un autre user
+  ensureOwnership(user.id);
 
   // Employer connecte mais pas encore d'entreprise → onboarding
   if (!user.companyId && pathname !== "/recruteur/onboarding") {

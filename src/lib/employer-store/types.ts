@@ -181,6 +181,8 @@ export type EmployerCompanyProfile = {
 };
 
 export type EmployerState = {
+  /** Identifiant du compte recruteur proprietaire de ces donnees. */
+  ownerId?: string;
   jobs: EmployerJob[];
   candidates: EmployerCandidate[];
   applications: EmployerApplication[];

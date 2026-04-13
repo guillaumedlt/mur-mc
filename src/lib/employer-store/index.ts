@@ -25,8 +25,8 @@ export type {
   EmployerState,
 } from "./types";
 
-// Core (hook + reset)
-export { useEmployer, resetEmployer } from "./core";
+// Core (hook + reset + ownership)
+export { useEmployer, resetEmployer, ensureOwnership, setOwnerId } from "./core";
 
 // Jobs CRUD
 export { createJob, updateJob, deleteJob, setJobStatus, getEmployerJob } from "./jobs";

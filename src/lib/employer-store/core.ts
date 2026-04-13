@@ -143,3 +143,32 @@ export function resetEmployer(): void {
   }
   emit();
 }
+
+/**
+ * Verifie que le store appartient bien au user connecte.
+ * Si le ownerId ne match pas, reset le store pour eviter de voir
+ * les donnees d'un autre compte (ex: donnees demo vs vrai compte).
+ */
+export function ensureOwnership(userId: string): void {
+  ensureLoaded();
+  if (cached.ownerId && cached.ownerId !== userId) {
+    // Donnees d'un autre compte → reset
+    cached = { ...EMPTY, ownerId: userId };
+    loaded = true;
+    persist();
+    emit();
+  } else if (!cached.ownerId && cached.jobs.length === 0 && cached.applications.length === 0) {
+    // Store vide, stamp le owner
+    cached = { ...cached, ownerId: userId };
+    persist();
+  }
+}
+
+/**
+ * Stamp le ownerId sur le store courant (appele apres un seed ou login).
+ */
+export function setOwnerId(userId: string): void {
+  ensureLoaded();
+  cached = { ...cached, ownerId: userId };
+  persist();
+}
