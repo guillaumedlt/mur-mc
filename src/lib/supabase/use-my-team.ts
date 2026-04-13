@@ -171,12 +171,16 @@ export async function inviteTeamMember(
   }
 
   // Create a pending invitation
-  const { error } = await supabase.from("team_invitations").insert({
-    company_id: companyId,
-    email,
-    team_role: teamRole,
-    invited_by: invitedBy,
-  });
+  const { data: inv, error } = await supabase
+    .from("team_invitations")
+    .insert({
+      company_id: companyId,
+      email,
+      team_role: teamRole,
+      invited_by: invitedBy,
+    })
+    .select("token")
+    .single();
 
   if (error) {
     return { ok: false, error: error.message };
@@ -192,9 +196,10 @@ export async function inviteTeamMember(
       companyName: opts?.companyName ?? "",
       role: roleLabel,
       inviterName: opts?.inviterName ?? "",
+      token: inv?.token ?? "",
     }),
   }).catch(() => {
-    // Fire and forget — the invitation is saved, email is best-effort
+    // Fire and forget
   });
 
   return { ok: true, linked: false };
