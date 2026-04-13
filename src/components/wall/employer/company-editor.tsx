@@ -10,6 +10,7 @@ import {
   Page,
   PlaySolid,
   PlusCircle,
+  Sparks,
   Trash,
   Xmark,
 } from "iconoir-react";
@@ -83,6 +84,12 @@ export function CompanyEditor() {
   // Video URLs (YouTube/Vimeo embeds)
   const [videos, setVideos] = useState<string[]>([]);
   const [videoInput, setVideoInput] = useState("");
+
+  // AI generation
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [showAiPrompt, setShowAiPrompt] = useState(false);
 
   // Logo & cover as data URLs (local preview before save)
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -171,6 +178,42 @@ export function CompanyEditor() {
     if (!url) return;
     setVideos((prev) => [...prev, url]);
     setVideoInput("");
+  };
+
+  const generateWithAi = async () => {
+    if (!companyName.trim()) return;
+    setAiGenerating(true);
+    setAiError(null);
+    try {
+      const res = await fetch("/api/ai/scan-company", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          companyName: companyName.trim(),
+          domain: website.trim() || undefined,
+          sector: sector || undefined,
+          size: size || undefined,
+          location: location || "Monaco",
+          freePrompt: aiPrompt.trim() || undefined,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Erreur serveur" }));
+        throw new Error(err.error || "Erreur de generation");
+      }
+      const data = await res.json();
+      if (data.tagline) setTagline(data.tagline);
+      if (data.description) setDescription(data.description);
+      if (data.positioning) setPositioning(data.positioning);
+      if (data.culture) setCulture(data.culture);
+      if (data.sector) setSector(data.sector);
+      if (data.size) setSize(data.size);
+      if (Array.isArray(data.perks) && data.perks.length > 0) setPerks(data.perks);
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : "Erreur lors de la generation");
+    } finally {
+      setAiGenerating(false);
+    }
   };
 
   const onSave = async (e: React.FormEvent) => {
@@ -343,6 +386,61 @@ export function CompanyEditor() {
               </FormRow>
             </div>
           </Card>
+
+          {/* AI Generate */}
+          <div className="rounded-xl border border-[var(--accent)]/20 bg-[var(--accent)]/[0.04] p-4 flex flex-col gap-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-2.5">
+                <span className="size-9 rounded-xl bg-[var(--accent)]/15 text-[var(--accent)] flex items-center justify-center shrink-0 mt-0.5">
+                  <Sparks width={16} height={16} strokeWidth={2} />
+                </span>
+                <div>
+                  <div className="text-[13px] font-medium text-foreground">
+                    Rediger la fiche avec l&apos;IA
+                  </div>
+                  <div className="text-[11.5px] text-muted-foreground leading-snug mt-0.5">
+                    Genere automatiquement la tagline, description, positionnement, culture et avantages a partir du nom et du site web.
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={!companyName.trim() || aiGenerating}
+                onClick={generateWithAi}
+                className="h-9 px-4 rounded-full bg-[var(--accent)] text-background text-[12.5px] font-medium hover:bg-[var(--accent)]/85 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5 shrink-0"
+              >
+                {aiGenerating ? (
+                  <span className="size-3.5 border-2 border-background/30 border-t-background rounded-full animate-spin" />
+                ) : (
+                  <Sparks width={12} height={12} strokeWidth={2} />
+                )}
+                {aiGenerating ? "Generation..." : "Generer"}
+              </button>
+            </div>
+            <div>
+              <button
+                type="button"
+                onClick={() => setShowAiPrompt(!showAiPrompt)}
+                className="text-[11.5px] text-[var(--accent)] hover:underline underline-offset-2"
+              >
+                {showAiPrompt ? "Masquer les precisions" : "Ajouter des precisions pour l'IA"}
+              </button>
+              {showAiPrompt && (
+                <textarea
+                  value={aiPrompt}
+                  onChange={(e) => setAiPrompt(e.target.value)}
+                  rows={3}
+                  placeholder={"Ex : Nous sommes specialises dans la gestion de fortune pour familles UHNW, ambiance startup mais dans le luxe, equipe jeune et internationale..."}
+                  className="mt-2 w-full bg-white border border-[var(--border)] rounded-xl px-3.5 py-2.5 text-[13px] outline-none placeholder:text-[var(--tertiary-foreground)] focus:border-[var(--accent)] transition-all leading-[1.55] resize-y"
+                />
+              )}
+            </div>
+            {aiError && (
+              <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-3 py-2 text-[12px] text-destructive">
+                {aiError}
+              </div>
+            )}
+          </div>
 
           {/* Logo */}
           <Card title="Logo de l'entreprise">

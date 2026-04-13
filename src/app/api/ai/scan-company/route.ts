@@ -2,15 +2,16 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
 /**
- * API Route : scanne un domaine d'entreprise et genere une description via Claude.
+ * API Route : genere le contenu complet d'une fiche entreprise via Claude.
  * POST /api/ai/scan-company
- * Body: { domain }
+ * Body: { domain?, companyName?, sector?, size?, location?, freePrompt? }
  * Protegee : requiert un user Supabase authentifie.
  */
 export async function POST(request: Request) {
-  // Auth check
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Non authentifie" }, { status: 401 });
   }
@@ -24,21 +25,51 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { domain } = body;
+  const { domain, companyName, sector, size, location, freePrompt } = body;
 
-  if (!domain) {
-    return NextResponse.json({ error: "domain required" }, { status: 400 });
-  }
+  const companyHint = companyName ? `Nom : ${companyName}` : "";
+  const domainHint = domain ? `Site web : ${domain}` : "";
+  const sectorHint = sector ? `Secteur : ${sector}` : "";
+  const sizeHint = size ? `Taille : ${size} collaborateurs` : "";
+  const locationHint = location ? `Localisation : ${location}` : "";
+  const freeHint = freePrompt?.trim()
+    ? `\nInstructions supplementaires du recruteur :\n"${freePrompt.trim()}"`
+    : "";
 
-  const systemPrompt = `Tu es un assistant pour un job board a Monaco (Mur.mc).
-On te donne un nom de domaine d'entreprise. A partir de ce domaine, genere :
-1. Une description d'entreprise (150 mots max, en francais, ton professionnel mais pas corporate)
-2. Un positionnement marche (100 mots max)
-3. Le secteur principal (parmi : Banque & Finance, Yachting, Hotellerie & Restauration, Luxe & Retail, Tech & Digital, Immobilier, Juridique, Sport & Bien-etre, Evenementiel, Autre)
-4. La taille estimee (1-10, 10-50, 50-200, 200-500, 500+)
+  const systemPrompt = `Tu es un expert en marque employeur pour un job board premium a Monaco (Mur.mc).
+Tu rediges des fiches entreprise inspirantes, dans le style de Welcome to the Jungle : authentiques, vivantes, pas corporate.
 
-Reponds UNIQUEMENT en JSON valide avec les cles : description, positioning, sector, size
+A partir des informations fournies sur l'entreprise, genere une fiche complete et attractive.
+Tu connais bien le marche monegasque : banques privees, palaces, yachting, luxe, family offices, tech, immobilier.
+
+IMPORTANT :
+- La tagline doit etre une phrase d'accroche courte et percutante (max 10 mots)
+- La description doit etre engageante, raconter l'histoire et la mission (200 mots max, pas de bullet points)
+- Le positionnement marche doit expliquer ce qui differencie l'entreprise (100 mots max)
+- La culture doit decrire l'ambiance, les valeurs, le quotidien des equipes (150 mots max)
+- Les avantages doivent etre realistes pour Monaco (6-8 items concrets)
+- Le secteur doit etre un des choix disponibles
+- Si le site web est fourni, essaie de deviner des informations credibles sur l'entreprise
+
+Reponds UNIQUEMENT en JSON valide avec cette structure exacte :
+{
+  "tagline": "string (max 10 mots)",
+  "description": "string (200 mots max, ton narratif)",
+  "positioning": "string (100 mots max)",
+  "culture": "string (150 mots max)",
+  "sector": "string (parmi : Banque & Finance, Yachting, Hotellerie & Restauration, Luxe & Retail, Tech & Digital, Immobilier, Juridique, Sport & Bien-etre, Evenementiel, Famille / Office, Assurance, Audit & Conseil, BTP & Construction, Commerce & Distribution, Communication & Marketing, Comptabilite, Education & Formation, Industrie, Logistique & Transport, Medical & Sante, Ressources Humaines, Securite, Services a la personne, Autre)",
+  "size": "string (parmi : 1-10, 10-50, 50-200, 200-500, 500+)",
+  "perks": ["string", "string", ...] (6-8 items)
+}
+
 Pas de markdown, pas de texte avant ou apres le JSON.`;
+
+  const userPrompt = `Genere la fiche entreprise pour :
+${companyHint}
+${domainHint}
+${sectorHint}
+${sizeHint}
+${locationHint}${freeHint}`.trim();
 
   try {
     const response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -50,14 +81,9 @@ Pas de markdown, pas de texte avant ou apres le JSON.`;
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
-        max_tokens: 800,
+        max_tokens: 1500,
         system: systemPrompt,
-        messages: [
-          {
-            role: "user",
-            content: `Domaine de l'entreprise : ${domain}`,
-          },
-        ],
+        messages: [{ role: "user", content: userPrompt }],
       }),
     });
 
@@ -72,17 +98,26 @@ Pas de markdown, pas de texte avant ou apres le JSON.`;
     const data = await response.json();
     const rawText = data.content?.[0]?.text ?? "{}";
 
-    // Parse le JSON de la reponse
     try {
       const parsed = JSON.parse(rawText);
       return NextResponse.json(parsed);
     } catch {
-      // Si le parse echoue, retourner le texte brut comme description
+      const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try {
+          return NextResponse.json(JSON.parse(jsonMatch[0]));
+        } catch {
+          // fall through
+        }
+      }
       return NextResponse.json({
         description: rawText,
         positioning: "",
-        sector: "Autre",
-        size: "10-50",
+        culture: "",
+        tagline: "",
+        sector: sector || "Autre",
+        size: size || "10-50",
+        perks: [],
       });
     }
   } catch (err) {
