@@ -253,7 +253,7 @@ export default async function StoryPage(props: PageProps<"/stories/[slug]">) {
                     className="my-10 border-l-[3px] border-[var(--accent)] pl-6"
                   >
                     <p className="font-display italic text-[22px] leading-[1.35] text-foreground tracking-[-0.005em]">
-                      « {block.text} »
+                      {block.text}
                     </p>
                     {block.author && (
                       <footer className="mt-3 text-[12.5px] text-muted-foreground">
@@ -263,10 +263,78 @@ export default async function StoryPage(props: PageProps<"/stories/[slug]">) {
                   </blockquote>
                 );
               }
+              if (block.type === "table" && "headers" in block) {
+                return (
+                  <div key={i} className="my-8 overflow-x-auto rounded-xl border border-[var(--border)]">
+                    <table className="w-full text-[13.5px]">
+                      <thead>
+                        <tr className="bg-[var(--background-alt)]">
+                          {block.headers.map((h, hi) => (
+                            <th key={hi} className="text-left py-3 px-4 font-semibold text-foreground/70 border-b border-[var(--border)] whitespace-nowrap">
+                              {h}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {block.rows.map((row, ri) => (
+                          <tr key={ri} className="border-b border-[var(--border)] last:border-b-0 hover:bg-[var(--background-alt)]/40">
+                            {row.map((cell, ci) => (
+                              <td key={ci} className={`py-2.5 px-4 ${ci === 0 ? "font-medium text-foreground" : "text-foreground/80"}`}>
+                                {cell}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              }
+              if (block.type === "stats" && "items" in block) {
+                return (
+                  <div key={i} className="my-8 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {block.items.map((s, si) => (
+                      <div key={si} className="rounded-xl bg-[var(--background-alt)] border border-[var(--border)] p-4 text-center">
+                        <div className="font-display text-[28px] sm:text-[32px] tracking-[-0.02em] text-foreground">
+                          {s.value}
+                        </div>
+                        <div className="text-[11.5px] text-muted-foreground mt-1">
+                          {s.label}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              }
+              if (block.type === "list" && "items" in block) {
+                return (
+                  <ul key={i} className="my-6 flex flex-col gap-2.5">
+                    {block.items.map((item, li) => (
+                      <li key={li} className="flex items-start gap-2.5 text-[15px] text-foreground/88 leading-[1.65]">
+                        <span className="mt-[7px] size-1.5 rounded-full bg-[var(--accent)] shrink-0" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                );
+              }
+              if (block.type === "callout" && "text" in block && !("author" in block)) {
+                const tone = ("tone" in block ? block.tone : "info") ?? "info";
+                const bg = tone === "warning" ? "bg-amber-50 border-amber-200" : tone === "tip" ? "bg-emerald-50 border-emerald-200" : "bg-sky-50 border-sky-200";
+                const text = tone === "warning" ? "text-amber-900" : tone === "tip" ? "text-emerald-900" : "text-sky-900";
+                return (
+                  <div key={i} className={`my-8 rounded-xl border px-5 py-4 ${bg}`}>
+                    <p className={`text-[14px] leading-[1.7] ${text}`}>
+                      {block.text}
+                    </p>
+                  </div>
+                );
+              }
               return (
                 <p
                   key={i}
-                  className="text-[16px] leading-[1.75] text-foreground/88 mt-5 first:mt-0"
+                  className="text-[16px] leading-[1.75] text-foreground/88 mt-5 first:mt-0 whitespace-pre-line"
                 >
                   {block.text}
                 </p>

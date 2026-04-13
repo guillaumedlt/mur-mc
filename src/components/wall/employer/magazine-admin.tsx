@@ -289,10 +289,10 @@ function StoryForm({
 
   const updateBlock = (
     index: number,
-    patch: Partial<Story["body"][number]>,
+    patch: Record<string, unknown>,
   ) => {
     setBodyBlocks((prev) =>
-      prev.map((b, i) => (i === index ? { ...b, ...patch } : b)),
+      prev.map((b, i) => (i === index ? { ...b, ...patch } as Story["body"][number] : b)),
     );
   };
 
@@ -310,7 +310,7 @@ function StoryForm({
       .split(",")
       .map((t) => t.trim())
       .filter(Boolean);
-    const cleanBody = bodyBlocks.filter((b) => b.text.trim().length > 0);
+    const cleanBody = bodyBlocks.filter((b) => "text" in b ? (b.text as string).trim().length > 0 : true);
 
     const payload = {
       slug: finalSlug,
@@ -517,7 +517,7 @@ function StoryForm({
                     </span>
                   </div>
                   <textarea
-                    value={block.text}
+                    value={("text" in block ? block.text : "") as string}
                     onChange={(e) => updateBlock(i, { text: e.target.value })}
                     rows={block.type === "h2" ? 1 : 4}
                     className={`w-full bg-white border border-[var(--border)] rounded-xl px-3.5 py-2.5 text-[13px] outline-none placeholder:text-[var(--tertiary-foreground)] focus:border-[var(--accent)] transition-all leading-[1.55] resize-y ${

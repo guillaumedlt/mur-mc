@@ -21,6 +21,10 @@ export type Story = {
     | { type: "p"; text: string }
     | { type: "h2"; text: string }
     | { type: "quote"; text: string; author?: string }
+    | { type: "table"; headers: string[]; rows: string[][] }
+    | { type: "stats"; items: Array<{ label: string; value: string }> }
+    | { type: "list"; items: string[] }
+    | { type: "callout"; text: string; tone?: "info" | "warning" | "tip" }
   >;
   authorName: string;
   authorRole: string;
