@@ -33,6 +33,7 @@ create table if not exists companies (
   has_cover boolean default false,
   cover_url text,
   blocks jsonb default '[]',
+  job_quota integer default 1,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );

@@ -19,6 +19,7 @@ import {
   createJob,
 } from "@/lib/employer-store";
 import { useMyJobs } from "@/lib/supabase/use-my-jobs";
+import { useMyCompany } from "@/lib/supabase/use-my-company";
 import { createClient } from "@/lib/supabase/client";
 import type {
   ExperienceLevel,
@@ -27,7 +28,7 @@ import type {
   WorkTime,
 } from "@/lib/data";
 
-const FREE_JOB_LIMIT = 1;
+const DEFAULT_QUOTA = 1;
 
 const CONTRACTS: JobType[] = [
   "CDI",
@@ -176,6 +177,8 @@ export function PublishJobForm({ existing, onCancel }: Props) {
   };
 
   const { jobs: existingJobs, loading: jobsLoading } = useMyJobs();
+  const { company: myCompany } = useMyCompany();
+  const jobQuota = myCompany?.job_quota ?? DEFAULT_QUOTA;
 
   if (!user || user.role !== "employer") {
     return (
@@ -218,7 +221,7 @@ export function PublishJobForm({ existing, onCancel }: Props) {
   }
 
   // Quota atteint → message upgrade
-  if (!existing && !jobsLoading && existingJobs.length >= FREE_JOB_LIMIT) {
+  if (!existing && !jobsLoading && existingJobs.length >= jobQuota) {
     return (
       <div className="max-w-[760px] mx-auto bg-white border border-[var(--border)] rounded-2xl p-12 text-center">
         <span className="size-14 rounded-2xl bg-foreground/5 text-foreground/60 inline-flex items-center justify-center mb-4">
@@ -228,7 +231,7 @@ export function PublishJobForm({ existing, onCancel }: Props) {
           Quota atteint
         </h2>
         <p className="text-[13.5px] text-muted-foreground mt-2 max-w-md mx-auto">
-          Vous avez atteint la limite de {FREE_JOB_LIMIT} offre{FREE_JOB_LIMIT > 1 ? "s" : ""} gratuite{FREE_JOB_LIMIT > 1 ? "s" : ""}.
+          Vous avez atteint la limite de {jobQuota} offre{jobQuota > 1 ? "s" : ""}.
           Pour publier de nouvelles offres, passez à un forfait payant.
         </p>
         <div className="flex items-center justify-center gap-3 mt-6 flex-wrap">
@@ -247,7 +250,7 @@ export function PublishJobForm({ existing, onCancel }: Props) {
           </a>
         </div>
         <p className="text-[11px] text-foreground/45 mt-4">
-          Vous avez {existingJobs.length} offre{existingJobs.length > 1 ? "s" : ""} publiée{existingJobs.length > 1 ? "s" : ""} sur {FREE_JOB_LIMIT} autorisée{FREE_JOB_LIMIT > 1 ? "s" : ""}
+          Vous avez {existingJobs.length} offre{existingJobs.length > 1 ? "s" : ""} sur {jobQuota} autorisee{jobQuota > 1 ? "s" : ""}
         </p>
       </div>
     );
