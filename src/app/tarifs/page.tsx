@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BadgeCheck, Bag, Rocket, Sparks } from "iconoir-react";
+import { BadgeCheck, Bag, Mail, Sparks } from "iconoir-react";
 import { fetchAllJobs } from "@/lib/supabase/queries";
 import { Shell } from "@/components/wall/shell";
 
@@ -16,7 +16,7 @@ const PLANS = [
     name: "Starter",
     price: "Gratuit",
     period: "",
-    description: "Pour tester le mur avec une premiere offre.",
+    description: "Pour decouvrir le mur et publier votre premiere offre.",
     features: [
       "1 offre active",
       "Fiche entreprise basique",
@@ -28,39 +28,26 @@ const PLANS = [
     accent: false,
   },
   {
-    name: "Growth",
-    price: "290 EUR",
-    period: "/ offre",
-    description: "Pour les entreprises qui recrutent regulierement a Monaco.",
+    name: "Sur mesure",
+    price: "Sur devis",
+    period: "",
+    description: "Pour les entreprises qui recrutent a Monaco. Contactez-nous pour un plan adapte a vos besoins.",
     features: [
       "Offres illimitees",
-      "Fiche entreprise premium (blocs, photos, cover)",
+      "Fiche entreprise premium (photos, videos, cover)",
       "Pipeline kanban drag & drop",
       "Import CSV candidats",
       "Messages IA pre-rediges",
       "Equipe multi-utilisateurs",
-      "Boost offre inclus (1 / offre)",
-    ],
-    cta: "Choisir Growth",
-    href: "/inscription",
-    accent: true,
-  },
-  {
-    name: "Talent Partner",
-    price: "Sur devis",
-    period: "",
-    description: "Pour les groupes et les besoins volume.",
-    features: [
-      "Tout Growth inclus",
+      "Boost offres en page d'accueil",
       "Account manager dedie",
-      "Offres sponsorisees en page d'accueil",
       "Analytics avances",
       "API d'integration (ATS, SIRH)",
       "Marque employeur personnalisee",
     ],
     cta: "Nous contacter",
-    href: "mailto:contact@mur.mc",
-    accent: false,
+    href: "mailto:contact@mur.mc?subject=Demande%20de%20devis%20Mur.mc",
+    accent: true,
   },
 ];
 
@@ -85,7 +72,7 @@ export default async function TarifsPage() {
           </p>
         </header>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-[820px] mx-auto">
           {PLANS.map((plan) => (
             <div
               key={plan.name}
@@ -157,8 +144,8 @@ export default async function TarifsPage() {
                     : "border border-[var(--border)] bg-white text-foreground/85 hover:bg-[var(--background-alt)]"
                 }`}
               >
-                {plan.name === "Growth" && (
-                  <Rocket width={14} height={14} strokeWidth={2} />
+                {plan.name === "Sur mesure" && (
+                  <Mail width={14} height={14} strokeWidth={2} />
                 )}
                 {plan.name === "Starter" && (
                   <Bag width={14} height={14} strokeWidth={2} />
