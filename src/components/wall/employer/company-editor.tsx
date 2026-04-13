@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowUpRight,
@@ -18,52 +18,45 @@ import {
 } from "@/lib/employer-store";
 import { BlockEditor } from "./block-editor";
 import { useUser } from "@/lib/auth";
-import { companies } from "@/lib/data";
+import { useMyCompany, updateCompanySupabase } from "@/lib/supabase/use-my-company";
 import { CompanyLogo } from "../company-logo";
 
 export function CompanyEditor() {
   const user = useUser();
   const { companyProfile } = useEmployer();
+  const { company: sbCompany, loading: companyLoading } = useMyCompany();
   const coverRef = useRef<HTMLInputElement>(null);
   const [savedFlash, setSavedFlash] = useState(false);
   const [coverError, setCoverError] = useState<string | null>(null);
 
-  const company = useMemo(
-    () => companies.find((c) => c.id === user?.companyId),
-    [user?.companyId],
-  );
+  // Use Supabase company as source of truth
+  const company = sbCompany;
 
-  // Local form state, initialized from override → fallback to data.ts
-  const merged = useMemo(() => {
-    if (!company) return null;
-    return {
-      tagline: companyProfile?.tagline ?? company.tagline ?? "",
-      description: companyProfile?.description ?? company.description ?? "",
-      positioning: companyProfile?.positioning ?? company.positioning ?? "",
-      culture: companyProfile?.culture ?? company.culture ?? "",
-      perks: companyProfile?.perks ?? company.perks ?? [],
-      website: companyProfile?.website ?? company.website ?? "",
-      hasCover: companyProfile?.hasCover ?? company.hasCover ?? false,
-    };
-  }, [company, companyProfile]);
+  const [tagline, setTagline] = useState("");
+  const [description, setDescription] = useState("");
+  const [positioning, setPositioning] = useState("");
+  const [culture, setCulture] = useState("");
+  const [perks, setPerks] = useState<string[]>([]);
+  const [website, setWebsite] = useState("");
 
-  const [tagline, setTagline] = useState(merged?.tagline ?? "");
-  const [description, setDescription] = useState(merged?.description ?? "");
-  const [positioning, setPositioning] = useState(merged?.positioning ?? "");
-  const [culture, setCulture] = useState(merged?.culture ?? "");
-  const [perks, setPerks] = useState<string[]>(merged?.perks ?? []);
-  const [website, setWebsite] = useState(merged?.website ?? "");
-
-  // Resync if merged changes (login d'un autre user, etc.)
-  const [prevCompanyId, setPrevCompanyId] = useState(company?.id);
+  // Resync when company loads from Supabase
+  const [prevCompanyId, setPrevCompanyId] = useState<string | null>(null);
   if (company?.id !== prevCompanyId) {
-    setPrevCompanyId(company?.id);
-    setTagline(merged?.tagline ?? "");
-    setDescription(merged?.description ?? "");
-    setPositioning(merged?.positioning ?? "");
-    setCulture(merged?.culture ?? "");
-    setPerks(merged?.perks ?? []);
-    setWebsite(merged?.website ?? "");
+    setPrevCompanyId(company?.id ?? null);
+    setTagline(company?.tagline ?? "");
+    setDescription(company?.description ?? "");
+    setPositioning(company?.positioning ?? "");
+    setCulture(company?.culture ?? "");
+    setPerks(company?.perks ?? []);
+    setWebsite(company?.website ?? "");
+  }
+
+  if (companyLoading) {
+    return (
+      <div className="max-w-[1100px] mx-auto bg-white border border-[var(--border)] rounded-2xl p-12 flex items-center justify-center">
+        <span className="size-5 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin" />
+      </div>
+    );
   }
 
   if (!user || !company) return null;
@@ -71,7 +64,7 @@ export function CompanyEditor() {
   const onSave = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 1. Store local
+    // 1. Store local (for blocks/cover data URL)
     updateCompanyProfile({
       companyId: company.id,
       tagline: tagline || undefined,
@@ -80,26 +73,19 @@ export function CompanyEditor() {
       culture: culture || undefined,
       perks,
       website: website || undefined,
-      hasCover: !!companyProfile?.coverDataUrl || company.hasCover,
+      hasCover: !!companyProfile?.coverDataUrl || company.has_cover,
     });
 
     // 2. Supabase
-    if (user?.companyId) {
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
-      await supabase
-        .from("companies")
-        .update({
-          tagline: tagline || null,
-          description: description || null,
-          positioning: positioning || null,
-          culture: culture || null,
-          perks,
-          website: website || null,
-          blocks: companyProfile?.blocks ?? [],
-        })
-        .eq("id", user.companyId);
-    }
+    await updateCompanySupabase(company.id, {
+      tagline: tagline || null,
+      description: description || null,
+      positioning: positioning || null,
+      culture: culture || null,
+      perks,
+      website: website || null,
+      blocks: companyProfile?.blocks ?? company.blocks ?? [],
+    });
 
     setSavedFlash(true);
     window.setTimeout(() => setSavedFlash(false), 2000);
@@ -128,7 +114,7 @@ export function CompanyEditor() {
             <CompanyLogo
               name={company.name}
               domain={company.domain}
-              color={company.logoColor}
+              color={company.logo_color}
               initials={company.initials}
               size={56}
               radius={16}

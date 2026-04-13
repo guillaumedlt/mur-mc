@@ -1,9 +1,9 @@
 "use client";
 
 /**
- * Hook : loads applications for a given job from Supabase,
- * including candidate profiles and events.
- * Used by the kanban board to show real applications.
+ * Hook : loads applications from Supabase.
+ * - Pass a jobId to get applications for a specific job (kanban).
+ * - Pass null to get ALL applications for the user's company (pool).
  */
 
 import { useState } from "react";
@@ -30,13 +30,37 @@ export function useMyApplications(jobId: string | null): UseMyApplicationsResult
   const [loading, setLoading] = useState(true);
   const [fetchedFor, setFetchedFor] = useState<string | null>(null);
 
-  const key = jobId && user ? `${jobId}:${user.id}` : null;
+  const companyId = user?.companyId ?? null;
+  const key = user ? `${jobId ?? "all"}:${user.id}` : null;
 
-  const doFetch = (jid: string) => {
+  const doFetch = async (jid: string | null) => {
     setLoading(true);
     const supabase = createClient();
 
-    supabase
+    // Determine which job IDs to fetch for
+    let jobIds: string[] = [];
+    if (jid) {
+      jobIds = [jid];
+    } else if (companyId) {
+      const { data: jobsData } = await supabase
+        .from("jobs")
+        .select("id")
+        .eq("company_id", companyId);
+      jobIds = (jobsData ?? []).map((j: { id: string }) => j.id);
+      if (jobIds.length === 0) {
+        setApplications([]);
+        setCandidates([]);
+        setLoading(false);
+        return;
+      }
+    } else {
+      setApplications([]);
+      setCandidates([]);
+      setLoading(false);
+      return;
+    }
+
+    const { data, error } = await supabase
       .from("applications")
       .select(`
         *,
@@ -47,91 +71,87 @@ export function useMyApplications(jobId: string | null): UseMyApplicationsResult
           avatar_url, linkedin_url, cv_file_name
         )
       `)
-      .eq("job_id", jid)
-      .order("order", { ascending: true })
-      .then(({ data, error }) => {
-        if (error || !data) {
-          setLoading(false);
-          return;
-        }
+      .in("job_id", jobIds)
+      .order("order", { ascending: true });
 
-        const apps: EmployerApplication[] = [];
-        const cands: EmployerCandidate[] = [];
-        const seenCandidates = new Set<string>();
+    if (error || !data) {
+      setLoading(false);
+      return;
+    }
 
-        for (const row of data as Record<string, unknown>[]) {
-          // Map events
-          const rawEvents = Array.isArray(row.application_events)
-            ? row.application_events
-            : [];
-          const events: EmployerApplicationEvent[] = rawEvents.map(
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (e: any) => ({
-              id: e.id,
-              type: e.type,
-              at: e.created_at,
-              text: e.text ?? undefined,
-              by: e.by_name ?? undefined,
-              from: e.from_status ?? undefined,
-              to: e.to_status ?? undefined,
-            }),
-          );
+    const apps: EmployerApplication[] = [];
+    const cands: EmployerCandidate[] = [];
+    const seenCandidates = new Set<string>();
 
-          apps.push({
-            id: row.id as string,
-            jobId: row.job_id as string,
-            candidateId: row.candidate_id as string,
-            status: (row.status as EmployerApplicationStatus) ?? "received",
-            matchScore: (row.match_score as number) ?? 0,
-            rating: (row.rating as number) ?? 0,
-            appliedAt: row.applied_at as string,
-            updatedAt: row.updated_at as string,
-            coverLetter: (row.cover_letter as string) ?? undefined,
-            events,
-            order: (row.order as number) ?? 0,
-          });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    for (const row of data as any[]) {
+      const rawEvents = Array.isArray(row.application_events)
+        ? row.application_events
+        : [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const events: EmployerApplicationEvent[] = rawEvents.map((e: any) => ({
+        id: e.id,
+        type: e.type,
+        at: e.created_at,
+        text: e.text ?? undefined,
+        by: e.by_name ?? undefined,
+        from: e.from_status ?? undefined,
+        to: e.to_status ?? undefined,
+      }));
 
-          // Map candidate
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const c = row.candidate as any;
-          if (c && !seenCandidates.has(c.id)) {
-            seenCandidates.add(c.id);
-            const nameParts = (c.full_name ?? "").split(/\s+/).filter(Boolean);
-            const initials =
-              nameParts.length >= 2
-                ? `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`.toUpperCase()
-                : (c.full_name ?? "??").slice(0, 2).toUpperCase();
-
-            cands.push({
-              id: c.id,
-              fullName: c.full_name ?? "",
-              email: c.email ?? "",
-              phone: c.phone ?? undefined,
-              location: c.location ?? undefined,
-              headline: c.headline ?? undefined,
-              bio: c.bio ?? undefined,
-              experienceYears: c.experience_years ?? undefined,
-              skills: c.skills ?? [],
-              languages: c.languages ?? [],
-              sectors: c.sectors ?? [],
-              avatarColor: "#1C3D5A",
-              initials,
-              linkedinUrl: c.linkedin_url ?? undefined,
-              cvFileName: c.cv_file_name ?? undefined,
-              source: "platform",
-            });
-          }
-        }
-
-        setApplications(apps);
-        setCandidates(cands);
-        setLoading(false);
+      apps.push({
+        id: row.id,
+        jobId: row.job_id,
+        candidateId: row.candidate_id,
+        status: (row.status as EmployerApplicationStatus) ?? "received",
+        matchScore: row.match_score ?? 0,
+        rating: row.rating ?? 0,
+        appliedAt: row.applied_at,
+        updatedAt: row.updated_at,
+        coverLetter: row.cover_letter ?? undefined,
+        events,
+        order: row.order ?? 0,
       });
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const c = row.candidate as any;
+      if (c && !seenCandidates.has(c.id)) {
+        seenCandidates.add(c.id);
+        const nameParts = (c.full_name ?? "").split(/\s+/).filter(Boolean);
+        const initials =
+          nameParts.length >= 2
+            ? `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`.toUpperCase()
+            : (c.full_name ?? "??").slice(0, 2).toUpperCase();
+
+        cands.push({
+          id: c.id,
+          fullName: c.full_name ?? "",
+          email: c.email ?? "",
+          phone: c.phone ?? undefined,
+          location: c.location ?? undefined,
+          headline: c.headline ?? undefined,
+          bio: c.bio ?? undefined,
+          experienceYears: c.experience_years ?? undefined,
+          skills: c.skills ?? [],
+          languages: c.languages ?? [],
+          sectors: c.sectors ?? [],
+          avatarColor: "#1C3D5A",
+          initials,
+          linkedinUrl: c.linkedin_url ?? undefined,
+          cvFileName: c.cv_file_name ?? undefined,
+          source: "platform",
+        });
+      }
+    }
+
+    setApplications(apps);
+    setCandidates(cands);
+    setLoading(false);
   };
 
   if (key !== fetchedFor) {
     setFetchedFor(key);
-    if (!jobId || !user) {
+    if (!user) {
       setApplications([]);
       setCandidates([]);
       setLoading(false);
@@ -141,7 +161,7 @@ export function useMyApplications(jobId: string | null): UseMyApplicationsResult
   }
 
   const refetch = () => {
-    if (jobId) doFetch(jobId);
+    if (user) doFetch(jobId);
   };
 
   return { applications, candidates, loading, refetch };
@@ -149,7 +169,6 @@ export function useMyApplications(jobId: string | null): UseMyApplicationsResult
 
 /**
  * Move an application to a new status in Supabase.
- * Also inserts a status_changed event.
  */
 export async function moveApplicationSupabase(
   applicationId: string,
@@ -162,10 +181,7 @@ export async function moveApplicationSupabase(
 
   await supabase
     .from("applications")
-    .update({
-      status: toStatus,
-      order: toIndex,
-    })
+    .update({ status: toStatus, order: toIndex })
     .eq("id", applicationId);
 
   if (fromStatus !== toStatus) {

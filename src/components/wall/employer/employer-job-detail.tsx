@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -13,51 +13,42 @@ import {
   MapPin,
   PauseSolid,
   PlaySolid,
-  PlusCircle,
   Trash,
   Xmark,
 } from "iconoir-react";
-import {
-  type EmployerApplicationStatus,
-  applicationsByStatus,
-  deleteJob,
-  setJobStatus,
-  useEmployer,
-} from "@/lib/employer-store";
+import type { EmployerApplicationStatus } from "@/lib/employer-store";
 import { useUser } from "@/lib/auth";
+import { useMyJob, updateJobSupabase, deleteJobSupabase } from "@/lib/supabase/use-my-jobs";
+import { useMyApplications } from "@/lib/supabase/use-my-applications";
 import { ApplicationStatusPill, JobStatusPill } from "./status-pill";
-import { PublishJobForm } from "./publish-job-form";
 
 type Props = { id: string };
 
 export function EmployerJobDetail({ id }: Props) {
   const user = useUser();
   const router = useRouter();
-  const { jobs } = useEmployer();
-  const job = jobs.find((j) => j.id === id);
-  const [editing, setEditing] = useState(false);
-
-  // Lock body scroll quand le drawer d'édition est ouvert
-  useEffect(() => {
-    if (!editing || typeof document === "undefined") return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [editing]);
+  const { job, loading } = useMyJob(id);
+  const { applications } = useMyApplications(id);
 
   const breakdown = useMemo(() => {
-    if (!job) return null;
-    return applicationsByStatus(job.id);
-  }, [job]);
+    const out: Record<EmployerApplicationStatus, number> = {
+      received: 0, reviewed: 0, interview: 0, offer: 0, hired: 0, rejected: 0,
+    };
+    for (const a of applications) out[a.status]++;
+    return out;
+  }, [applications]);
 
-  const totalApps = useMemo(() => {
-    if (!breakdown) return 0;
-    return Object.values(breakdown).reduce((s, arr) => s + arr.length, 0);
-  }, [breakdown]);
+  const totalApps = applications.length;
 
   if (!user || user.role !== "employer") return null;
+
+  if (loading) {
+    return (
+      <div className="max-w-[1100px] mx-auto bg-white border border-[var(--border)] rounded-2xl p-12 flex items-center justify-center">
+        <span className="size-5 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   if (!job) {
     return (
@@ -75,21 +66,24 @@ export function EmployerJobDetail({ id }: Props) {
     );
   }
 
-  const togglePause = () => {
-    setJobStatus(job.id, job.status === "paused" ? "published" : "paused");
+  const togglePause = async () => {
+    const next = job.status === "paused" ? "published" : "paused";
+    await updateJobSupabase(job.id, { status: next });
+    router.refresh();
   };
-  const close = () => {
-    if (window.confirm("Fermer cette offre ? Elle n'apparaîtra plus dans le mur.")) {
-      setJobStatus(job.id, "closed");
+  const close = async () => {
+    if (window.confirm("Fermer cette offre ? Elle n'apparaitra plus dans le mur.")) {
+      await updateJobSupabase(job.id, { status: "closed" });
+      router.refresh();
     }
   };
-  const onDelete = () => {
+  const onDelete = async () => {
     if (
       window.confirm(
-        "Supprimer définitivement cette offre et toutes ses candidatures ?",
+        "Supprimer definitivement cette offre et toutes ses candidatures ?",
       )
     ) {
-      deleteJob(job.id);
+      await deleteJobSupabase(job.id);
       router.push("/recruteur/offres");
     }
   };
@@ -110,7 +104,7 @@ export function EmployerJobDetail({ id }: Props) {
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <p className="ed-label-sm">Offre</p>
-              <JobStatusPill status={job.status} />
+              <JobStatusPill status={job.status as "draft" | "published" | "paused" | "closed"} />
             </div>
             <h1 className="font-display text-[24px] sm:text-[28px] lg:text-[32px] leading-[1.08] tracking-[-0.015em] text-foreground mt-1.5">
               {job.title}
@@ -126,7 +120,7 @@ export function EmployerJobDetail({ id }: Props) {
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <Calendar width={12} height={12} strokeWidth={2} />
-                Créée {formatDate(job.createdAt)}
+                Créée {formatDate(job.created_at)}
               </span>
             </div>
           </div>
@@ -149,19 +143,19 @@ export function EmployerJobDetail({ id }: Props) {
               Performance
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
-              <Stat icon={Eye} label="Vues" value={job.views.toLocaleString("fr-FR")} />
+              <Stat icon={Eye} label="Vues" value={(job.views ?? 0).toLocaleString("fr-FR")} />
               <Stat icon={Group} label="Candidatures" value={String(totalApps)} />
               <Stat
                 icon={Calendar}
                 label="En entretien"
-                value={String((breakdown?.interview.length ?? 0) + (breakdown?.offer.length ?? 0))}
+                value={String((breakdown.interview ?? 0) + (breakdown.offer ?? 0))}
               />
             </div>
-            {breakdown && totalApps > 0 && (
+            {totalApps > 0 && (
               <div className="flex flex-col gap-2.5">
                 {(["received", "reviewed", "interview", "offer", "hired", "rejected"] as EmployerApplicationStatus[]).map(
                   (s) => {
-                    const count = breakdown[s].length;
+                    const count = breakdown[s];
                     const pct = totalApps > 0 ? Math.round((count / totalApps) * 100) : 0;
                     return (
                       <div key={s} className="flex items-center gap-3 text-[12px]">
@@ -191,9 +185,9 @@ export function EmployerJobDetail({ id }: Props) {
               Description
             </h2>
             <p className="font-display italic text-[15px] leading-[1.6] text-foreground/85">
-              {job.shortDescription}
+              {job.short_description}
             </p>
-            {job.description && job.description !== job.shortDescription && (
+            {job.description && job.description !== job.short_description && (
               <p className="text-[14px] leading-[1.7] text-foreground/80 mt-4">
                 {job.description}
               </p>
@@ -206,14 +200,7 @@ export function EmployerJobDetail({ id }: Props) {
           <div className="bg-white border border-[var(--border)] rounded-2xl p-5">
             <p className="ed-label-sm mb-3">Actions</p>
             <div className="flex flex-col gap-2">
-              <button
-                type="button"
-                onClick={() => setEditing(true)}
-                className="h-10 px-4 rounded-xl bg-foreground text-background text-[12.5px] font-medium hover:bg-foreground/85 transition-colors flex items-center justify-center gap-2"
-              >
-                <PlusCircle width={13} height={13} strokeWidth={2} />
-                Modifier l&apos;offre
-              </button>
+              {/* TODO: edit drawer wired to Supabase */}
               {job.status === "published" || job.status === "draft" ? (
                 <button
                   type="button"
@@ -272,20 +259,7 @@ export function EmployerJobDetail({ id }: Props) {
         </aside>
       </div>
 
-      {/* Edit drawer */}
-      {editing && (
-        <div
-          className="fixed inset-0 z-50 bg-foreground/30 backdrop-blur-[2px] flex items-start justify-center pt-[4vh] px-3 overflow-y-auto"
-          onClick={() => setEditing(false)}
-        >
-          <div
-            className="w-full max-w-[820px] mb-6"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <PublishJobForm existing={job} onCancel={() => setEditing(false)} />
-          </div>
-        </div>
-      )}
+      {/* Edit drawer placeholder — TODO: wire to Supabase */}
     </div>
   );
 }

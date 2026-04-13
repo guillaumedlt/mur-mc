@@ -24,16 +24,16 @@ import {
   useEmployer,
 } from "@/lib/employer-store";
 import { useMyJobs } from "@/lib/supabase/use-my-jobs";
+import { useMyApplications } from "@/lib/supabase/use-my-applications";
 import { MiniStats } from "./mini-stats";
 import { ApplicationStatusPill } from "./status-pill";
 
 export function EmployerDashboard() {
   const user = useUser();
-  const { applications, candidates, companyProfile, onboarding } = useEmployer();
+  const { companyProfile, onboarding } = useEmployer();
   const { jobs: supabaseJobs, loading: jobsLoading } = useMyJobs();
+  const { applications, candidates } = useMyApplications(null);
 
-  // Utiliser les offres Supabase comme source de verite
-  const jobCount = supabaseJobs.length;
   const publishedCount = supabaseJobs.filter((j) => j.status === "published").length;
 
   const breakdown = useMemo(() => {
@@ -49,7 +49,7 @@ export function EmployerDashboard() {
     return out;
   }, [applications]);
 
-  const totalApps = supabaseJobs.reduce((s, j) => s + j.applicationsCount, 0) || applications.length;
+  const totalApps = applications.length;
   const totalViews = supabaseJobs.reduce((s, j) => s + (j.views ?? 0), 0);
   const interviewing = breakdown.interview + breakdown.offer;
 
@@ -265,7 +265,7 @@ export function EmployerDashboard() {
                 href="/recruteur/offres"
                 icon={Bag}
                 label="Mes offres"
-                hint={`${jobCount} au total`}
+                hint={`${supabaseJobs.length} au total`}
               />
               <ActionLink
                 href="/recruteur/candidats"

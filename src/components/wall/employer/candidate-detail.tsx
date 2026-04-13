@@ -25,11 +25,10 @@ import {
   type EmployerApplicationEventType,
   KANBAN_STATUSES,
   eventLabel,
-  moveApplication,
-  rateApplication,
   statusLabel,
-  useEmployer,
 } from "@/lib/employer-store";
+import { useMyApplications, moveApplicationSupabase, rateApplicationSupabase } from "@/lib/supabase/use-my-applications";
+import { useMyJobs } from "@/lib/supabase/use-my-jobs";
 import { ApplicationStatusPill } from "./status-pill";
 import { StarRating } from "./star-rating";
 import { CandidateMessageModal } from "./candidate-message-modal";
@@ -39,16 +38,17 @@ import { CvPreviewModal } from "./cv-preview-modal";
 type Props = { id: string; recruiterName: string };
 
 export function CandidateDetail({ id, recruiterName }: Props) {
-  const { applications, candidates, jobs } = useEmployer();
+  const { applications, candidates, refetch } = useMyApplications(null);
+  const { jobs } = useMyJobs();
   const [msgOpen, setMsgOpen] = useState(false);
   const [noteOpen, setNoteOpen] = useState(false);
   const [cvPreviewOpen, setCvPreviewOpen] = useState(false);
 
   const app = applications.find((a) => a.id === id);
   const cand = app ? candidates.find((c) => c.id === app.candidateId) : null;
-  const job = app ? jobs.find((j) => j.id === app.jobId) : null;
+  const sbJob = app ? jobs.find((j) => j.id === app.jobId) : null;
 
-  if (!app || !cand || !job) {
+  if (!app || !cand) {
     return (
       <div className="max-w-[1100px] mx-auto bg-white border border-[var(--border)] rounded-2xl p-12 text-center">
         <p className="font-display italic text-[18px] text-foreground">
@@ -72,11 +72,11 @@ export function CandidateDetail({ id, recruiterName }: Props) {
   return (
     <div className="max-w-[1100px] mx-auto">
       <Link
-        href={`/recruteur/offres/${job.id}/candidats`}
+        href={`/recruteur/offres/${app.jobId}/candidats`}
         className="inline-flex items-center gap-1.5 text-[12.5px] text-foreground/55 hover:text-foreground transition-colors mb-3 px-1"
       >
         <ArrowLeft width={12} height={12} strokeWidth={2} />
-        Pipeline · {job.title}
+        Pipeline · {sbJob?.title ?? "Offre"}
       </Link>
 
       {/* Hero */}
@@ -136,7 +136,7 @@ export function CandidateDetail({ id, recruiterName }: Props) {
               )}
               <StarRating
                 value={app.rating}
-                onChange={(v) => rateApplication(app.id, v)}
+                onChange={(v) => rateApplicationSupabase(app.id, v).then(refetch)}
               />
             </div>
           </div>
@@ -266,7 +266,7 @@ export function CandidateDetail({ id, recruiterName }: Props) {
               {canAdvance && nextStatus && (
                 <button
                   type="button"
-                  onClick={() => moveApplication(app.id, nextStatus)}
+                  onClick={() => moveApplicationSupabase(app.id, nextStatus, 0, app.status, recruiterName).then(refetch)}
                   className="h-10 rounded-xl bg-foreground text-background text-[12.5px] font-medium hover:bg-foreground/85 transition-colors flex items-center justify-center gap-2"
                 >
                   <ArrowRight width={12} height={12} strokeWidth={2} />
@@ -301,7 +301,7 @@ export function CandidateDetail({ id, recruiterName }: Props) {
                 <button
                   type="button"
                   onClick={() =>
-                    moveApplication(app.id, "rejected")
+                    moveApplicationSupabase(app.id, "rejected", 0, app.status, recruiterName).then(refetch)
                   }
                   className="h-10 rounded-xl border border-[var(--border)] bg-white text-[12.5px] text-foreground/55 hover:text-destructive hover:border-destructive/30 transition-colors flex items-center justify-center gap-2"
                 >
@@ -363,10 +363,10 @@ export function CandidateDetail({ id, recruiterName }: Props) {
           <div className="bg-white border border-[var(--border)] rounded-2xl p-5">
             <p className="ed-label-sm mb-3">Offre liée</p>
             <Link
-              href={`/recruteur/offres/${job.id}`}
+              href={`/recruteur/offres/${app.jobId}`}
               className="text-[13px] text-foreground hover:text-[var(--accent)] transition-colors"
             >
-              {job.title}
+              {sbJob?.title ?? "Offre"}
             </Link>
           </div>
 
@@ -393,7 +393,7 @@ export function CandidateDetail({ id, recruiterName }: Props) {
         appId={app.id}
         candidateName={cand.fullName}
         recruiterName={recruiterName}
-        jobTitle={job.title}
+        jobTitle={sbJob?.title ?? "Offre"}
         open={msgOpen}
         onClose={() => setMsgOpen(false)}
       />

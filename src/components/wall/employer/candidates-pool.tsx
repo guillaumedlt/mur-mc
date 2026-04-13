@@ -17,8 +17,9 @@ import {
   KANBAN_STATUSES,
   candidateSourceLabel,
   statusLabel,
-  useEmployer,
 } from "@/lib/employer-store";
+import { useMyJobs } from "@/lib/supabase/use-my-jobs";
+import { useMyApplications } from "@/lib/supabase/use-my-applications";
 import { ApplicationStatusPill } from "./status-pill";
 import { StarRatingCompact } from "./star-rating";
 import { EmployerEmptyState } from "./employer-empty-state";
@@ -26,7 +27,9 @@ import { EmployerEmptyState } from "./employer-empty-state";
 type SortKey = "recent" | "match" | "rating";
 
 export function CandidatesPool() {
-  const { jobs, applications, candidates } = useEmployer();
+  const { jobs } = useMyJobs();
+  // Load applications for all jobs — pass null to get all for this employer
+  const { applications, candidates } = useMyApplications(null);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] =
     useState<EmployerApplicationStatus | "all">("all");

@@ -2,15 +2,23 @@
 
 import Link from "next/link";
 import { ArrowLeft, Group } from "iconoir-react";
-import { applicationsForJob, useEmployer } from "@/lib/employer-store";
+import { useMyJob } from "@/lib/supabase/use-my-jobs";
+import { useMyApplications } from "@/lib/supabase/use-my-applications";
 import { KanbanBoard } from "./kanban-board";
 
 type Props = { jobId: string };
 
 export function KanbanPage({ jobId }: Props) {
-  const { jobs } = useEmployer();
-  const job = jobs.find((j) => j.id === jobId);
-  const apps = applicationsForJob(jobId);
+  const { job, loading } = useMyJob(jobId);
+  const { applications } = useMyApplications(jobId);
+
+  if (loading) {
+    return (
+      <div className="max-w-[1100px] mx-auto bg-white border border-[var(--border)] rounded-2xl p-12 flex items-center justify-center">
+        <span className="size-5 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   if (!job) {
     return (
@@ -47,7 +55,7 @@ export function KanbanPage({ jobId }: Props) {
             </h1>
           </div>
           <span className="wall-badge" data-tone="accent">
-            <Group /> {apps.length} candidature{apps.length > 1 ? "s" : ""}
+            <Group /> {applications.length} candidature{applications.length > 1 ? "s" : ""}
           </span>
         </div>
       </header>
