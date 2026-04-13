@@ -25,82 +25,94 @@ import {
 } from "@/lib/employer-store";
 import { useMyJobs } from "@/lib/supabase/use-my-jobs";
 import { useMyApplications } from "@/lib/supabase/use-my-applications";
+import { useManualCandidates } from "@/lib/supabase/use-manual-candidates";
+import { useMyCompany } from "@/lib/supabase/use-my-company";
 import { MiniStats } from "./mini-stats";
 import { ApplicationStatusPill } from "./status-pill";
 
+type CandidateRow = {
+  id: string;
+  fullName: string;
+  headline?: string;
+  initials: string;
+  avatarColor: string;
+  status: EmployerApplicationStatus;
+  matchScore: number;
+  appliedAt: string;
+  jobId: string;
+  linkId: string; // for href
+};
+
 export function EmployerDashboard() {
   const user = useUser();
-  const { companyProfile, onboarding } = useEmployer();
+  const { onboarding } = useEmployer();
   const { jobs: supabaseJobs, loading: jobsLoading } = useMyJobs();
   const { applications, candidates } = useMyApplications(null);
+  const { candidates: manualCands } = useManualCandidates();
+  const { company } = useMyCompany();
 
   const publishedCount = supabaseJobs.filter((j) => j.status === "published").length;
 
+  // Merge all candidates into unified rows
+  const allRows = useMemo(() => {
+    const rows: CandidateRow[] = [];
+    for (const app of applications) {
+      const cand = candidates.find((c) => c.id === app.candidateId);
+      rows.push({
+        id: app.id,
+        fullName: cand?.fullName ?? "Candidat",
+        headline: cand?.headline,
+        initials: cand?.initials ?? "??",
+        avatarColor: cand?.avatarColor ?? "#1C3D5A",
+        status: app.status,
+        matchScore: app.matchScore,
+        appliedAt: app.appliedAt,
+        jobId: app.jobId,
+        linkId: app.id,
+      });
+    }
+    for (const mc of manualCands) {
+      rows.push({
+        id: `mc-${mc.id}`,
+        fullName: mc.fullName,
+        headline: mc.headline,
+        initials: mc.initials,
+        avatarColor: mc.avatarColor,
+        status: mc.status as EmployerApplicationStatus,
+        matchScore: 0,
+        appliedAt: mc.createdAt,
+        jobId: mc.jobId ?? "",
+        linkId: `mc-${mc.id}`,
+      });
+    }
+    return rows;
+  }, [applications, candidates, manualCands]);
+
   const breakdown = useMemo(() => {
     const out: Record<EmployerApplicationStatus, number> = {
-      received: 0,
-      reviewed: 0,
-      interview: 0,
-      offer: 0,
-      hired: 0,
-      rejected: 0,
+      received: 0, reviewed: 0, interview: 0, offer: 0, hired: 0, rejected: 0,
     };
-    for (const a of applications) out[a.status]++;
+    for (const r of allRows) out[r.status]++;
     return out;
-  }, [applications]);
+  }, [allRows]);
 
-  const totalApps = applications.length;
+  const totalCandidates = allRows.length;
   const totalViews = supabaseJobs.reduce((s, j) => s + (j.views ?? 0), 0);
   const interviewing = breakdown.interview + breakdown.offer;
 
-  // Top 5 candidats à traiter : received/reviewed avec match score le plus haut
+  // Top 5 candidats a traiter : received/reviewed, les plus recents
   const toTreat = useMemo(
     () =>
-      [...applications]
-        .filter((a) => a.status === "received" || a.status === "reviewed")
-        .sort((a, b) => b.matchScore - a.matchScore)
+      [...allRows]
+        .filter((r) => r.status === "received" || r.status === "reviewed")
+        .sort((a, b) => b.appliedAt.localeCompare(a.appliedAt))
         .slice(0, 5),
-    [applications],
+    [allRows],
   );
-
-  // Activité récente : 8 derniers events
-  const recentEvents = useMemo(() => {
-    type Row = {
-      appId: string;
-      jobId: string;
-      jobTitle: string;
-      candidateName: string;
-      candidateInitials: string;
-      candidateColor: string;
-      type: string;
-      at: string;
-      text?: string;
-    };
-    const out: Row[] = [];
-    for (const app of applications) {
-      const sbJob = supabaseJobs.find((j: { id: string }) => j.id === app.jobId);
-      const cand = candidates.find((c) => c.id === app.candidateId);
-      if (!cand) continue;
-      for (const e of app.events) {
-        out.push({
-          appId: app.id,
-          jobId: app.jobId,
-          jobTitle: sbJob?.title ?? "Offre",
-          candidateName: cand.fullName,
-          candidateInitials: cand.initials,
-          candidateColor: cand.avatarColor,
-          type: e.type,
-          at: e.at,
-          text: e.text,
-        });
-      }
-    }
-    return out.sort((a, b) => b.at.localeCompare(a.at)).slice(0, 8);
-  }, [applications, supabaseJobs, candidates]);
 
   if (!user) return null;
   const displayName =
-    companyProfile?.tagline ?? user.companyName ?? "Console recruteur";
+    company?.tagline ?? user.companyName ?? "Console recruteur";
 
   return (
     <div className="max-w-[1100px] mx-auto">
@@ -150,8 +162,8 @@ export function EmployerDashboard() {
         />
         <MiniStats
           icon={SendMail}
-          label="Candidatures"
-          value={totalApps}
+          label="Candidats"
+          value={totalCandidates}
           tone="muted"
         />
         <MiniStats
@@ -184,7 +196,7 @@ export function EmployerDashboard() {
                 Voir tous →
               </Link>
             </div>
-            <PipelineBars breakdown={breakdown} total={totalApps} />
+            <PipelineBars breakdown={breakdown} total={totalCandidates} />
           </article>
 
           {/* Top à traiter */}
@@ -211,36 +223,32 @@ export function EmployerDashboard() {
               </p>
             ) : (
               <ul className="flex flex-col">
-                {toTreat.map((app) => {
-                  const cand = candidates.find((c) => c.id === app.candidateId);
-                  const sbJob = supabaseJobs.find((j: { id: string }) => j.id === app.jobId);
-                  if (!cand) return null;
+                {toTreat.map((row) => {
+                  const sbJob = supabaseJobs.find((j: { id: string }) => j.id === row.jobId);
                   return (
-                    <li key={app.id}>
+                    <li key={row.id}>
                       <Link
-                        href={`/recruteur/candidats/${app.id}`}
+                        href={`/recruteur/candidats/${row.linkId}`}
                         className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-3 py-2.5 -mx-2 px-2 rounded-lg hover:bg-[var(--background-alt)] transition-colors"
                       >
                         <span
                           className="size-9 rounded-xl flex items-center justify-center text-white font-display text-[12px] font-medium ring-1 ring-black/5"
                           style={{
-                            background: `linear-gradient(155deg, ${cand.avatarColor}, #122a3f)`,
+                            background: `linear-gradient(155deg, ${row.avatarColor}, #122a3f)`,
                           }}
                           aria-hidden
                         >
-                          {cand.initials}
+                          {row.initials}
                         </span>
                         <div className="min-w-0">
                           <div className="text-[13.5px] font-medium text-foreground line-clamp-1">
-                            {cand.fullName}
+                            {row.fullName}
                           </div>
                           <div className="text-[11.5px] text-muted-foreground truncate">
-                            {cand.headline} · {sbJob?.title ?? "Offre"}
+                            {row.headline ?? ""}{sbJob ? ` · ${sbJob.title}` : ""}
                           </div>
                         </div>
-                        <span className="wall-badge" data-tone="accent">
-                          <Sparks /> {app.matchScore}%
-                        </span>
+                        <ApplicationStatusPill status={row.status} />
                         <ArrowUpRight
                           width={12}
                           height={12}
@@ -271,7 +279,7 @@ export function EmployerDashboard() {
                 href="/recruteur/candidats"
                 icon={Group}
                 label="Tous les candidats"
-                hint={`${totalApps} candidatures`}
+                hint={`${totalCandidates} candidats`}
               />
               <ActionLink
                 href="/recruteur/entreprise"
@@ -283,33 +291,41 @@ export function EmployerDashboard() {
           </div>
 
           <div className="bg-white border border-[var(--border)] rounded-2xl p-5">
-            <p className="ed-label-sm mb-3">Activité récente</p>
-            {recentEvents.length === 0 ? (
+            <p className="ed-label-sm mb-3">Derniers candidats</p>
+            {allRows.length === 0 ? (
               <p className="text-[12.5px] text-muted-foreground">
-                Aucune activité récente.
+                Aucun candidat pour l&apos;instant.
               </p>
             ) : (
-              <ul className="flex flex-col gap-3">
-                {recentEvents.map((evt, i) => (
-                  <li key={`${evt.appId}-${i}`} className="text-[12px]">
-                    <Link
-                      href={`/recruteur/candidats/${evt.appId}`}
-                      className="block hover:bg-[var(--background-alt)] -mx-1 px-1 py-1 rounded-md transition-colors"
-                    >
-                      <div className="flex items-baseline gap-1.5">
-                        <span className="font-medium text-foreground line-clamp-1">
-                          {evt.candidateName}
+              <ul className="flex flex-col gap-2">
+                {[...allRows]
+                  .sort((a, b) => b.appliedAt.localeCompare(a.appliedAt))
+                  .slice(0, 6)
+                  .map((row) => (
+                    <li key={row.id}>
+                      <Link
+                        href={`/recruteur/candidats/${row.linkId}`}
+                        className="flex items-center gap-2.5 hover:bg-[var(--background-alt)] -mx-1 px-1 py-1.5 rounded-md transition-colors"
+                      >
+                        <span
+                          className="size-7 rounded-lg flex items-center justify-center text-white font-display text-[10px] font-medium ring-1 ring-black/5 shrink-0"
+                          style={{
+                            background: `linear-gradient(155deg, ${row.avatarColor}, #122a3f)`,
+                          }}
+                        >
+                          {row.initials}
                         </span>
-                        <span className="text-[10.5px] font-mono text-[var(--tertiary-foreground)] shrink-0">
-                          {formatRelative(evt.at)}
+                        <div className="min-w-0 flex-1">
+                          <div className="text-[12.5px] font-medium text-foreground line-clamp-1">
+                            {row.fullName}
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-mono text-[var(--tertiary-foreground)] shrink-0">
+                          {formatRelative(row.appliedAt)}
                         </span>
-                      </div>
-                      <div className="text-foreground/65 line-clamp-1">
-                        {evtSentence(evt.type)} · {evt.jobTitle}
-                      </div>
-                    </Link>
-                  </li>
-                ))}
+                      </Link>
+                    </li>
+                  ))}
               </ul>
             )}
           </div>
@@ -395,30 +411,6 @@ function ActionLink({
   );
 }
 
-function evtSentence(type: string): string {
-  switch (type) {
-    case "received":
-      return "a candidaté";
-    case "cv_viewed":
-      return "CV consulté";
-    case "status_changed":
-      return "statut modifié";
-    case "interview_scheduled":
-      return "entretien planifié";
-    case "offer_sent":
-      return "offre envoyée";
-    case "hired":
-      return "embauché";
-    case "rejected":
-      return "candidature refusée";
-    case "message_sent":
-      return "message envoyé";
-    case "note_added":
-      return "note ajoutée";
-    default:
-      return type;
-  }
-}
 
 function OnboardingBanner({
   onboarding,
