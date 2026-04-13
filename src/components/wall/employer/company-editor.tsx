@@ -10,36 +10,33 @@ import {
   Page,
   Trash,
 } from "iconoir-react";
-import {
-  removeCover,
-  setCoverFromFile,
-  updateCompanyProfile,
-  useEmployer,
-} from "@/lib/employer-store";
-import { BlockEditor } from "./block-editor";
 import { useUser } from "@/lib/auth";
 import { useMyCompany, updateCompanySupabase } from "@/lib/supabase/use-my-company";
-import { CompanyLogo } from "../company-logo";
+import { resizeImage } from "@/lib/resize-image";
 
 export function CompanyEditor() {
   const user = useUser();
-  const { companyProfile } = useEmployer();
-  const { company: sbCompany, loading: companyLoading } = useMyCompany();
+  const { company, loading: companyLoading, refetch } = useMyCompany();
+  const logoRef = useRef<HTMLInputElement>(null);
   const coverRef = useRef<HTMLInputElement>(null);
   const [savedFlash, setSavedFlash] = useState(false);
+  const [logoError, setLogoError] = useState<string | null>(null);
   const [coverError, setCoverError] = useState<string | null>(null);
 
-  // Use Supabase company as source of truth
-  const company = sbCompany;
-
+  // Form state
   const [tagline, setTagline] = useState("");
   const [description, setDescription] = useState("");
   const [positioning, setPositioning] = useState("");
   const [culture, setCulture] = useState("");
-  const [perks, setPerks] = useState<string[]>([]);
   const [website, setWebsite] = useState("");
+  const [perksInput, setPerksInput] = useState("");
+  const [perks, setPerks] = useState<string[]>([]);
 
-  // Resync when company loads from Supabase
+  // Logo & cover as data URLs (local preview before save)
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+
+  // Sync from Supabase when loaded
   const companyId = company?.id ?? null;
   const [prevCompanyId, setPrevCompanyId] = useState<string | null>(null);
   if (companyId !== null && companyId !== prevCompanyId) {
@@ -48,8 +45,10 @@ export function CompanyEditor() {
     setDescription(company?.description ?? "");
     setPositioning(company?.positioning ?? "");
     setCulture(company?.culture ?? "");
-    setPerks(company?.perks ?? []);
     setWebsite(company?.website ?? "");
+    setPerks(company?.perks ?? []);
+    setLogoPreview(company?.logo_url ?? null);
+    setCoverPreview(company?.cover_url ?? null);
   }
 
   if (companyLoading) {
@@ -62,22 +61,40 @@ export function CompanyEditor() {
 
   if (!user || !company) return null;
 
+  const onLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLogoError(null);
+    try {
+      const dataUrl = await resizeImage(file, { maxWidth: 256, maxHeight: 256, quality: 0.9 });
+      setLogoPreview(dataUrl);
+    } catch {
+      setLogoError("Impossible de charger l'image.");
+    }
+  };
+
+  const onCoverChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCoverError(null);
+    try {
+      const dataUrl = await resizeImage(file, { maxWidth: 1200, maxHeight: 600, quality: 0.85 });
+      setCoverPreview(dataUrl);
+    } catch {
+      setCoverError("Impossible de charger l'image.");
+    }
+  };
+
+  const addPerk = () => {
+    const v = perksInput.trim();
+    if (!v) return;
+    setPerks([...perks, v]);
+    setPerksInput("");
+  };
+
   const onSave = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 1. Store local (for blocks/cover data URL)
-    updateCompanyProfile({
-      companyId: company.id,
-      tagline: tagline || undefined,
-      description: description || undefined,
-      positioning: positioning || undefined,
-      culture: culture || undefined,
-      perks,
-      website: website || undefined,
-      hasCover: !!companyProfile?.coverDataUrl || company.has_cover,
-    });
-
-    // 2. Supabase
     await updateCompanySupabase(company.id, {
       tagline: tagline || null,
       description: description || null,
@@ -85,55 +102,58 @@ export function CompanyEditor() {
       culture: culture || null,
       perks,
       website: website || null,
-      blocks: companyProfile?.blocks ?? company.blocks ?? [],
+      logo_url: logoPreview || null,
+      cover_url: coverPreview || null,
+      has_cover: !!coverPreview,
     });
 
     setSavedFlash(true);
-    window.setTimeout(() => setSavedFlash(false), 2000);
+    window.setTimeout(() => {
+      setSavedFlash(false);
+      refetch();
+    }, 1500);
   };
 
-  const onCoverChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setCoverError(null);
-    // Initialize company profile first if needed
-    if (!companyProfile) {
-      updateCompanyProfile({ companyId: company.id });
-    }
-    try {
-      await setCoverFromFile(file);
-    } catch {
-      setCoverError("Image trop lourde (max ~800 Ko).");
-    }
-  };
+  const logoDisplay = logoPreview || null;
+  const coverDisplay = coverPreview || null;
 
   return (
     <div className="max-w-[1100px] mx-auto">
       <header className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-6 lg:py-7 mb-3">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="flex items-start gap-4 min-w-0">
-            <CompanyLogo
-              name={company.name}
-              domain={company.domain}
-              color={company.logo_color}
-              initials={company.initials}
-              size={56}
-              radius={16}
-            />
+            {/* Logo preview */}
+            <div className="relative shrink-0">
+              {logoDisplay ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={logoDisplay}
+                  alt={company.name}
+                  className="size-14 rounded-2xl object-cover ring-1 ring-black/5"
+                />
+              ) : (
+                <span
+                  className="size-14 rounded-2xl flex items-center justify-center text-white font-display text-[18px] font-medium ring-1 ring-black/5"
+                  style={{ background: company.logo_color }}
+                >
+                  {company.initials}
+                </span>
+              )}
+            </div>
             <div className="min-w-0">
               <p className="ed-label-sm">Ma fiche entreprise</p>
               <h1 className="font-display text-[24px] sm:text-[28px] tracking-[-0.015em] text-foreground mt-1">
                 {company.name}
               </h1>
               <p className="text-[13px] text-muted-foreground mt-1">
-                Tes modifications seront visibles sur la fiche publique.
+                Les modifications sont visibles sur la fiche publique apres enregistrement.
               </p>
             </div>
           </div>
           <Link
             href={`/entreprises/${company.slug}`}
             target="_blank"
-            className="h-10 px-3 sm:px-4 rounded-full border border-[var(--border)] bg-white text-[12.5px] sm:text-[13px] text-foreground/80 hover:text-foreground hover:bg-[var(--background-alt)] transition-colors flex items-center gap-2 shrink-0"
+            className="h-10 px-4 rounded-full border border-[var(--border)] bg-white text-[13px] text-foreground/80 hover:text-foreground hover:bg-[var(--background-alt)] transition-colors flex items-center gap-2 shrink-0"
           >
             Voir la fiche publique
             <ArrowUpRight width={11} height={11} strokeWidth={2.2} />
@@ -146,14 +166,82 @@ export function CompanyEditor() {
         className="grid grid-cols-1 lg:grid-cols-3 gap-3 items-start"
       >
         <div className="lg:col-span-2 flex flex-col gap-3">
-          {/* Cover photo */}
-          <article className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-6 lg:py-7">
-            <p className="ed-label-sm mb-3">Photo de couverture</p>
-            {companyProfile?.coverDataUrl ? (
-              <div className="relative rounded-xl overflow-hidden h-[180px] sm:h-[220px]">
+
+          {/* Logo */}
+          <Card title="Logo de l'entreprise">
+            <div className="flex items-center gap-4">
+              <div className="relative shrink-0">
+                {logoDisplay ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={logoDisplay}
+                    alt="Logo"
+                    className="size-20 rounded-2xl object-cover ring-1 ring-black/5"
+                  />
+                ) : (
+                  <span
+                    className="size-20 rounded-2xl flex items-center justify-center text-white font-display text-[24px] font-medium ring-1 ring-black/5"
+                    style={{ background: company.logo_color }}
+                  >
+                    {company.initials}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => logoRef.current?.click()}
+                  className="absolute -bottom-1 -right-1 size-7 rounded-full border-2 border-white bg-foreground text-background flex items-center justify-center hover:bg-foreground/85 transition-colors"
+                  aria-label="Changer le logo"
+                >
+                  <Camera width={12} height={12} strokeWidth={2.2} />
+                </button>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] text-foreground">
+                  {logoDisplay ? "Logo personnalise" : "Pas de logo — les initiales sont affichees"}
+                </p>
+                <p className="text-[11.5px] text-muted-foreground mt-1">
+                  JPG ou PNG, carre recommande (256 x 256 px)
+                </p>
+                <div className="flex items-center gap-2 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => logoRef.current?.click()}
+                    className="text-[12px] text-[var(--accent)] hover:underline underline-offset-2"
+                  >
+                    {logoDisplay ? "Changer" : "Telecharger un logo"}
+                  </button>
+                  {logoDisplay && (
+                    <button
+                      type="button"
+                      onClick={() => setLogoPreview(null)}
+                      className="text-[12px] text-foreground/55 hover:text-destructive transition-colors inline-flex items-center gap-1"
+                    >
+                      <Trash width={10} height={10} strokeWidth={2} />
+                      Retirer
+                    </button>
+                  )}
+                </div>
+                {logoError && (
+                  <p className="text-[11.5px] text-destructive mt-1">{logoError}</p>
+                )}
+              </div>
+            </div>
+            <input
+              ref={logoRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={onLogoChange}
+            />
+          </Card>
+
+          {/* Cover */}
+          <Card title="Photo de couverture">
+            {coverDisplay ? (
+              <div className="relative rounded-xl overflow-hidden h-[180px] sm:h-[240px]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={companyProfile.coverDataUrl}
+                  src={coverDisplay}
                   alt="Couverture"
                   className="w-full h-full object-cover"
                 />
@@ -168,7 +256,7 @@ export function CompanyEditor() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => removeCover()}
+                    onClick={() => setCoverPreview(null)}
                     className="size-8 rounded-full bg-white/90 border border-[var(--border)] flex items-center justify-center text-foreground/55 hover:text-destructive transition-colors"
                     aria-label="Retirer la couverture"
                   >
@@ -189,14 +277,12 @@ export function CompanyEditor() {
                   Ajouter une photo de couverture
                 </div>
                 <div className="text-[11.5px] text-muted-foreground mt-1">
-                  JPG/PNG, 1600 x 520 recommandé
+                  JPG/PNG, 1600 x 520 recommande
                 </div>
               </button>
             )}
             {coverError && (
-              <p className="text-[11.5px] text-destructive mt-2">
-                {coverError}
-              </p>
+              <p className="text-[11.5px] text-destructive mt-2">{coverError}</p>
             )}
             <input
               ref={coverRef}
@@ -205,11 +291,11 @@ export function CompanyEditor() {
               className="hidden"
               onChange={onCoverChange}
             />
-          </article>
+          </Card>
 
-          {/* Infos essentielles */}
-          <article className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-6 lg:py-7 flex flex-col gap-4">
-            <FormRow label="Tagline" hint="Phrase d'accroche courte, affichee en overlay sur le cover">
+          {/* Infos principales */}
+          <Card title="Informations">
+            <FormRow label="Tagline" hint="Phrase d'accroche courte, visible en haut de la fiche">
               <input
                 type="text"
                 value={tagline}
@@ -235,23 +321,90 @@ export function CompanyEditor() {
                 />
               </div>
             </FormRow>
-          </article>
+          </Card>
 
-          {/* Blocs de contenu */}
-          <article className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-6 lg:py-7">
-            <div className="flex items-baseline justify-between mb-4">
-              <div>
-                <p className="ed-label-sm">Contenu de la fiche</p>
-                <p className="text-[12px] text-muted-foreground mt-1">
-                  Ajoutez et ordonnez vos blocs : texte, images, citations, chiffres, avantages.
-                </p>
-              </div>
+          {/* Description */}
+          <Card title="Presentation">
+            <FormRow label="Description" hint="Presentez votre entreprise en quelques paragraphes">
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={5}
+                placeholder="L'histoire, la mission, le coeur de metier de votre entreprise..."
+                className="bg-white border border-[var(--border)] rounded-xl px-3.5 py-3 text-[13.5px] outline-none placeholder:text-[var(--tertiary-foreground)] focus:border-[var(--accent)] transition-all leading-[1.65] resize-y"
+              />
+            </FormRow>
+            <FormRow label="Positionnement" hint="Ce qui vous differencie de vos concurrents">
+              <textarea
+                value={positioning}
+                onChange={(e) => setPositioning(e.target.value)}
+                rows={3}
+                placeholder="Ex. Leader dans l'hotellerie de luxe a Monaco depuis 1863..."
+                className="bg-white border border-[var(--border)] rounded-xl px-3.5 py-3 text-[13.5px] outline-none placeholder:text-[var(--tertiary-foreground)] focus:border-[var(--accent)] transition-all leading-[1.65] resize-y"
+              />
+            </FormRow>
+            <FormRow label="Culture d'entreprise" hint="L'ambiance, les valeurs, le quotidien de vos equipes">
+              <textarea
+                value={culture}
+                onChange={(e) => setCulture(e.target.value)}
+                rows={3}
+                placeholder="Ex. Esprit famille, exigence du detail, mobilite interne encouragee..."
+                className="bg-white border border-[var(--border)] rounded-xl px-3.5 py-3 text-[13.5px] outline-none placeholder:text-[var(--tertiary-foreground)] focus:border-[var(--accent)] transition-all leading-[1.65] resize-y"
+              />
+            </FormRow>
+          </Card>
+
+          {/* Avantages */}
+          <Card title="Avantages">
+            {perks.length > 0 && (
+              <ul className="flex flex-col gap-1.5 mb-3">
+                {perks.map((p, i) => (
+                  <li key={i} className="flex items-center gap-2 group">
+                    <input
+                      type="text"
+                      value={p}
+                      onChange={(e) => {
+                        const next = [...perks];
+                        next[i] = e.target.value;
+                        setPerks(next);
+                      }}
+                      className="flex-1 bg-white border border-[var(--border)] rounded-lg px-3 py-1.5 text-[13px] outline-none focus:border-[var(--accent)] transition-colors"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setPerks(perks.filter((_, j) => j !== i))}
+                      className="size-7 rounded-full hover:bg-destructive/10 flex items-center justify-center text-foreground/30 hover:text-destructive transition-colors shrink-0"
+                    >
+                      <Trash width={11} height={11} strokeWidth={2} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={perksInput}
+                onChange={(e) => setPerksInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") { e.preventDefault(); addPerk(); }
+                }}
+                placeholder="Ex. Mutuelle premium, 13e mois, parking..."
+                className="flex-1 wall-input h-9 text-[13px] placeholder:text-[var(--tertiary-foreground)]"
+              />
+              <button
+                type="button"
+                onClick={addPerk}
+                disabled={!perksInput.trim()}
+                className="h-9 px-3 rounded-full border border-[var(--border)] bg-white text-[12px] text-foreground/75 hover:bg-[var(--background-alt)] disabled:opacity-40 transition-colors"
+              >
+                Ajouter
+              </button>
             </div>
-            <BlockEditor blocks={companyProfile?.blocks ?? []} />
-          </article>
+          </Card>
         </div>
 
-        {/* Sidebar save */}
+        {/* Sidebar */}
         <aside className="lg:sticky lg:top-[140px] flex flex-col gap-3">
           <div className="bg-white border border-[var(--border)] rounded-2xl p-5 flex flex-col gap-2">
             <button
@@ -261,10 +414,10 @@ export function CompanyEditor() {
               {savedFlash ? (
                 <>
                   <BadgeCheck width={14} height={14} strokeWidth={2} />
-                  Modifications enregistrées
+                  Enregistre
                 </>
               ) : (
-                "Enregistrer les modifications"
+                "Enregistrer"
               )}
             </button>
             <Link
@@ -275,13 +428,50 @@ export function CompanyEditor() {
               Voir la fiche publique
               <ArrowUpRight width={11} height={11} strokeWidth={2.2} />
             </Link>
-            <p className="text-[11px] text-center text-foreground/55 mt-1">
-              Les changements sont visibles immédiatement sur la fiche publique.
-            </p>
+          </div>
+
+          {/* Info box */}
+          <div className="bg-white border border-[var(--border)] rounded-2xl p-5">
+            <p className="ed-label-sm mb-2">A propos</p>
+            <dl className="flex flex-col gap-2 text-[12.5px]">
+              <div className="flex justify-between">
+                <dt className="text-foreground/55">Nom</dt>
+                <dd className="text-foreground">{company.name}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-foreground/55">Secteur</dt>
+                <dd className="text-foreground">{company.sector}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-foreground/55">Taille</dt>
+                <dd className="text-foreground">{company.size || "Non renseignee"}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-foreground/55">Localisation</dt>
+                <dd className="text-foreground">{company.location}</dd>
+              </div>
+            </dl>
           </div>
         </aside>
       </form>
     </div>
+  );
+}
+
+/* ─── Primitives ─── */
+
+function Card({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <article className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-6 lg:py-7">
+      <p className="ed-label-sm mb-4">{title}</p>
+      <div className="flex flex-col gap-4">{children}</div>
+    </article>
   );
 }
 

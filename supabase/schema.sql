@@ -27,6 +27,7 @@ create table if not exists companies (
   website text,
   domain text,
   logo_color text default '#1C3D5A',
+  logo_url text,
   initials text,
   founded integer,
   has_cover boolean default false,

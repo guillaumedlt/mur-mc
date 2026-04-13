@@ -19,6 +19,7 @@ export type MyCompany = {
   website: string;
   domain: string;
   logo_color: string;
+  logo_url: string | null;
   initials: string;
   founded: number | null;
   has_cover: boolean;
@@ -43,6 +44,7 @@ function mapCompany(row: any): MyCompany {
     website: row.website ?? "",
     domain: row.domain ?? "",
     logo_color: row.logo_color ?? "#1C3D5A",
+    logo_url: row.logo_url ?? null,
     initials: row.initials ?? "",
     founded: row.founded ?? null,
     has_cover: row.has_cover ?? false,
