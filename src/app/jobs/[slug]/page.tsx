@@ -29,6 +29,7 @@ import { Shell } from "@/components/wall/shell";
 import { ApplyButton } from "@/components/wall/apply-button";
 import { SaveShareButtons } from "@/components/wall/save-share-buttons";
 import { MatchPill } from "@/components/wall/match-pill";
+import { TrackView } from "@/components/wall/track-view";
 
 const SITE_URL = "https://mur.mc";
 
@@ -153,6 +154,7 @@ export default async function JobPage(props: PageProps<"/jobs/[slug]">) {
 
   return (
     <Shell jobs={allJobs}>
+      <TrackView jobId={job.id} />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }}

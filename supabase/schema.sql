@@ -160,6 +160,17 @@ create table if not exists manual_candidates (
   updated_at timestamptz default now()
 );
 
+-- Vues uniques par offre (fingerprint = hash IP + UA)
+create table if not exists job_views (
+  id uuid primary key default uuid_generate_v4(),
+  job_id uuid not null references jobs(id) on delete cascade,
+  fingerprint text not null,
+  user_agent text,
+  referrer text,
+  created_at timestamptz default now(),
+  unique(job_id, fingerprint)
+);
+
 -- Articles du magazine
 create table if not exists stories (
   id uuid primary key default uuid_generate_v4(),
