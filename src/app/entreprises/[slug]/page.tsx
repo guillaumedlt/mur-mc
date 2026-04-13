@@ -52,8 +52,29 @@ export default async function CompanyPage(
     fetchAllJobs(),
   ]);
 
+  const orgJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: company.name,
+    description: company.description || company.tagline,
+    url: company.website ? `https://${company.website}` : `${SITE_URL}/entreprises/${company.slug}`,
+    logo: company.logoUrl || undefined,
+    address: {
+      "@type": "PostalAddress",
+      addressLocality: company.location || "Monaco",
+      addressCountry: "MC",
+    },
+    numberOfEmployees: company.size ? { "@type": "QuantitativeValue", value: company.size } : undefined,
+    foundingDate: company.founded ? String(company.founded) : undefined,
+    sameAs: company.website ? [`https://${company.website}`] : undefined,
+  };
+
   return (
     <Shell jobs={allJobs}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
+      />
       <div className="max-w-[1100px] mx-auto">
         <Link
           href="/entreprises"
