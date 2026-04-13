@@ -143,27 +143,37 @@ function RichCompany({
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 items-start">
         <div className="lg:col-span-2 flex flex-col gap-3">
-          <article className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-6 lg:py-9">
-            <Section title="L'entreprise">
-              <p className="text-[15px] leading-[1.75] text-foreground/85 first-letter:font-display first-letter:text-[44px] first-letter:float-left first-letter:leading-[0.9] first-letter:mr-2 first-letter:mt-1.5">
+          {/* Description */}
+          {company.description && (
+            <article className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-6 lg:py-9">
+              <h3 className="ed-label-sm mb-4">L&apos;entreprise</h3>
+              <p className="text-[15px] leading-[1.85] text-foreground/85 whitespace-pre-line">
                 {company.description}
               </p>
-            </Section>
-            {company.positioning && (
-              <Section title="Positionnement marché">
-                <p className="text-[14.5px] leading-[1.75] text-foreground/82">
-                  {company.positioning}
-                </p>
-              </Section>
-            )}
-            {company.culture && (
-              <Section title="Culture & environnement">
-                <p className="text-[14.5px] leading-[1.75] text-foreground/82">
-                  {company.culture}
-                </p>
-              </Section>
-            )}
-          </article>
+            </article>
+          )}
+
+          {/* Positionnement */}
+          {company.positioning && (
+            <article className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-6 lg:py-8">
+              <h3 className="ed-label-sm mb-4">Positionnement marché</h3>
+              <p className="text-[15px] leading-[1.85] text-foreground/82 whitespace-pre-line">
+                {company.positioning}
+              </p>
+            </article>
+          )}
+
+          {/* Culture */}
+          {company.culture && (
+            <article className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-6 lg:py-8">
+              <h3 className="ed-label-sm mb-4">Culture & environnement</h3>
+              <p className="text-[15px] leading-[1.85] text-foreground/82 whitespace-pre-line">
+                {company.culture}
+              </p>
+            </article>
+          )}
+
+          {/* Blocks (gallery, videos, etc.) */}
           {blocks.length > 0 && <BlocksRenderer blocks={blocks} />}
         </div>
         <aside className="lg:sticky lg:top-[80px] flex flex-col gap-3">
@@ -310,32 +320,33 @@ function SimpleCompany({
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 items-start">
-        <article className="lg:col-span-2 bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-6 lg:py-9">
-          <Section title="À propos">
-            <p className="text-[14.5px] leading-[1.7] text-foreground/85">
-              {company.description}
-            </p>
-          </Section>
+        <div className="lg:col-span-2 flex flex-col gap-3">
+          {company.description && (
+            <article className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-6 lg:py-9">
+              <h3 className="ed-label-sm mb-4">A propos</h3>
+              <p className="text-[15px] leading-[1.85] text-foreground/85 whitespace-pre-line">
+                {company.description}
+              </p>
+            </article>
+          )}
           {company.positioning && (
-            <Section title="Positionnement marché">
-              <p className="text-[14px] leading-[1.7] text-foreground/80">
+            <article className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-6 lg:py-8">
+              <h3 className="ed-label-sm mb-4">Positionnement marché</h3>
+              <p className="text-[15px] leading-[1.85] text-foreground/82 whitespace-pre-line">
                 {company.positioning}
               </p>
-            </Section>
+            </article>
           )}
           {company.culture && (
-            <Section title="Culture & environnement">
-              <p className="text-[14px] leading-[1.7] text-foreground/80">
+            <article className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-6 lg:py-8">
+              <h3 className="ed-label-sm mb-4">Culture & environnement</h3>
+              <p className="text-[15px] leading-[1.85] text-foreground/82 whitespace-pre-line">
                 {company.culture}
               </p>
-            </Section>
+            </article>
           )}
-          {blocks.length > 0 && (
-            <div className="mt-6">
-              <BlocksRendererInline blocks={blocks} />
-            </div>
-          )}
-        </article>
+          {blocks.length > 0 && <BlocksRenderer blocks={blocks} />}
+        </div>
         <aside className="lg:sticky lg:top-[80px] flex flex-col gap-3">
           {company.perks && company.perks.length > 0 && (
             <div className="bg-white border border-[var(--border)] rounded-2xl p-5">
@@ -404,21 +415,6 @@ function SimpleCompany({
 
 /* ─── Shared helpers ─────────────────────────────────────── */
 
-function Section({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="mt-8 first:mt-0">
-      <h3 className="ed-label-sm mb-3">{title}</h3>
-      {children}
-    </section>
-  );
-}
-
 function Stat({
   icon,
   children,
@@ -465,22 +461,6 @@ function BlocksRenderer({ blocks }: { blocks: CompanyBlock[] }) {
           )}
           <PublicBlock block={block} />
         </article>
-      ))}
-    </>
-  );
-}
-
-/** Simple : blocs inline (used in SimpleCompany, inside existing article). */
-function BlocksRendererInline({ blocks }: { blocks: CompanyBlock[] }) {
-  return (
-    <>
-      {blocks.map((block) => (
-        <section key={block.id} className="mt-8">
-          {block.title && (
-            <h3 className="ed-label-sm mb-3">{block.title}</h3>
-          )}
-          <PublicBlock block={block} />
-        </section>
       ))}
     </>
   );
