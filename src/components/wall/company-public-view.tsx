@@ -51,8 +51,9 @@ function RichCompany({
 
   return (
     <div className="flex flex-col gap-3">
+      {/* Cover hero */}
       <header className="bg-white border border-[var(--border)] rounded-2xl overflow-hidden">
-        <div className="relative h-[180px] sm:h-[220px] lg:h-[260px] w-full">
+        <div className="relative h-[200px] sm:h-[280px] lg:h-[340px] w-full">
           {isDataUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -70,24 +71,29 @@ function RichCompany({
               className="object-cover"
             />
           )}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/0 via-black/0 to-black/35" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/0 via-black/10 to-black/50" />
+
+          {/* Tagline overlay on cover */}
           {company.tagline && (
-            <div className="absolute top-6 right-6 max-w-[360px]">
-              <p className="font-display italic text-[15px] text-white leading-snug drop-shadow-[0_1px_4px_rgba(0,0,0,0.5)]">
-                « {company.tagline} »
+            <div className="absolute bottom-5 left-5 sm:left-7 lg:left-9 right-5 sm:right-7 lg:right-9">
+              <p className="font-display italic text-[18px] sm:text-[22px] lg:text-[26px] text-white leading-[1.2] drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)] max-w-[600px]">
+                {company.tagline}
               </p>
             </div>
           )}
         </div>
-        <div className="px-5 sm:px-7 lg:px-9 pb-7 -mt-10 relative">
-          <div className="flex items-end gap-3 sm:gap-5">
-            <div className="rounded-[18px] sm:rounded-[22px] p-1 bg-white shadow-[0_8px_30px_-8px_rgba(10,10,10,0.25)] shrink-0">
+
+        {/* Identity bar */}
+        <div className="px-5 sm:px-7 lg:px-9 py-5 sm:py-6 -mt-12 sm:-mt-14 relative">
+          <div className="flex items-end gap-4 sm:gap-5">
+            {/* Logo — big and prominent */}
+            <div className="rounded-[20px] sm:rounded-[24px] p-1.5 bg-white shadow-[0_8px_30px_-6px_rgba(10,10,10,0.3)] shrink-0">
               {company.logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={company.logoUrl}
                   alt={company.name}
-                  className="size-16 rounded-[14px] object-cover"
+                  className="size-[72px] sm:size-[88px] rounded-[14px] sm:rounded-[18px] object-cover"
                 />
               ) : (
                 <CompanyLogo
@@ -95,18 +101,22 @@ function RichCompany({
                   domain={company.domain}
                   color={company.logoColor}
                   initials={company.initials}
-                  size={64}
-                  radius={14}
+                  size={88}
+                  radius={18}
                 />
               )}
             </div>
-            <div className="min-w-0 flex-1 pb-2">
-              <p className="ed-label-sm">{company.sector}</p>
-              <h1 className="font-display text-[24px] sm:text-[28px] lg:text-[34px] leading-[1.08] tracking-[-0.015em] text-foreground mt-1">
+
+            <div className="min-w-0 flex-1 pb-1">
+              <h1 className="font-display text-[26px] sm:text-[32px] lg:text-[38px] leading-[1.05] tracking-[-0.02em] text-foreground">
                 {company.name}
               </h1>
+              <p className="text-[13px] sm:text-[14px] text-muted-foreground mt-1">
+                {company.sector}
+              </p>
             </div>
-            <div className="hidden md:flex shrink-0 pb-2">
+
+            <div className="hidden md:flex shrink-0 pb-1">
               <span
                 className="wall-badge"
                 data-tone={openings.length > 0 ? "accent" : "muted"}
@@ -116,17 +126,19 @@ function RichCompany({
               </span>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-5 text-[12.5px] text-foreground/65">
-            <Stat icon={<MapPin width={12} height={12} strokeWidth={2} />}>
+
+          {/* Meta stats row */}
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-5 text-[13px] text-foreground/60">
+            <Stat icon={<MapPin width={13} height={13} strokeWidth={2} />}>
               {company.location}
             </Stat>
             {company.size && (
-              <Stat icon={<Group width={12} height={12} strokeWidth={2} />}>
+              <Stat icon={<Group width={13} height={13} strokeWidth={2} />}>
                 {company.size} collaborateurs
               </Stat>
             )}
             {company.founded && (
-              <Stat icon={<Calendar width={12} height={12} strokeWidth={2} />}>
+              <Stat icon={<Calendar width={13} height={13} strokeWidth={2} />}>
                 Fondée en {company.founded}
               </Stat>
             )}
@@ -137,7 +149,7 @@ function RichCompany({
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-[var(--accent)] hover:underline underline-offset-2"
               >
-                <Globe width={12} height={12} strokeWidth={2} />
+                <Globe width={13} height={13} strokeWidth={2} />
                 {company.website}
               </a>
             )}
