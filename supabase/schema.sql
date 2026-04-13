@@ -137,6 +137,28 @@ create table if not exists saved_jobs (
   unique(user_id, job_id)
 );
 
+-- Candidats ajoutes manuellement (pas de compte Supabase)
+create table if not exists manual_candidates (
+  id uuid primary key default uuid_generate_v4(),
+  company_id uuid not null references companies(id) on delete cascade,
+  job_id uuid references jobs(id) on delete set null,
+  full_name text not null,
+  email text,
+  phone text,
+  location text,
+  headline text,
+  skills text[] default '{}',
+  languages text[] default '{}',
+  cover_letter text,
+  status text default 'received' check (status in ('received','reviewed','interview','offer','hired','rejected')),
+  rating integer default 0,
+  source text default 'manual' check (source in ('manual','csv_import','referral')),
+  added_by uuid references profiles(id),
+  notes text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
 -- Articles du magazine
 create table if not exists stories (
   id uuid primary key default uuid_generate_v4(),

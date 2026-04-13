@@ -18,7 +18,7 @@ import {
 } from "iconoir-react";
 import { useUser } from "@/lib/auth";
 import { useMyJobs, type MyJob } from "@/lib/supabase/use-my-jobs";
-import { createClient } from "@/lib/supabase/client";
+import { addManualCandidateSupabase } from "@/lib/supabase/use-manual-candidates";
 
 type Tab = "manual" | "csv";
 
@@ -97,58 +97,17 @@ export function AddCandidate() {
   );
 }
 
-/* ─── Supabase helpers ─────────────────────────────────────── */
-
-async function insertCandidate(
-  candidateData: {
-    fullName: string;
-    email: string;
-    phone?: string;
-    location?: string;
-    headline?: string;
-    skills: string[];
-    languages: string[];
-  },
-  jobId: string | undefined,
-  coverLetter: string | undefined,
-  userId: string,
-): Promise<boolean> {
-  const supabase = createClient();
-
-  // First ensure the candidate has a profile — if they don't exist, we create
-  // an application linked to the recruiter's user ID as a "manual" source
-  if (!jobId) return true; // No job to link to, nothing to insert
-
-  // Insert application directly
-  const { error } = await supabase.from("applications").insert({
-    job_id: jobId,
-    candidate_id: userId, // Link to the recruiter who added them for now
-    status: "received",
-    cover_letter: coverLetter || null,
-    source: "manual",
-    added_by: userId,
-    match_score: 50,
-  });
-
-  if (error) {
-    window.console.error("Insert application error:", error);
-    return false;
-  }
-
-  return true;
-}
-
 /* ─── Manual form ──────────────────────────────────────────── */
 
 function ManualForm({
   jobs,
-  userName,
   userId,
 }: {
   jobs: MyJob[];
   userName: string;
   userId: string;
 }) {
+  const user = useUser();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -163,46 +122,23 @@ function ManualForm({
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || !user?.companyId) return;
     setSaving(true);
 
-    await insertCandidate(
-      {
-        fullName: name.trim(),
-        email: email.trim(),
-        phone: phone.trim() || undefined,
-        location: location.trim() || undefined,
-        headline: headline.trim() || undefined,
-        skills: skills.split(/[,;]/).map((s) => s.trim()).filter(Boolean),
-        languages: languages.split(/[,;]/).map((s) => s.trim()).filter(Boolean),
-      },
-      jobId || undefined,
-      coverLetter.trim() || undefined,
-      userId,
-    );
-
-    // Also insert an event
-    if (jobId) {
-      const supabase = createClient();
-      // Get the application we just created to add an event
-      const { data: app } = await supabase
-        .from("applications")
-        .select("id")
-        .eq("job_id", jobId)
-        .eq("added_by", userId)
-        .order("applied_at", { ascending: false })
-        .limit(1)
-        .single();
-
-      if (app) {
-        await supabase.from("application_events").insert({
-          application_id: app.id,
-          type: "received",
-          text: `Candidat ajoute manuellement : ${name.trim()}`,
-          by_name: userName,
-        });
-      }
-    }
+    await addManualCandidateSupabase({
+      companyId: user.companyId,
+      jobId: jobId || undefined,
+      fullName: name.trim(),
+      email: email.trim() || undefined,
+      phone: phone.trim() || undefined,
+      location: location.trim() || undefined,
+      headline: headline.trim() || undefined,
+      skills: skills.split(/[,;]/).map((s) => s.trim()).filter(Boolean),
+      languages: languages.split(/[,;]/).map((s) => s.trim()).filter(Boolean),
+      coverLetter: coverLetter.trim() || undefined,
+      source: "manual",
+      addedBy: userId,
+    });
 
     setSaving(false);
     setDone(true);
@@ -331,8 +267,10 @@ function CsvImport({
     reader.readAsText(file);
   };
 
+  const user = useUser();
+
   const onImport = async () => {
-    if (!preview) return;
+    if (!preview || !user?.companyId) return;
     setImporting(true);
 
     let count = 0;
@@ -341,20 +279,19 @@ function CsvImport({
       const email = (row.email || row.mail || "").trim();
       if (!fullName && !email) continue;
 
-      await insertCandidate(
-        {
-          fullName: fullName || email.split("@")[0],
-          email,
-          phone: (row.telephone || row.phone || row.tel || "").trim() || undefined,
-          location: (row.lieu || row.location || row.ville || "").trim() || undefined,
-          headline: (row.poste || row.headline || row.titre || "").trim() || undefined,
-          skills: (row.competences || row.skills || "").split(/[,;]/).map((s) => s.trim()).filter(Boolean),
-          languages: (row.langues || row.languages || "").split(/[,;]/).map((s) => s.trim()).filter(Boolean),
-        },
-        jobId || undefined,
-        undefined,
-        userId,
-      );
+      await addManualCandidateSupabase({
+        companyId: user.companyId,
+        jobId: jobId || undefined,
+        fullName: fullName || email.split("@")[0],
+        email: email || undefined,
+        phone: (row.telephone || row.phone || row.tel || "").trim() || undefined,
+        location: (row.lieu || row.location || row.ville || "").trim() || undefined,
+        headline: (row.poste || row.headline || row.titre || "").trim() || undefined,
+        skills: (row.competences || row.skills || "").split(/[,;]/).map((s) => s.trim()).filter(Boolean),
+        languages: (row.langues || row.languages || "").split(/[,;]/).map((s) => s.trim()).filter(Boolean),
+        source: "csv_import",
+        addedBy: userId,
+      });
       count++;
     }
 

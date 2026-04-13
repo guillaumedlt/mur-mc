@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  ArrowUpRight,
   Calendar,
   Group,
   PlusCircle,
@@ -20,16 +19,77 @@ import {
 } from "@/lib/employer-store";
 import { useMyJobs } from "@/lib/supabase/use-my-jobs";
 import { useMyApplications } from "@/lib/supabase/use-my-applications";
+import { useManualCandidates } from "@/lib/supabase/use-manual-candidates";
 import { ApplicationStatusPill } from "./status-pill";
 import { StarRatingCompact } from "./star-rating";
 import { EmployerEmptyState } from "./employer-empty-state";
 
 type SortKey = "recent" | "match" | "rating";
 
+// Unified type for display
+type CandidateRow = {
+  id: string;
+  fullName: string;
+  email: string;
+  headline?: string;
+  initials: string;
+  avatarColor: string;
+  status: EmployerApplicationStatus;
+  matchScore: number;
+  rating: number;
+  appliedAt: string;
+  jobId: string;
+  source: string;
+};
+
 export function CandidatesPool() {
   const { jobs } = useMyJobs();
-  // Load applications for all jobs — pass null to get all for this employer
   const { applications, candidates } = useMyApplications(null);
+  const { candidates: manualCands } = useManualCandidates();
+
+  // Merge real applications + manual candidates into unified list
+  const allRows: CandidateRow[] = useMemo(() => {
+    const rows: CandidateRow[] = [];
+
+    // Real applications
+    for (const app of applications) {
+      const cand = candidates.find((c) => c.id === app.candidateId);
+      rows.push({
+        id: app.id,
+        fullName: cand?.fullName ?? "Candidat",
+        email: cand?.email ?? "",
+        headline: cand?.headline,
+        initials: cand?.initials ?? "??",
+        avatarColor: cand?.avatarColor ?? "#1C3D5A",
+        status: app.status,
+        matchScore: app.matchScore,
+        rating: app.rating,
+        appliedAt: app.appliedAt,
+        jobId: app.jobId,
+        source: "platform",
+      });
+    }
+
+    // Manual candidates
+    for (const mc of manualCands) {
+      rows.push({
+        id: `mc-${mc.id}`,
+        fullName: mc.fullName,
+        email: mc.email,
+        headline: mc.headline,
+        initials: mc.initials,
+        avatarColor: mc.avatarColor,
+        status: mc.status as EmployerApplicationStatus,
+        matchScore: 0,
+        rating: mc.rating,
+        appliedAt: mc.createdAt,
+        jobId: mc.jobId ?? "",
+        source: mc.source,
+      });
+    }
+
+    return rows;
+  }, [applications, candidates, manualCands]);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] =
     useState<EmployerApplicationStatus | "all">("all");
@@ -44,7 +104,7 @@ export function CandidatesPool() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    let list = applications;
+    let list = allRows;
     if (statusFilter !== "all") {
       list = list.filter((a) => a.status === statusFilter);
     }
@@ -53,10 +113,7 @@ export function CandidatesPool() {
     }
     if (q) {
       list = list.filter((a) => {
-        const cand = candidates.find((c) => c.id === a.candidateId);
-        if (!cand) return false;
-        const hay =
-          `${cand.fullName} ${cand.headline} ${cand.skills.join(" ")} ${cand.email}`.toLowerCase();
+        const hay = `${a.fullName} ${a.headline ?? ""} ${a.email}`.toLowerCase();
         return hay.includes(q);
       });
     }
@@ -66,7 +123,7 @@ export function CandidatesPool() {
       return b.appliedAt.localeCompare(a.appliedAt);
     });
     return list;
-  }, [applications, candidates, query, statusFilter, jobFilter, sort]);
+  }, [allRows, query, statusFilter, jobFilter, sort]);
 
   return (
     <div className="max-w-[1100px] mx-auto">
@@ -76,7 +133,7 @@ export function CandidatesPool() {
           Pool de candidatures
         </h1>
         <p className="text-[13.5px] text-muted-foreground mt-2">
-          {applications.length} candidature{applications.length > 1 ? "s" : ""} sur{" "}
+          {allRows.length} candidat{allRows.length > 1 ? "s" : ""} sur{" "}
           {jobs.length} offre{jobs.length > 1 ? "s" : ""}
         </p>
         <div className="flex items-center gap-2 mt-4">
@@ -200,58 +257,49 @@ export function CandidatesPool() {
         />
       ) : (
         <div className="bg-white border border-[var(--border)] rounded-2xl divide-y divide-[var(--border)]">
-          {filtered.map((app) => {
-            const cand = candidates.find((c) => c.id === app.candidateId);
-            const job = jobs.find((j) => j.id === app.jobId);
-            if (!cand || !job) return null;
+          {filtered.map((row) => {
+            const job = jobs.find((j) => j.id === row.jobId);
             return (
-              <Link
-                key={app.id}
-                href={`/recruteur/candidats/${app.id}`}
+              <div
+                key={row.id}
                 className="group flex items-center gap-3 sm:gap-4 px-4 sm:px-6 lg:px-7 py-3 sm:py-4 hover:bg-[var(--background-alt)]/40 transition-colors"
               >
                 <span
                   className="size-10 rounded-xl flex items-center justify-center text-white font-display text-[12px] font-medium ring-1 ring-black/5 shrink-0"
                   style={{
-                    background: `linear-gradient(155deg, ${cand.avatarColor}, #122a3f)`,
+                    background: `linear-gradient(155deg, ${row.avatarColor}, #122a3f)`,
                   }}
                   aria-hidden
                 >
-                  {cand.initials}
+                  {row.initials}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <div className="text-[14px] font-medium text-foreground line-clamp-1 group-hover:text-[var(--accent)] transition-colors">
-                    {cand.fullName}
+                  <div className="text-[14px] font-medium text-foreground line-clamp-1">
+                    {row.fullName}
                   </div>
                   <div className="text-[11.5px] text-muted-foreground line-clamp-1 mt-0.5">
-                    {cand.headline} · {job.title}
+                    {row.headline ?? row.email}{job ? ` · ${job.title}` : ""}
                   </div>
                 </div>
                 <div className="hidden sm:flex items-center gap-2 shrink-0">
-                  {app.matchScore >= 65 && (
+                  {row.matchScore >= 65 && (
                     <span className="wall-badge" data-tone="accent">
-                      <Sparks /> {app.matchScore}%
+                      <Sparks /> {row.matchScore}%
                     </span>
                   )}
-                  {app.rating > 0 && <StarRatingCompact value={app.rating} />}
+                  {row.rating > 0 && <StarRatingCompact value={row.rating} />}
                 </div>
-                <ApplicationStatusPill status={app.status} />
-                {cand.source !== "platform" && (
+                <ApplicationStatusPill status={row.status} />
+                {row.source !== "platform" && (
                   <span className="wall-badge hidden lg:inline-flex" data-tone="muted">
-                    {candidateSourceLabel(cand.source)}
+                    {candidateSourceLabel(row.source as "manual" | "csv_import" | "referral" | "platform")}
                   </span>
                 )}
                 <span className="text-[10.5px] font-mono text-[var(--tertiary-foreground)] hidden md:inline-flex items-center gap-1 shrink-0">
                   <Calendar width={10} height={10} strokeWidth={2} />
-                  {formatShort(app.appliedAt)}
+                  {formatShort(row.appliedAt)}
                 </span>
-                <ArrowUpRight
-                  width={12}
-                  height={12}
-                  strokeWidth={2.2}
-                  className="text-foreground/40 group-hover:text-[var(--accent)] shrink-0"
-                />
-              </Link>
+              </div>
             );
           })}
         </div>
