@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   ArrowLeft,
   BadgeCheck,
+  EditPencil,
   Mail,
   MapPin,
   Phone,
@@ -125,9 +126,19 @@ export function ManualCandidateDetail({ id }: Props) {
                 {mc.initials}
               </span>
               <div className="flex-1 min-w-0">
-                <h1 className="font-display text-[24px] sm:text-[28px] tracking-[-0.015em] text-foreground">
-                  {mc.fullName}
-                </h1>
+                <div className="flex items-center gap-2">
+                  <h1 className="font-display text-[24px] sm:text-[28px] tracking-[-0.015em] text-foreground">
+                    {mc.fullName}
+                  </h1>
+                  <button
+                    type="button"
+                    onClick={() => setEditing(true)}
+                    className="size-8 rounded-full hover:bg-[var(--background-alt)] flex items-center justify-center text-foreground/40 hover:text-foreground transition-colors shrink-0"
+                    aria-label="Modifier le candidat"
+                  >
+                    <EditPencil width={14} height={14} strokeWidth={2} />
+                  </button>
+                </div>
                 {mc.headline && (
                   <p className="text-[14px] text-muted-foreground mt-1">
                     {mc.headline}
