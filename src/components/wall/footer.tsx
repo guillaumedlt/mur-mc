@@ -12,38 +12,26 @@ export function Footer() {
         © {new Date().getFullYear()} Mur.mc — Le mur d&apos;offres de la
         Principauté de Monaco
       </span>
-      <nav className="flex items-center gap-4">
+      <nav className="flex items-center gap-4 flex-wrap">
         <Link href="/" className="hover:text-foreground transition-colors">
           Offres
         </Link>
-        <Link
-          href="/entreprises"
-          className="hover:text-foreground transition-colors"
-        >
+        <Link href="/emploi-monaco" className="hover:text-foreground transition-colors">
+          Emploi Monaco
+        </Link>
+        <Link href="/entreprises" className="hover:text-foreground transition-colors">
           Entreprises
         </Link>
-        <Link
-          href="/stories"
-          className="hover:text-foreground transition-colors"
-        >
+        <Link href="/stories" className="hover:text-foreground transition-colors">
           Magazine
         </Link>
-        <Link
-          href="/tarifs"
-          className="hover:text-foreground transition-colors"
-        >
+        <Link href="/tarifs" className="hover:text-foreground transition-colors">
           Tarifs
         </Link>
-        <Link
-          href="/a-propos"
-          className="hover:text-foreground transition-colors"
-        >
+        <Link href="/a-propos" className="hover:text-foreground transition-colors">
           A propos
         </Link>
-        <a
-          href="mailto:contact@mur.mc"
-          className="hover:text-foreground transition-colors"
-        >
+        <a href="mailto:contact@mur.mc" className="hover:text-foreground transition-colors">
           Contact
         </a>
       </nav>

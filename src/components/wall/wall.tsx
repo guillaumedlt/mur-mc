@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import {
   Filter,
   List,
@@ -269,6 +270,38 @@ export function Wall({ jobs }: Props) {
           )}
         </main>
       </div>
+
+      {/* SEO sector links */}
+      <nav className="mt-3 bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 py-4">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-[11px] uppercase tracking-[0.08em] font-semibold text-foreground/50">
+            Emploi par secteur
+          </span>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {[
+            { href: "/emploi-monaco/banque-finance", label: "Banque & Finance" },
+            { href: "/emploi-monaco/hotellerie-restauration", label: "Hotellerie" },
+            { href: "/emploi-monaco/tech-digital", label: "Tech & Digital" },
+            { href: "/emploi-monaco/yachting", label: "Yachting" },
+            { href: "/emploi-monaco/luxe-retail", label: "Luxe & Retail" },
+            { href: "/emploi-monaco/immobilier", label: "Immobilier" },
+            { href: "/emploi-monaco/juridique", label: "Juridique" },
+            { href: "/emploi-monaco/communication-marketing", label: "Communication" },
+            { href: "/emploi-monaco/btp-construction", label: "BTP" },
+            { href: "/emploi-monaco/ressources-humaines", label: "RH" },
+            { href: "/emploi-monaco", label: "Tous les secteurs" },
+          ].map((s) => (
+            <Link
+              key={s.href}
+              href={s.href}
+              className="h-7 px-2.5 rounded-full text-[11.5px] border border-[var(--border)] text-foreground/65 hover:text-foreground hover:border-foreground/30 transition-colors inline-flex items-center"
+            >
+              {s.label}
+            </Link>
+          ))}
+        </div>
+      </nav>
 
       <Footer />
 
