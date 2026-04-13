@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { allJobs } from "@/lib/data";
+
 import { Shell } from "@/components/wall/shell";
 import { OnboardingWizard } from "@/components/wall/employer/onboarding-wizard";
 
@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 
 export default function OnboardingPage() {
   return (
-    <Shell jobs={allJobs}>
+    <Shell jobs={[]}>
       <OnboardingWizard />
     </Shell>
   );

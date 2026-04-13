@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { allJobs } from "@/lib/data";
 import { Shell } from "@/components/wall/shell";
 import { CandidateDashboard } from "@/components/wall/candidate-dashboard";
+import { fetchAllJobs } from "@/lib/supabase/queries";
 
 export const metadata: Metadata = {
   title: "Mon espace candidat",
@@ -10,10 +10,14 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function CandidatPage() {
+export const revalidate = 300;
+
+export default async function CandidatPage() {
+  const jobs = await fetchAllJobs();
+
   return (
-    <Shell jobs={allJobs}>
-      <CandidateDashboard jobs={allJobs} />
+    <Shell jobs={jobs}>
+      <CandidateDashboard jobs={jobs} />
     </Shell>
   );
 }

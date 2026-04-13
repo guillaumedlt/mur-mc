@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { allJobs } from "@/lib/data";
+
 import { Shell } from "@/components/wall/shell";
 import { ApplicationsList } from "@/components/wall/applications-list";
 
@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 
 export default function CandidaturesPage() {
   return (
-    <Shell jobs={allJobs}>
+    <Shell jobs={[]}>
       <ApplicationsList />
     </Shell>
   );

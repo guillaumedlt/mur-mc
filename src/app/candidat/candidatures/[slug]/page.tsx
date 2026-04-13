@@ -1,4 +1,4 @@
-import { allJobs } from "@/lib/data";
+
 import { Shell } from "@/components/wall/shell";
 import { ApplicationDetail } from "@/components/wall/application-detail";
 
@@ -13,7 +13,7 @@ export default async function ApplicationDetailPage(
 ) {
   const { slug } = await props.params;
   return (
-    <Shell jobs={allJobs}>
+    <Shell jobs={[]}>
       <ApplicationDetail id={slug} />
     </Shell>
   );

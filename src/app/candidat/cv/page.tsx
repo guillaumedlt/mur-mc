@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { allJobs } from "@/lib/data";
+
 import { Shell } from "@/components/wall/shell";
 import { CvView } from "@/components/wall/cv-view";
 
@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 
 export default function CvPage() {
   return (
-    <Shell jobs={allJobs}>
+    <Shell jobs={[]}>
       <CvView />
     </Shell>
   );

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { allJobs } from "@/lib/data";
+
 import { Shell } from "@/components/wall/shell";
 import { ProfileEditor } from "@/components/wall/profile-editor";
 
@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 
 export default function ProfilPage() {
   return (
-    <Shell jobs={allJobs}>
+    <Shell jobs={[]}>
       <ProfileEditor />
     </Shell>
   );
