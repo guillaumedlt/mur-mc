@@ -7,25 +7,30 @@ type Props = {
   domain?: string;
   color: string;
   initials: string;
+  logoUrl?: string;
   size?: number;
   radius?: number;
 };
 
 /**
- * Tile logo entreprise. Essaie successivement plusieurs sources de favicons
- * publiques (Google haute résolution, puis DuckDuckGo). Si tout échoue,
- * retombe sur une tile colorée avec les initiales — toujours quelque chose
- * à afficher, jamais de carré vide.
+ * Tile logo entreprise. Priorite :
+ * 1. logoUrl uploaded par le recruteur
+ * 2. Favicon via Google/DuckDuckGo (depuis le domain)
+ * 3. Tile coloree avec initiales
  */
 export function CompanyLogo({
   name,
   domain,
   color,
   initials,
+  logoUrl,
   size = 44,
   radius = 14,
 }: Props) {
-  const sources = domain ? buildSources(domain) : [];
+  const sources = [
+    ...(logoUrl ? [logoUrl] : []),
+    ...(domain ? buildSources(domain) : []),
+  ];
   const [idx, setIdx] = useState(0);
   const exhausted = idx >= sources.length;
   const showImage = sources.length > 0 && !exhausted;

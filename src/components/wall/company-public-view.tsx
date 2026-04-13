@@ -80,23 +80,15 @@ function RichCompany({
           <div className="flex items-end gap-4 sm:gap-5">
             {/* Logo — big and prominent */}
             <div className="rounded-[20px] sm:rounded-[24px] p-1.5 bg-white shadow-[0_8px_30px_-6px_rgba(10,10,10,0.3)] shrink-0">
-              {company.logoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={company.logoUrl}
-                  alt={company.name}
-                  className="size-[72px] sm:size-[88px] rounded-[14px] sm:rounded-[18px] object-cover"
-                />
-              ) : (
-                <CompanyLogo
-                  name={company.name}
-                  domain={company.domain}
-                  color={company.logoColor}
-                  initials={company.initials}
-                  size={88}
-                  radius={18}
-                />
-              )}
+              <CompanyLogo
+                name={company.name}
+                domain={company.domain}
+                logoUrl={company.logoUrl}
+                color={company.logoColor}
+                initials={company.initials}
+                size={88}
+                radius={18}
+              />
             </div>
 
             <div className="min-w-0 flex-1 pb-1">
@@ -267,6 +259,7 @@ function SimpleCompany({
           <CompanyLogo
             name={company.name}
             domain={company.domain}
+            logoUrl={company.logoUrl}
             color={company.logoColor}
             initials={company.initials}
             size={64}

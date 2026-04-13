@@ -115,6 +115,7 @@ function HeroCard({ job }: { job: Job }) {
           <CompanyLogo
             name={job.company.name}
             domain={job.company.domain}
+            logoUrl={job.company.logoUrl}
             color={job.company.logoColor}
             initials={job.company.initials}
             size={52}

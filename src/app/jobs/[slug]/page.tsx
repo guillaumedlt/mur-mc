@@ -184,6 +184,7 @@ export default async function JobPage(props: PageProps<"/jobs/[slug]">) {
             <CompanyLogo
               name={job.company.name}
               domain={job.company.domain}
+              logoUrl={job.company.logoUrl}
               color={job.company.logoColor}
               initials={job.company.initials}
               size={56}
@@ -354,6 +355,7 @@ export default async function JobPage(props: PageProps<"/jobs/[slug]">) {
                         <CompanyLogo
                           name={j.company.name}
                           domain={j.company.domain}
+                          logoUrl={j.company.logoUrl}
                           color={j.company.logoColor}
                           initials={j.company.initials}
                           size={32}

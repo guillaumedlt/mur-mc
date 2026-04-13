@@ -27,6 +27,7 @@ export function CompanyCard({ company, jobCount, index }: Props) {
         <CompanyLogo
           name={company.name}
           domain={company.domain}
+          logoUrl={company.logoUrl}
           color={company.logoColor}
           initials={company.initials}
           size={48}

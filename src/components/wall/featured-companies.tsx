@@ -89,6 +89,7 @@ function HeroCompanyCard({
           <CompanyLogo
             name={company.name}
             domain={company.domain}
+            logoUrl={company.logoUrl}
             color={company.logoColor}
             initials={company.initials}
             size={56}
