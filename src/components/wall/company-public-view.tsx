@@ -73,14 +73,6 @@ function RichCompany({
           )}
           <div className="absolute inset-0 bg-gradient-to-b from-black/0 via-black/10 to-black/50" />
 
-          {/* Tagline overlay on cover */}
-          {company.tagline && (
-            <div className="absolute bottom-5 left-5 sm:left-7 lg:left-9 right-5 sm:right-7 lg:right-9">
-              <p className="font-display italic text-[18px] sm:text-[22px] lg:text-[26px] text-white leading-[1.2] drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)] max-w-[600px]">
-                {company.tagline}
-              </p>
-            </div>
-          )}
         </div>
 
         {/* Identity bar */}
