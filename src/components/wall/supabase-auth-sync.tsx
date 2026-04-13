@@ -59,7 +59,7 @@ export function SupabaseAuthSync() {
         avatarColor: role === "employer" ? "#7c1d2c" : "#1C3D5A",
       };
 
-      // Pour les employers, charger company en 1 seule requete jointure
+      // Pour les employers, charger company ou detecter invitation
       if (role === "employer") {
         const { data } = await supabase
           .from("profiles")
@@ -71,6 +71,27 @@ export function SupabaseAuthSync() {
           const companies = data.companies as unknown;
           if (companies && typeof companies === "object" && "name" in (companies as Record<string, unknown>)) {
             authUser.companyName = (companies as { name: string }).name;
+          }
+        } else if (user.email) {
+          // Pas de company — verifier invitation en attente
+          const { data: inv } = await supabase
+            .from("team_invitations")
+            .select("id, company_id, team_role, companies(name)")
+            .eq("email", user.email)
+            .eq("status", "pending")
+            .limit(1)
+            .single();
+          if (inv?.company_id) {
+            await supabase.from("profiles").update({
+              company_id: inv.company_id,
+              team_role: inv.team_role,
+            }).eq("id", user.id);
+            await supabase.from("team_invitations").update({ status: "accepted" }).eq("id", inv.id);
+            authUser.companyId = inv.company_id;
+            const c = inv.companies as unknown;
+            if (c && typeof c === "object" && "name" in (c as Record<string, unknown>)) {
+              authUser.companyName = (c as { name: string }).name;
+            }
           }
         }
       }

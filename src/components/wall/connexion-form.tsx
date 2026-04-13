@@ -117,6 +117,7 @@ export function ConnexionForm({ mode }: Props) {
           .select("company_id")
           .eq("id", user.id)
           .single();
+
         if (profile?.company_id) {
           authUser.companyId = profile.company_id;
           const { data: company } = await supabase
@@ -125,6 +126,39 @@ export function ConnexionForm({ mode }: Props) {
             .eq("id", profile.company_id)
             .single();
           if (company) authUser.companyName = company.name;
+        } else {
+          // Pas de company — verifier s'il y a une invitation en attente
+          const userEmail = user.email ?? email;
+          const { data: invitation } = await supabase
+            .from("team_invitations")
+            .select("id, company_id, team_role, companies(name)")
+            .eq("email", userEmail)
+            .eq("status", "pending")
+            .limit(1)
+            .single();
+
+          if (invitation?.company_id) {
+            // Linker le profil a la company
+            await supabase
+              .from("profiles")
+              .update({
+                company_id: invitation.company_id,
+                team_role: invitation.team_role,
+              })
+              .eq("id", user.id);
+
+            // Marquer l'invitation comme acceptee
+            await supabase
+              .from("team_invitations")
+              .update({ status: "accepted" })
+              .eq("id", invitation.id);
+
+            authUser.companyId = invitation.company_id;
+            const companyData = invitation.companies as unknown;
+            if (companyData && typeof companyData === "object" && "name" in (companyData as Record<string, unknown>)) {
+              authUser.companyName = (companyData as { name: string }).name;
+            }
+          }
         }
       }
 

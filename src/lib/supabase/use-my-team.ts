@@ -13,11 +13,23 @@ export type TeamMemberRow = {
   avatarColor: string;
   initials: string;
   createdAt: string;
+  isPending: false;
 };
+
+export type PendingInvitation = {
+  id: string;
+  email: string;
+  teamRole: "admin" | "recruiter" | "viewer";
+  createdAt: string;
+  isPending: true;
+};
+
+export type TeamRow = TeamMemberRow | PendingInvitation;
 
 export function useMyTeam() {
   const user = useUser();
   const [members, setMembers] = useState<TeamMemberRow[]>([]);
+  const [invitations, setInvitations] = useState<PendingInvitation[]>([]);
   const [loading, setLoading] = useState(true);
   const [fetchedFor, setFetchedFor] = useState<string | null>(null);
 
@@ -26,49 +38,73 @@ export function useMyTeam() {
     setFetchedFor(companyId);
     if (!companyId) {
       setMembers([]);
+      setInvitations([]);
       setLoading(false);
     } else {
       setLoading(true);
       const supabase = createClient();
-      supabase
-        .from("profiles")
-        .select("id, full_name, email, role, team_role, created_at")
-        .eq("company_id", companyId)
-        .order("created_at", { ascending: true })
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .then(({ data }: { data: any }) => {
-          if (data) {
-            const palette = ["#1C3D5A", "#7c1d2c", "#0a4d3a", "#062b3e", "#6B4423"];
-            setMembers(
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              data.map((row: any, i: number) => {
-                const name = row.full_name ?? row.email?.split("@")[0] ?? "?";
-                const parts = name.split(/\s+/).filter(Boolean);
-                const initials =
-                  parts.length >= 2
-                    ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
-                    : name.slice(0, 2).toUpperCase();
-                return {
-                  id: row.id,
-                  fullName: name,
-                  email: row.email ?? "",
-                  role: row.role ?? "employer",
-                  teamRole: row.team_role ?? "viewer",
-                  avatarColor: palette[i % palette.length],
-                  initials,
-                  createdAt: row.created_at,
-                };
-              }),
-            );
-          }
-          setLoading(false);
-        });
+
+      Promise.all([
+        supabase
+          .from("profiles")
+          .select("id, full_name, email, role, team_role, created_at")
+          .eq("company_id", companyId)
+          .order("created_at", { ascending: true }),
+        supabase
+          .from("team_invitations")
+          .select("*")
+          .eq("company_id", companyId)
+          .eq("status", "pending")
+          .order("created_at", { ascending: true }),
+      ]).then(([profilesRes, invitesRes]) => {
+        const palette = ["#1C3D5A", "#7c1d2c", "#0a4d3a", "#062b3e", "#6B4423"];
+
+        if (profilesRes.data) {
+          setMembers(
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            profilesRes.data.map((row: any, i: number) => {
+              const name = row.full_name ?? row.email?.split("@")[0] ?? "?";
+              const parts = name.split(/\s+/).filter(Boolean);
+              const initials =
+                parts.length >= 2
+                  ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
+                  : name.slice(0, 2).toUpperCase();
+              return {
+                id: row.id,
+                fullName: name,
+                email: row.email ?? "",
+                role: row.role ?? "employer",
+                teamRole: row.team_role ?? "viewer",
+                avatarColor: palette[i % palette.length],
+                initials,
+                createdAt: row.created_at,
+                isPending: false as const,
+              };
+            }),
+          );
+        }
+
+        if (invitesRes.data) {
+          setInvitations(
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            invitesRes.data.map((row: any) => ({
+              id: row.id,
+              email: row.email,
+              teamRole: row.team_role,
+              createdAt: row.created_at,
+              isPending: true as const,
+            })),
+          );
+        }
+
+        setLoading(false);
+      });
     }
   }
 
   const refetch = () => setFetchedFor(null);
 
-  return { members, loading, refetch };
+  return { members, invitations, loading, refetch };
 }
 
 export async function updateMemberRole(
@@ -90,4 +126,68 @@ export async function removeMemberFromCompany(
     .from("profiles")
     .update({ company_id: null, team_role: null })
     .eq("id", memberId);
+}
+
+export async function inviteTeamMember(
+  companyId: string,
+  email: string,
+  teamRole: "admin" | "recruiter" | "viewer",
+  invitedBy: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const supabase = createClient();
+
+  // Check if already invited
+  const { data: existing } = await supabase
+    .from("team_invitations")
+    .select("id")
+    .eq("company_id", companyId)
+    .eq("email", email)
+    .eq("status", "pending")
+    .single();
+
+  if (existing) {
+    return { ok: false, error: "Cette personne a deja une invitation en attente." };
+  }
+
+  // Check if already a member
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("id, company_id")
+    .eq("email", email)
+    .single();
+
+  if (profile?.company_id === companyId) {
+    return { ok: false, error: "Cette personne fait deja partie de votre equipe." };
+  }
+
+  // If they have an account, link them directly
+  if (profile) {
+    await supabase
+      .from("profiles")
+      .update({ company_id: companyId, team_role: teamRole })
+      .eq("id", profile.id);
+    return { ok: true };
+  }
+
+  // Otherwise, create a pending invitation
+  const { error } = await supabase.from("team_invitations").insert({
+    company_id: companyId,
+    email,
+    team_role: teamRole,
+    invited_by: invitedBy,
+  });
+
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+
+  return { ok: true };
+}
+
+export async function revokeInvitation(invitationId: string): Promise<void> {
+  const supabase = createClient();
+  await supabase
+    .from("team_invitations")
+    .update({ status: "revoked" })
+    .eq("id", invitationId);
 }

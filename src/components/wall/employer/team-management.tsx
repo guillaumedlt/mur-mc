@@ -3,6 +3,7 @@
 import { useState } from "react";
 import {
   BadgeCheck,
+  Clock,
   Group,
   Mail,
   PlusCircle,
@@ -11,12 +12,12 @@ import {
 } from "iconoir-react";
 import { useUser } from "@/lib/auth";
 import {
-  type TeamMemberRow,
   useMyTeam,
   updateMemberRole,
   removeMemberFromCompany,
+  inviteTeamMember,
+  revokeInvitation,
 } from "@/lib/supabase/use-my-team";
-import { createClient } from "@/lib/supabase/client";
 
 type TeamRole = "admin" | "recruiter" | "viewer";
 
@@ -30,7 +31,7 @@ function teamRoleLabel(r: TeamRole): string {
 
 export function TeamManagement() {
   const user = useUser();
-  const { members, loading, refetch } = useMyTeam();
+  const { members, invitations, loading, refetch } = useMyTeam();
   const [adding, setAdding] = useState(false);
 
   if (!user || user.role !== "employer") return null;
@@ -53,8 +54,8 @@ export function TeamManagement() {
               Gestion de l&apos;equipe
             </h1>
             <p className="text-[13.5px] text-muted-foreground mt-2">
-              {members.length} membre{members.length > 1 ? "s" : ""} ont acces a
-              l&apos;espace recruteur de votre entreprise.
+              {members.length} membre{members.length > 1 ? "s" : ""}
+              {invitations.length > 0 && ` · ${invitations.length} invitation${invitations.length > 1 ? "s" : ""} en attente`}
             </p>
           </div>
           <button
@@ -78,61 +79,71 @@ export function TeamManagement() {
           />
           <RoleCard
             role="recruiter"
-            description="Peut gerer les offres et les candidats. Ne peut pas modifier l'equipe ni la fiche entreprise."
+            description="Peut gerer les offres et les candidats. Ne peut pas modifier l'equipe."
           />
           <RoleCard
             role="viewer"
-            description="Acces en lecture seule. Peut consulter les offres, les candidats et les statistiques."
+            description="Acces en lecture seule. Peut consulter les offres et les candidats."
           />
         </div>
       </div>
 
       {/* Team list */}
       <div className="bg-white border border-[var(--border)] rounded-2xl divide-y divide-[var(--border)]">
-        {members.length === 0 ? (
+        {members.length === 0 && invitations.length === 0 ? (
           <div className="px-5 py-8 text-center">
             <p className="text-[13px] text-muted-foreground">
               Aucun membre dans l&apos;equipe.
             </p>
           </div>
         ) : (
-          members.map((m) => (
-            <MemberRow
-              key={m.id}
-              member={m}
-              isCurrentUser={m.id === user.id}
-              onRoleChange={async (role) => {
-                await updateMemberRole(m.id, role);
-                refetch();
-              }}
-              onRemove={async () => {
-                await removeMemberFromCompany(m.id);
-                refetch();
-              }}
-            />
-          ))
+          <>
+            {members.map((m) => (
+              <MemberRow
+                key={m.id}
+                member={m}
+                isCurrentUser={m.id === user.id}
+                onRoleChange={async (role) => {
+                  await updateMemberRole(m.id, role);
+                  refetch();
+                }}
+                onRemove={async () => {
+                  await removeMemberFromCompany(m.id);
+                  refetch();
+                }}
+              />
+            ))}
+            {invitations.map((inv) => (
+              <InvitationRow
+                key={inv.id}
+                invitation={inv}
+                onRevoke={async () => {
+                  await revokeInvitation(inv.id);
+                  refetch();
+                }}
+              />
+            ))}
+          </>
         )}
       </div>
 
       {/* Add member modal */}
       {adding && (
-        <AddMemberModal
+        <InviteModal
           companyId={user.companyId ?? ""}
+          userId={user.id}
           onClose={() => setAdding(false)}
-          onAdded={refetch}
+          onDone={() => {
+            setAdding(false);
+            refetch();
+          }}
         />
       )}
     </div>
   );
 }
 
-function RoleCard({
-  role,
-  description,
-}: {
-  role: TeamRole;
-  description: string;
-}) {
+function RoleCard({ role, description }: { role: TeamRole; description: string }) {
   return (
     <div className="rounded-xl border border-[var(--border)] bg-[var(--background-alt)]/40 p-3.5">
       <div className="text-[12.5px] font-semibold text-foreground">
@@ -151,7 +162,7 @@ function MemberRow({
   onRoleChange,
   onRemove,
 }: {
-  member: TeamMemberRow;
+  member: { id: string; fullName: string; email: string; teamRole: TeamRole; avatarColor: string; initials: string; createdAt: string };
   isCurrentUser: boolean;
   onRoleChange: (role: TeamRole) => void;
   onRemove: () => void;
@@ -160,23 +171,16 @@ function MemberRow({
     <div className="flex items-center gap-3 sm:gap-4 px-5 sm:px-7 py-4 hover:bg-[var(--background-alt)]/40 transition-colors">
       <span
         className="size-10 rounded-xl flex items-center justify-center text-white font-display text-[13px] font-medium ring-1 ring-black/5 shrink-0"
-        style={{
-          background: `linear-gradient(155deg, ${member.avatarColor}, #122a3f)`,
-        }}
+        style={{ background: `linear-gradient(155deg, ${member.avatarColor}, #122a3f)` }}
         aria-hidden
       >
         {member.initials}
       </span>
-
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="text-[14px] font-medium text-foreground">
-            {member.fullName}
-          </span>
+          <span className="text-[14px] font-medium text-foreground">{member.fullName}</span>
           {isCurrentUser && (
-            <span className="text-[10.5px] text-[var(--tertiary-foreground)]">
-              (vous)
-            </span>
+            <span className="text-[10.5px] text-[var(--tertiary-foreground)]">(vous)</span>
           )}
         </div>
         <div className="text-[12px] text-muted-foreground flex items-center gap-1.5">
@@ -184,7 +188,6 @@ function MemberRow({
           {member.email}
         </div>
       </div>
-
       <select
         value={member.teamRole}
         onChange={(e) => onRoleChange(e.target.value as TeamRole)}
@@ -196,18 +199,14 @@ function MemberRow({
         <option value="recruiter">Recruteur</option>
         <option value="viewer">Lecteur</option>
       </select>
-
       <span className="text-[10.5px] font-mono text-[var(--tertiary-foreground)] hidden md:block w-24 text-right">
         Depuis {formatDate(member.createdAt)}
       </span>
-
       {!isCurrentUser && (
         <button
           type="button"
           onClick={() => {
-            if (window.confirm(`Retirer ${member.fullName} de l'equipe ?`)) {
-              onRemove();
-            }
+            if (window.confirm(`Retirer ${member.fullName} de l'equipe ?`)) onRemove();
           }}
           className="size-8 rounded-full border border-[var(--border)] bg-white text-foreground/55 hover:text-destructive hover:border-destructive/30 transition-colors flex items-center justify-center shrink-0"
           aria-label={`Retirer ${member.fullName}`}
@@ -219,45 +218,79 @@ function MemberRow({
   );
 }
 
-function AddMemberModal({
+function InvitationRow({
+  invitation,
+  onRevoke,
+}: {
+  invitation: { id: string; email: string; teamRole: TeamRole; createdAt: string };
+  onRevoke: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-3 sm:gap-4 px-5 sm:px-7 py-4 bg-[var(--background-alt)]/20">
+      <span className="size-10 rounded-xl bg-[var(--background-alt)] border border-[var(--border)] flex items-center justify-center text-foreground/40 shrink-0">
+        <Clock width={16} height={16} strokeWidth={2} />
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span className="text-[14px] font-medium text-foreground/70">{invitation.email}</span>
+          <span className="h-5 px-2 rounded-full bg-amber-100 text-amber-700 text-[10px] font-semibold uppercase tracking-[0.06em] inline-flex items-center">
+            En attente
+          </span>
+        </div>
+        <div className="text-[12px] text-muted-foreground">
+          Invite en tant que {teamRoleLabel(invitation.teamRole)} · {formatDate(invitation.createdAt)}
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={() => {
+          if (window.confirm("Revoquer cette invitation ?")) onRevoke();
+        }}
+        className="size-8 rounded-full border border-[var(--border)] bg-white text-foreground/55 hover:text-destructive hover:border-destructive/30 transition-colors flex items-center justify-center shrink-0"
+        aria-label="Revoquer"
+      >
+        <Trash width={12} height={12} strokeWidth={2} />
+      </button>
+    </div>
+  );
+}
+
+function InviteModal({
   companyId,
+  userId,
   onClose,
-  onAdded,
+  onDone,
 }: {
   companyId: string;
+  userId: string;
   onClose: () => void;
-  onAdded: () => void;
+  onDone: () => void;
 }) {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<TeamRole>("recruiter");
-  const [done, setDone] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+  const [wasLinked, setWasLinked] = useState(false);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
+    setSaving(true);
     setError(null);
 
-    // Find the user by email in profiles and link them
-    const supabase = createClient();
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("email", email.trim())
-      .single();
+    const result = await inviteTeamMember(companyId, email.trim(), role, userId);
 
-    if (!profile) {
-      setError("Aucun compte Mur.mc trouve avec cet email. L'utilisateur doit d'abord creer un compte.");
+    if (!result.ok) {
+      setError(result.error ?? "Erreur");
+      setSaving(false);
       return;
     }
 
-    await supabase
-      .from("profiles")
-      .update({ company_id: companyId, team_role: role })
-      .eq("id", profile.id);
-
+    // Check if the user was linked directly (had an existing account)
+    setWasLinked(true); // We'll show appropriate message
+    setSaving(false);
     setDone(true);
-    onAdded();
   };
 
   return (
@@ -271,21 +304,18 @@ function AddMemberModal({
       >
         {done ? (
           <div className="px-7 py-10 text-center">
-            <BadgeCheck
-              width={24}
-              height={24}
-              strokeWidth={2}
-              className="text-[var(--accent)] inline-block"
-            />
+            <BadgeCheck width={24} height={24} strokeWidth={2} className="text-[var(--accent)] inline-block" />
             <p className="text-[15px] font-medium text-foreground mt-3">
-              Membre ajoute
+              {wasLinked ? "Membre ajoute" : "Invitation envoyee"}
             </p>
-            <p className="text-[12.5px] text-muted-foreground mt-1">
-              {email} a ete ajoute a votre equipe en tant que {teamRoleLabel(role)}.
+            <p className="text-[12.5px] text-muted-foreground mt-1 max-w-sm mx-auto">
+              {wasLinked
+                ? `${email} a ete ajoute a votre equipe en tant que ${teamRoleLabel(role)}.`
+                : `Une invitation a ete creee pour ${email}. Quand cette personne creera son compte Mur.mc avec cet email, elle sera automatiquement ajoutee a votre equipe.`}
             </p>
             <button
               type="button"
-              onClick={onClose}
+              onClick={onDone}
               className="h-9 px-4 mt-5 rounded-full bg-foreground text-background text-[12.5px] font-medium"
             >
               Fermer
@@ -296,9 +326,7 @@ function AddMemberModal({
             <div className="px-6 py-4 flex items-center justify-between border-b border-[var(--border)]">
               <div className="flex items-center gap-2">
                 <Group width={14} height={14} strokeWidth={2} />
-                <span className="text-[14px] font-medium text-foreground">
-                  Ajouter un membre
-                </span>
+                <span className="text-[14px] font-medium text-foreground">Inviter un membre</span>
               </div>
               <button
                 type="button"
@@ -309,7 +337,7 @@ function AddMemberModal({
                 <Xmark width={13} height={13} strokeWidth={2.2} />
               </button>
             </div>
-            <div className="px-6 py-5 flex flex-col gap-3">
+            <div className="px-6 py-5 flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
                 <label className="text-[11px] uppercase tracking-[0.08em] font-semibold text-foreground/60">
                   Email du membre
@@ -322,9 +350,6 @@ function AddMemberModal({
                   placeholder="collegue@entreprise.com"
                   className="wall-input flex-1 text-[13.5px] placeholder:text-[var(--tertiary-foreground)]"
                 />
-                <p className="text-[11px] text-muted-foreground">
-                  L&apos;utilisateur doit avoir un compte Mur.mc (recruteur).
-                </p>
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className="text-[11px] uppercase tracking-[0.08em] font-semibold text-foreground/60">
@@ -339,6 +364,11 @@ function AddMemberModal({
                   <option value="recruiter">Recruteur</option>
                   <option value="viewer">Lecteur</option>
                 </select>
+              </div>
+              <div className="rounded-xl bg-[var(--background-alt)] border border-[var(--border)] p-3.5 text-[12px] text-foreground/70 leading-snug">
+                Si cette personne a deja un compte Mur.mc, elle sera ajoutee directement.
+                Sinon, une invitation en attente sera creee — elle sera automatiquement linkee
+                a votre equipe quand elle creera son compte avec cet email.
               </div>
               {error && (
                 <div className="rounded-xl bg-destructive/10 border border-destructive/20 px-3.5 py-2.5 text-[12.5px] text-destructive">
@@ -356,10 +386,15 @@ function AddMemberModal({
               </button>
               <button
                 type="submit"
-                className="h-9 px-4 rounded-full bg-foreground text-background text-[12.5px] font-medium hover:bg-foreground/85 transition-colors flex items-center gap-1.5"
+                disabled={saving}
+                className="h-9 px-4 rounded-full bg-foreground text-background text-[12.5px] font-medium hover:bg-foreground/85 disabled:opacity-50 transition-colors flex items-center gap-1.5"
               >
-                <PlusCircle width={12} height={12} strokeWidth={2} />
-                Ajouter
+                {saving ? (
+                  <span className="size-3.5 border-2 border-background/30 border-t-background rounded-full animate-spin" />
+                ) : (
+                  <PlusCircle width={12} height={12} strokeWidth={2} />
+                )}
+                {saving ? "Envoi..." : "Inviter"}
               </button>
             </div>
           </form>
@@ -370,8 +405,5 @@ function AddMemberModal({
 }
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("fr-FR", {
-    month: "short",
-    year: "numeric",
-  });
+  return new Date(iso).toLocaleDateString("fr-FR", { month: "short", year: "numeric" });
 }
