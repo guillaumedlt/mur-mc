@@ -334,23 +334,19 @@ export function PublishJobForm({ existing, onCancel }: Props) {
           </p>
           {/* Booster */}
           <div className="mt-6 rounded-2xl border border-[var(--accent)]/20 bg-[var(--accent)]/[0.04] p-5 max-w-md mx-auto">
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2 mb-3">
               <Rocket width={16} height={16} strokeWidth={2} className="text-[var(--accent)]" />
               <span className="text-[13px] font-semibold text-foreground">
                 Booster mon offre
               </span>
             </div>
-            <p className="text-[12.5px] text-muted-foreground leading-snug">
-              Mettez votre offre en avant sur le mur pour 3x plus de visibilite.
-              Les offres boostees apparaissent en tete et dans la section « Mises en avant ».
-            </p>
-            <button
-              type="button"
-              className="mt-3 h-9 px-4 rounded-full bg-[var(--accent)] text-background text-[12.5px] font-medium hover:bg-[var(--accent)]/85 transition-colors flex items-center gap-1.5"
+            <a
+              href="mailto:contact@mur.mc?subject=Booster%20mon%20offre"
+              className="h-9 px-4 rounded-full bg-[var(--accent)] text-background text-[12.5px] font-medium hover:bg-[var(--accent)]/85 transition-colors inline-flex items-center gap-1.5"
             >
               <Rocket width={12} height={12} strokeWidth={2} />
-              Booster — a partir de 49 EUR
-            </button>
+              Nous contacter
+            </a>
           </div>
 
           <div className="flex items-center justify-center gap-2 mt-6 flex-wrap">
