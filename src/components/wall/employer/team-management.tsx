@@ -132,6 +132,8 @@ export function TeamManagement() {
         <InviteModal
           companyId={user.companyId ?? ""}
           userId={user.id}
+          companyName={user.companyName ?? ""}
+          userName={user.name}
           onClose={() => setAdding(false)}
           onDone={() => {
             setAdding(false);
@@ -258,11 +260,15 @@ function InvitationRow({
 function InviteModal({
   companyId,
   userId,
+  companyName,
+  userName,
   onClose,
   onDone,
 }: {
   companyId: string;
   userId: string;
+  companyName: string;
+  userName: string;
   onClose: () => void;
   onDone: () => void;
 }) {
@@ -279,7 +285,10 @@ function InviteModal({
     setSaving(true);
     setError(null);
 
-    const result = await inviteTeamMember(companyId, email.trim(), role, userId);
+    const result = await inviteTeamMember(companyId, email.trim(), role, userId, {
+      companyName,
+      inviterName: userName,
+    });
 
     if (!result.ok) {
       setError(result.error ?? "Erreur");
@@ -287,8 +296,7 @@ function InviteModal({
       return;
     }
 
-    // Check if the user was linked directly (had an existing account)
-    setWasLinked(true); // We'll show appropriate message
+    setWasLinked(!!result.linked);
     setSaving(false);
     setDone(true);
   };
@@ -311,7 +319,7 @@ function InviteModal({
             <p className="text-[12.5px] text-muted-foreground mt-1 max-w-sm mx-auto">
               {wasLinked
                 ? `${email} a ete ajoute a votre equipe en tant que ${teamRoleLabel(role)}.`
-                : `Une invitation a ete creee pour ${email}. Quand cette personne creera son compte Mur.mc avec cet email, elle sera automatiquement ajoutee a votre equipe.`}
+                : `Un email d'invitation a ete envoye a ${email}. Quand cette personne creera son compte Mur.mc, elle sera automatiquement ajoutee a votre equipe en tant que ${teamRoleLabel(role)}.`}
             </p>
             <button
               type="button"

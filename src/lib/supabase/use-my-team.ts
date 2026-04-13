@@ -133,7 +133,8 @@ export async function inviteTeamMember(
   email: string,
   teamRole: "admin" | "recruiter" | "viewer",
   invitedBy: string,
-): Promise<{ ok: boolean; error?: string }> {
+  opts?: { companyName?: string; inviterName?: string },
+): Promise<{ ok: boolean; error?: string; linked?: boolean }> {
   const supabase = createClient();
 
   // Check if already invited
@@ -166,10 +167,10 @@ export async function inviteTeamMember(
       .from("profiles")
       .update({ company_id: companyId, team_role: teamRole })
       .eq("id", profile.id);
-    return { ok: true };
+    return { ok: true, linked: true };
   }
 
-  // Otherwise, create a pending invitation
+  // Create a pending invitation
   const { error } = await supabase.from("team_invitations").insert({
     company_id: companyId,
     email,
@@ -181,7 +182,22 @@ export async function inviteTeamMember(
     return { ok: false, error: error.message };
   }
 
-  return { ok: true };
+  // Send invitation email via API route
+  const roleLabel = teamRole === "admin" ? "Admin" : teamRole === "recruiter" ? "Recruteur" : "Lecteur";
+  fetch("/api/invite", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      email,
+      companyName: opts?.companyName ?? "",
+      role: roleLabel,
+      inviterName: opts?.inviterName ?? "",
+    }),
+  }).catch(() => {
+    // Fire and forget — the invitation is saved, email is best-effort
+  });
+
+  return { ok: true, linked: false };
 }
 
 export async function revokeInvitation(invitationId: string): Promise<void> {
