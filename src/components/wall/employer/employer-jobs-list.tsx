@@ -8,9 +8,12 @@ import {
   Eye,
   Group,
   PlusCircle,
+  Rocket,
+  Sparks,
 } from "iconoir-react";
 import { type EmployerJobStatus } from "@/lib/employer-store";
 import { useMyJobs } from "@/lib/supabase/use-my-jobs";
+import { useMyCompany } from "@/lib/supabase/use-my-company";
 import { JobStatusPill } from "./status-pill";
 import { EmployerEmptyState } from "./employer-empty-state";
 
@@ -27,6 +30,9 @@ const FILTERS: Array<{ key: Filter; label: string }> = [
 
 export function EmployerJobsList() {
   const { jobs: supabaseJobs, loading } = useMyJobs();
+  const { company } = useMyCompany();
+  const quota = company?.job_quota ?? 1;
+  const boostedCount = supabaseJobs.filter((j) => j.featured).length;
   const [filter, setFilter] = useState<Filter>("all");
   const [sort, setSort] = useState<SortKey>("recent");
 
@@ -66,9 +72,34 @@ export function EmployerJobsList() {
             <h1 className="font-display text-[24px] sm:text-[28px] lg:text-[30px] tracking-[-0.015em] text-foreground mt-1">
               Mes offres en ligne
             </h1>
-            <p className="text-[13.5px] text-muted-foreground mt-2">
-              {counts.all} offre{counts.all > 1 ? "s" : ""} au total · {counts.published} publiée{counts.published > 1 ? "s" : ""}
-            </p>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-3 text-[12.5px]">
+              <span className="inline-flex items-center gap-1.5 text-foreground/65">
+                <Bag width={12} height={12} strokeWidth={2} />
+                {counts.all} / {quota} offre{quota > 1 ? "s" : ""}
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-foreground/65">
+                <Sparks width={12} height={12} strokeWidth={2} />
+                {counts.published} publiee{counts.published > 1 ? "s" : ""}
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-foreground/65">
+                <Rocket width={12} height={12} strokeWidth={2} />
+                {boostedCount} boostee{boostedCount > 1 ? "s" : ""}
+              </span>
+            </div>
+            {/* Quota bar */}
+            <div className="mt-3 max-w-[300px]">
+              <div className="h-1.5 rounded-full bg-[var(--background-alt)] overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-[var(--accent)] transition-[width] duration-500 ease-out"
+                  style={{ width: `${Math.min(100, Math.round((counts.all / quota) * 100))}%` }}
+                />
+              </div>
+              <p className="text-[10.5px] text-foreground/45 mt-1">
+                {quota - counts.all > 0
+                  ? `${quota - counts.all} offre${quota - counts.all > 1 ? "s" : ""} restante${quota - counts.all > 1 ? "s" : ""}`
+                  : "Quota atteint"}
+              </p>
+            </div>
           </div>
           <Link
             href="/recruteur/publier"
