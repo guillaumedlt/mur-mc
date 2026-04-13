@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Calendar,
+  EditPencil,
   Group,
   PlusCircle,
   Search,
@@ -259,9 +260,11 @@ export function CandidatesPool() {
         <div className="bg-white border border-[var(--border)] rounded-2xl divide-y divide-[var(--border)]">
           {filtered.map((row) => {
             const job = jobs.find((j) => j.id === row.jobId);
+            const href = `/recruteur/candidats/${row.id}`;
             return (
-              <div
+              <Link
                 key={row.id}
+                href={href}
                 className="group flex items-center gap-3 sm:gap-4 px-4 sm:px-6 lg:px-7 py-3 sm:py-4 hover:bg-[var(--background-alt)]/40 transition-colors"
               >
                 <span
@@ -274,7 +277,7 @@ export function CandidatesPool() {
                   {row.initials}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <div className="text-[14px] font-medium text-foreground line-clamp-1">
+                  <div className="text-[14px] font-medium text-foreground line-clamp-1 group-hover:text-[var(--accent)] transition-colors">
                     {row.fullName}
                   </div>
                   <div className="text-[11.5px] text-muted-foreground line-clamp-1 mt-0.5">
@@ -299,7 +302,13 @@ export function CandidatesPool() {
                   <Calendar width={10} height={10} strokeWidth={2} />
                   {formatShort(row.appliedAt)}
                 </span>
-              </div>
+                <EditPencil
+                  width={13}
+                  height={13}
+                  strokeWidth={2}
+                  className="text-foreground/30 group-hover:text-[var(--accent)] transition-colors shrink-0"
+                />
+              </Link>
             );
           })}
         </div>
