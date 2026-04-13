@@ -28,6 +28,7 @@ import type { EmployerApplicationStatus } from "@/lib/employer-store";
 import { useUser } from "@/lib/auth";
 import { useMyJob, updateJobSupabase, deleteJobSupabase } from "@/lib/supabase/use-my-jobs";
 import { useMyApplications } from "@/lib/supabase/use-my-applications";
+import { useManualCandidates } from "@/lib/supabase/use-manual-candidates";
 import { ApplicationStatusPill, JobStatusPill } from "./status-pill";
 
 type Props = { id: string };
@@ -37,16 +38,21 @@ export function EmployerJobDetail({ id }: Props) {
   const router = useRouter();
   const { job, loading } = useMyJob(id);
   const { applications } = useMyApplications(id);
+  const { candidates: manualCands } = useManualCandidates(id);
 
   const breakdown = useMemo(() => {
     const out: Record<EmployerApplicationStatus, number> = {
       received: 0, reviewed: 0, interview: 0, offer: 0, hired: 0, rejected: 0,
     };
     for (const a of applications) out[a.status]++;
+    for (const mc of manualCands) {
+      const s = mc.status as EmployerApplicationStatus;
+      if (s in out) out[s]++;
+    }
     return out;
-  }, [applications]);
+  }, [applications, manualCands]);
 
-  const totalApps = applications.length;
+  const totalApps = applications.length + manualCands.length;
 
   if (!user || user.role !== "employer") return null;
 

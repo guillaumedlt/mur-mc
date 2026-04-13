@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowLeft, Group } from "iconoir-react";
 import { useMyJob } from "@/lib/supabase/use-my-jobs";
 import { useMyApplications } from "@/lib/supabase/use-my-applications";
+import { useManualCandidates } from "@/lib/supabase/use-manual-candidates";
 import { KanbanBoard } from "./kanban-board";
 
 type Props = { jobId: string };
@@ -11,6 +12,7 @@ type Props = { jobId: string };
 export function KanbanPage({ jobId }: Props) {
   const { job, loading } = useMyJob(jobId);
   const { applications } = useMyApplications(jobId);
+  const { candidates: manualCands } = useManualCandidates(jobId);
 
   if (loading) {
     return (
@@ -55,7 +57,7 @@ export function KanbanPage({ jobId }: Props) {
             </h1>
           </div>
           <span className="wall-badge" data-tone="accent">
-            <Group /> {applications.length} candidature{applications.length > 1 ? "s" : ""}
+            <Group /> {applications.length + manualCands.length} candidat{(applications.length + manualCands.length) > 1 ? "s" : ""}
           </span>
         </div>
       </header>

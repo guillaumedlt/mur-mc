@@ -8,6 +8,7 @@ import {
 } from "@/lib/employer-store";
 import { moveApplicationSupabase } from "@/lib/supabase/use-my-applications";
 import { useMyApplications } from "@/lib/supabase/use-my-applications";
+import { useManualCandidates, updateManualCandidateSupabase } from "@/lib/supabase/use-manual-candidates";
 import { KanbanColumn } from "./kanban-column";
 import { KanbanMobileTabs } from "./kanban-mobile-tabs";
 
@@ -15,21 +16,64 @@ type Props = { jobId: string };
 
 export function KanbanBoard({ jobId }: Props) {
   const { applications, candidates, refetch } = useMyApplications(jobId);
+  const { candidates: manualCands, refetch: refetchManual } = useManualCandidates(jobId);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [overColumn, setOverColumn] =
     useState<EmployerApplicationStatus | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null);
 
+  // Merge real applications + manual candidates into unified EmployerApplication[]
+  const allItems = useMemo(() => {
+    const items: EmployerApplication[] = [...applications];
+    for (const mc of manualCands) {
+      items.push({
+        id: `mc-${mc.id}`,
+        jobId: mc.jobId ?? jobId,
+        candidateId: mc.id,
+        status: mc.status as EmployerApplicationStatus,
+        matchScore: 0,
+        rating: mc.rating,
+        appliedAt: mc.createdAt,
+        updatedAt: mc.updatedAt,
+        events: [],
+        order: 999 + items.length,
+      });
+    }
+    return items;
+  }, [applications, manualCands, jobId]);
+
+  // Also merge candidates list so kanban cards can resolve names
+  const allCandidates = useMemo(() => {
+    const merged = [...candidates];
+    for (const mc of manualCands) {
+      merged.push({
+        id: mc.id,
+        fullName: mc.fullName,
+        email: mc.email,
+        phone: mc.phone,
+        location: mc.location,
+        headline: mc.headline,
+        skills: mc.skills,
+        languages: mc.languages,
+        sectors: [],
+        avatarColor: mc.avatarColor,
+        initials: mc.initials,
+        source: mc.source as "manual" | "csv_import" | "referral" | "platform",
+      });
+    }
+    return merged;
+  }, [candidates, manualCands]);
+
   const byStatus = useMemo(() => {
     const out: Record<EmployerApplicationStatus, EmployerApplication[]> = {
       received: [], reviewed: [], interview: [], offer: [], hired: [], rejected: [],
     };
-    for (const app of applications) out[app.status].push(app);
+    for (const app of allItems) out[app.status].push(app);
     for (const k of Object.keys(out) as EmployerApplicationStatus[]) {
       out[k].sort((a, b) => a.order - b.order);
     }
     return out;
-  }, [applications]);
+  }, [allItems]);
 
   const onDragStart = (id: string) => {
     setDraggingId(id);
@@ -63,10 +107,17 @@ export function KanbanBoard({ jobId }: Props) {
     index: number,
   ) => {
     if (draggingId) {
-      const app = applications.find((a) => a.id === draggingId);
-      if (app) {
-        await moveApplicationSupabase(draggingId, status, index, app.status, "");
-        refetch();
+      if (draggingId.startsWith("mc-")) {
+        // Manual candidate — update status in manual_candidates table
+        const mcId = draggingId.slice(3);
+        await updateManualCandidateSupabase(mcId, { status });
+        refetchManual();
+      } else {
+        const app = applications.find((a) => a.id === draggingId);
+        if (app) {
+          await moveApplicationSupabase(draggingId, status, index, app.status, "");
+          refetch();
+        }
       }
     }
     onDragEnd();
@@ -83,7 +134,7 @@ export function KanbanBoard({ jobId }: Props) {
             key={status}
             status={status}
             items={byStatus[status]}
-            candidates={candidates}
+            candidates={allCandidates}
             drag={drag}
             onDragStart={onDragStart}
             onDragEnd={onDragEnd}
@@ -98,7 +149,7 @@ export function KanbanBoard({ jobId }: Props) {
       <div className="lg:hidden">
         <KanbanMobileTabs
           byStatus={byStatus}
-          candidates={candidates}
+          candidates={allCandidates}
           jobId={jobId}
         />
       </div>
