@@ -6,14 +6,22 @@ import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   ArrowUpRight,
+  Bag,
   Building,
   Calendar,
+  Check,
+  Clock,
+  EuroSquare,
   Eye,
+  Globe,
   Group,
   MapPin,
   PauseSolid,
   PlaySolid,
+  Sparks,
+  Translate,
   Trash,
+  UserCircle,
   Xmark,
 } from "iconoir-react";
 import type { EmployerApplicationStatus } from "@/lib/employer-store";
@@ -78,15 +86,13 @@ export function EmployerJobDetail({ id }: Props) {
     }
   };
   const onDelete = async () => {
-    if (
-      window.confirm(
-        "Supprimer definitivement cette offre et toutes ses candidatures ?",
-      )
-    ) {
+    if (window.confirm("Supprimer definitivement cette offre et toutes ses candidatures ?")) {
       await deleteJobSupabase(job.id);
       router.push("/recruteur/offres");
     }
   };
+
+  const salary = formatSalary(job.salary_min, job.salary_max);
 
   return (
     <div className="max-w-[1100px] mx-auto">
@@ -99,29 +105,41 @@ export function EmployerJobDetail({ id }: Props) {
       </Link>
 
       {/* Hero */}
-      <header className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-6 lg:py-7 mb-3">
+      <header className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-6 lg:py-8 mb-3">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2.5 flex-wrap">
               <p className="ed-label-sm">Offre</p>
               <JobStatusPill status={job.status as "draft" | "published" | "paused" | "closed"} />
             </div>
-            <h1 className="font-display text-[24px] sm:text-[28px] lg:text-[32px] leading-[1.08] tracking-[-0.015em] text-foreground mt-1.5">
+            <h1 className="font-display text-[26px] sm:text-[30px] lg:text-[36px] leading-[1.08] tracking-[-0.015em] text-foreground mt-2">
               {job.title}
             </h1>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-3 text-[12.5px] text-foreground/65">
-              <span className="inline-flex items-center gap-1.5">
-                <Building width={12} height={12} strokeWidth={2} />
-                {job.type} · {job.sector}
+
+            {/* Badges */}
+            <div className="flex flex-wrap items-center gap-1.5 mt-4">
+              <span className="wall-badge" data-tone="muted">
+                <Bag /> {job.type}
               </span>
-              <span className="inline-flex items-center gap-1.5">
-                <MapPin width={12} height={12} strokeWidth={2} />
-                {job.location}
+              <span className="wall-badge" data-tone="muted">
+                <Building /> {job.sector}
               </span>
-              <span className="inline-flex items-center gap-1.5">
-                <Calendar width={12} height={12} strokeWidth={2} />
-                Créée {formatDate(job.created_at)}
+              <span className="wall-badge" data-tone="muted">
+                <MapPin /> {job.location}
               </span>
+              <span className="wall-badge" data-tone="muted">
+                <Clock /> {job.work_time}
+              </span>
+              {job.remote && job.remote !== "Sur site" && (
+                <span className="wall-badge" data-tone="accent">
+                  <Globe /> {job.remote}
+                </span>
+              )}
+              {job.featured && (
+                <span className="wall-badge" data-tone="accent">
+                  <Sparks /> Mise en avant
+                </span>
+              )}
             </div>
           </div>
           <Link
@@ -135,8 +153,9 @@ export function EmployerJobDetail({ id }: Props) {
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 items-start">
-        {/* Colonne gauche : description + breakdown */}
+        {/* Colonne principale */}
         <div className="lg:col-span-2 flex flex-col gap-3">
+
           {/* Stats KPI */}
           <article className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-6 lg:py-7">
             <h2 className="font-display text-[20px] tracking-[-0.01em] mb-5">
@@ -179,28 +198,99 @@ export function EmployerJobDetail({ id }: Props) {
             )}
           </article>
 
-          {/* Description */}
-          <article className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-6 lg:py-7">
-            <h2 className="font-display text-[20px] tracking-[-0.01em] mb-4">
-              Description
+          {/* Accroche + Description */}
+          <article className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-6 lg:py-8">
+            <h2 className="font-display text-[20px] tracking-[-0.01em] mb-5">
+              Description de l&apos;offre
             </h2>
-            <p className="font-display italic text-[15px] leading-[1.6] text-foreground/85">
-              {job.short_description}
-            </p>
+
+            {job.short_description && (
+              <p className="font-display italic text-[17px] leading-[1.6] text-foreground/90 mb-6">
+                {job.short_description}
+              </p>
+            )}
+
             {job.description && job.description !== job.short_description && (
-              <p className="text-[14px] leading-[1.7] text-foreground/80 mt-4">
+              <p className="text-[14.5px] leading-[1.75] text-foreground/85 whitespace-pre-line">
                 {job.description}
               </p>
             )}
           </article>
+
+          {/* Responsabilites */}
+          <ListSection
+            title="Responsabilités"
+            items={job.responsibilities}
+            icon={Check}
+          />
+
+          {/* Profil recherche */}
+          <ListSection
+            title="Profil recherché"
+            items={job.requirements}
+            icon={UserCircle}
+          />
+
+          {/* Avantages */}
+          <ListSection
+            title="Avantages"
+            items={job.benefits}
+            icon={Sparks}
+          />
+
+          {/* Tags */}
+          {job.tags.length > 0 && (
+            <article className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-6 lg:py-7">
+              <h2 className="font-display text-[20px] tracking-[-0.01em] mb-4">
+                Tags
+              </h2>
+              <div className="flex flex-wrap gap-1.5">
+                {job.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="h-7 px-2.5 rounded-full text-[11.5px] bg-[var(--background-alt)] border border-[var(--border)] text-foreground/75"
+                  >
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            </article>
+          )}
         </div>
 
-        {/* Sidebar : actions */}
+        {/* Sidebar */}
         <aside className="lg:sticky lg:top-[140px] flex flex-col gap-3">
+          {/* Details */}
+          <div className="bg-white border border-[var(--border)] rounded-2xl p-5">
+            <p className="ed-label-sm mb-4">Détails</p>
+            <dl className="flex flex-col gap-3">
+              <Detail icon={Bag} label="Contrat" value={job.type} />
+              <Detail icon={Building} label="Secteur" value={job.sector} />
+              <Detail icon={MapPin} label="Lieu" value={job.location} />
+              <Detail icon={Globe} label="Mode" value={job.remote} />
+              <Detail icon={Clock} label="Temps" value={job.work_time} />
+              <Detail icon={UserCircle} label="Niveau" value={job.level} />
+              {salary && <Detail icon={EuroSquare} label="Salaire" value={salary} />}
+              {job.languages.length > 0 && (
+                <Detail icon={Translate} label="Langues" value={job.languages.join(" · ")} />
+              )}
+              <Detail icon={Calendar} label="Créée" value={formatDate(job.created_at)} />
+              <Detail icon={Calendar} label="Modifiée" value={formatDate(job.updated_at)} />
+              <Detail icon={Globe} label="Langue" value={job.lang === "en" ? "Anglais" : "Français"} />
+            </dl>
+          </div>
+
+          {/* Actions */}
           <div className="bg-white border border-[var(--border)] rounded-2xl p-5">
             <p className="ed-label-sm mb-3">Actions</p>
             <div className="flex flex-col gap-2">
-              {/* TODO: edit drawer wired to Supabase */}
+              <Link
+                href={`/recruteur/offres/${job.id}/candidats`}
+                className="h-10 px-4 rounded-xl bg-foreground text-background text-[12.5px] font-medium hover:bg-foreground/85 transition-colors flex items-center justify-center gap-2"
+              >
+                <Group width={13} height={13} strokeWidth={2} />
+                Pipeline candidats
+              </Link>
               {job.status === "published" || job.status === "draft" ? (
                 <button
                   type="button"
@@ -241,26 +331,54 @@ export function EmployerJobDetail({ id }: Props) {
             </div>
           </div>
 
+          {/* Lien public */}
           <div className="bg-white border border-[var(--border)] rounded-2xl p-5">
-            <p className="ed-label-sm mb-3">Liens</p>
+            <p className="ed-label-sm mb-3">Lien public</p>
             <Link
-              href={`/recruteur/offres/${job.id}/candidats`}
-              className="block py-2 text-[12.5px] text-foreground/85 hover:text-foreground border-b border-[var(--border)] last:border-b-0"
+              href={`/jobs/${job.slug}`}
+              target="_blank"
+              className="text-[12.5px] text-[var(--accent)] hover:underline underline-offset-2 inline-flex items-center gap-1"
             >
-              Pipeline candidats
-              <ArrowUpRight
-                width={11}
-                height={11}
-                strokeWidth={2.2}
-                className="inline ml-1 text-foreground/40"
-              />
+              Voir l&apos;offre sur le mur
+              <ArrowUpRight width={11} height={11} strokeWidth={2.2} />
             </Link>
           </div>
         </aside>
       </div>
-
-      {/* Edit drawer placeholder — TODO: wire to Supabase */}
     </div>
+  );
+}
+
+/* ─── Sub-components ─── */
+
+function ListSection({
+  title,
+  items,
+  icon: Icon,
+}: {
+  title: string;
+  items: string[];
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+}) {
+  if (!items || items.length === 0) return null;
+  return (
+    <article className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-6 lg:py-7">
+      <h2 className="font-display text-[20px] tracking-[-0.01em] mb-5">
+        {title}
+      </h2>
+      <ul className="flex flex-col gap-3">
+        {items.map((it, i) => (
+          <li key={i} className="flex items-start gap-3">
+            <span className="mt-[3px] size-[20px] rounded-md bg-[var(--accent)]/10 text-[var(--accent)] flex items-center justify-center shrink-0">
+              <Icon width={12} height={12} strokeWidth={2.4} />
+            </span>
+            <span className="text-[14px] text-foreground/85 leading-[1.65]">
+              {it}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </article>
   );
 }
 
@@ -274,17 +392,42 @@ function Stat({
   value: string;
 }) {
   return (
-    <div className="bg-[var(--background-alt)] rounded-xl p-3 flex items-center gap-2.5">
-      <span className="size-9 rounded-lg bg-white border border-[var(--border)] flex items-center justify-center text-foreground/60">
-        <Icon width={14} height={14} strokeWidth={2} />
+    <div className="bg-[var(--background-alt)] rounded-xl p-3.5 flex items-center gap-3">
+      <span className="size-10 rounded-lg bg-white border border-[var(--border)] flex items-center justify-center text-foreground/60">
+        <Icon width={15} height={15} strokeWidth={2} />
       </span>
       <div className="min-w-0">
         <div className="text-[10.5px] uppercase tracking-[0.08em] text-foreground/55 font-medium">
           {label}
         </div>
-        <div className="font-display text-[18px] tracking-[-0.01em] text-foreground tabular-nums">
+        <div className="font-display text-[20px] tracking-[-0.01em] text-foreground tabular-nums">
           {value}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function Detail({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-start gap-2.5 text-[13px]">
+      <Icon
+        width={13}
+        height={13}
+        strokeWidth={2}
+        className="mt-[3px] text-foreground/45 shrink-0"
+      />
+      <div className="min-w-0 flex-1 flex items-baseline justify-between gap-3">
+        <dt className="text-foreground/55">{label}</dt>
+        <dd className="text-foreground text-right">{value}</dd>
       </div>
     </div>
   );
@@ -293,6 +436,16 @@ function Stat({
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("fr-FR", {
     day: "numeric",
-    month: "short",
+    month: "long",
+    year: "numeric",
   });
+}
+
+function formatSalary(min: number | null, max: number | null): string | null {
+  if (!min && !max) return null;
+  const fmt = (n: number) => `${Math.round(n / 1000)}k`;
+  if (min && max) return `${fmt(min)} - ${fmt(max)} EUR/an`;
+  if (min) return `A partir de ${fmt(min)} EUR/an`;
+  if (max) return `Jusqu'a ${fmt(max)} EUR/an`;
+  return null;
 }
