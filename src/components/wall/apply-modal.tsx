@@ -68,22 +68,29 @@ export function ApplyModal({ job, user, open, onClose }: Props) {
     if (user) {
       const { createClient } = await import("@/lib/supabase/client");
       const supabase = createClient();
-      await supabase.from("applications").insert({
-        job_id: job.id,
-        candidate_id: user.id,
-        status: "received",
-        cover_letter: coverLetter.trim() || null,
-        source: "platform",
-        match_score: score,
-      });
-      await supabase.from("application_events").insert({
-        application_id: job.id, // sera corrige quand on aura l'id
-        type: "received",
-        text: coverLetter.trim()
-          ? "Candidature recue avec lettre de motivation"
-          : "Candidature recue",
-        by_name: user.name,
-      });
+      const { data: newApp } = await supabase
+        .from("applications")
+        .insert({
+          job_id: job.id,
+          candidate_id: user.id,
+          status: "received",
+          cover_letter: coverLetter.trim() || null,
+          source: "platform",
+          match_score: score,
+        })
+        .select("id")
+        .single();
+
+      if (newApp) {
+        await supabase.from("application_events").insert({
+          application_id: newApp.id,
+          type: "received",
+          text: coverLetter.trim()
+            ? "Candidature recue avec lettre de motivation"
+            : "Candidature recue",
+          by_name: user.name,
+        });
+      }
     }
 
     setSent(true);

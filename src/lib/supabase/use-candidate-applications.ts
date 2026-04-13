@@ -1,0 +1,107 @@
+"use client";
+
+import { useState } from "react";
+import { useUser } from "@/lib/auth";
+import { createClient } from "./client";
+
+export type CandidateApplication = {
+  id: string;
+  jobId: string;
+  jobTitle: string;
+  jobSlug: string;
+  companyName: string;
+  companySlug: string;
+  companyLogoColor: string;
+  companyInitials: string;
+  companyDomain?: string;
+  companyLogoUrl?: string;
+  status: string;
+  matchScore: number;
+  coverLetter?: string;
+  appliedAt: string;
+  events: Array<{
+    id: string;
+    type: string;
+    text?: string;
+    by?: string;
+    createdAt: string;
+  }>;
+};
+
+export function useCandidateApplications() {
+  const user = useUser();
+  const [applications, setApplications] = useState<CandidateApplication[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [fetchedFor, setFetchedFor] = useState<string | null>(null);
+
+  const userId = user?.id ?? null;
+  if (userId !== fetchedFor) {
+    setFetchedFor(userId);
+    if (!userId) {
+      setApplications([]);
+      setLoading(false);
+    } else {
+      setLoading(true);
+      const supabase = createClient();
+      supabase
+        .from("applications")
+        .select(`
+          *,
+          application_events(*),
+          job:jobs!applications_job_id_fkey(
+            id, slug, title,
+            company:companies(name, slug, logo_color, initials, domain, logo_url)
+          )
+        `)
+        .eq("candidate_id", userId)
+        .order("applied_at", { ascending: false })
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .then(({ data }: { data: any }) => {
+          if (data) {
+            setApplications(
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              data.map((row: any) => {
+                const job = row.job;
+                const company = job?.company;
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const events = (row.application_events ?? []).map((e: any) => ({
+                  id: e.id,
+                  type: e.type,
+                  text: e.text ?? undefined,
+                  by: e.by_name ?? undefined,
+                  createdAt: e.created_at,
+                }));
+                return {
+                  id: row.id,
+                  jobId: row.job_id,
+                  jobTitle: job?.title ?? "Offre",
+                  jobSlug: job?.slug ?? "",
+                  companyName: company?.name ?? "Entreprise",
+                  companySlug: company?.slug ?? "",
+                  companyLogoColor: company?.logo_color ?? "#1C3D5A",
+                  companyInitials: company?.initials ?? "??",
+                  companyDomain: company?.domain ?? undefined,
+                  companyLogoUrl: company?.logo_url ?? undefined,
+                  status: row.status ?? "received",
+                  matchScore: row.match_score ?? 0,
+                  coverLetter: row.cover_letter ?? undefined,
+                  appliedAt: row.applied_at,
+                  events,
+                };
+              }),
+            );
+          }
+          setLoading(false);
+        });
+    }
+  }
+
+  const refetch = () => setFetchedFor(null);
+
+  return { applications, loading, refetch };
+}
+
+export async function withdrawApplicationSupabase(appId: string): Promise<void> {
+  const supabase = createClient();
+  await supabase.from("applications").delete().eq("id", appId);
+}

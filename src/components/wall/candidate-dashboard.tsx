@@ -25,6 +25,8 @@ import {
   statusTone,
   useCandidate,
 } from "@/lib/candidate-store";
+import { useSavedJobs } from "@/lib/supabase/use-saved-jobs";
+import { useCandidateApplications } from "@/lib/supabase/use-candidate-applications";
 import { CompanyLogo } from "./company-logo";
 import { UserAvatar } from "./user-avatar";
 
@@ -34,7 +36,9 @@ export function CandidateDashboard({ jobs }: Props) {
   const user = useUser();
   const loading = useAuthLoading();
   const router = useRouter();
-  const { profile, applications, savedJobIds } = useCandidate();
+  const { profile } = useCandidate();
+  const { savedIds } = useSavedJobs();
+  const { applications: sbApplications } = useCandidateApplications();
 
   useEffect(() => {
     if (!loading && user === null) {
@@ -68,8 +72,9 @@ export function CandidateDashboard({ jobs }: Props) {
   }
 
   const completion = profileCompletion(profile);
-  const recent = applications.slice(0, 4);
-  const interviewing = applications.filter(
+  const appCount = sbApplications.length;
+  const savedCount = savedIds.length;
+  const interviewing = sbApplications.filter(
     (a) => a.status === "interview",
   ).length;
 
@@ -141,8 +146,8 @@ export function CandidateDashboard({ jobs }: Props) {
         <Kpi
           icon={SendMail}
           label="Candidatures"
-          value={String(applications.length)}
-          tone={applications.length > 0 ? "accent" : "muted"}
+          value={String(appCount)}
+          tone={appCount > 0 ? "accent" : "muted"}
           href="/candidat/candidatures"
         />
         <Kpi
@@ -155,7 +160,7 @@ export function CandidateDashboard({ jobs }: Props) {
         <Kpi
           icon={Bookmark}
           label="Sauvegardées"
-          value={String(savedJobIds.length)}
+          value={String(savedCount)}
           tone="muted"
           href="/candidat/sauvegardes"
         />
@@ -179,7 +184,7 @@ export function CandidateDashboard({ jobs }: Props) {
                   Candidatures récentes
                 </h2>
                 <span className="wall-badge" data-tone="muted">
-                  <span className="font-mono">{applications.length}</span>
+                  <span className="font-mono">{appCount}</span>
                 </span>
               </div>
               <Link
@@ -190,7 +195,7 @@ export function CandidateDashboard({ jobs }: Props) {
               </Link>
             </div>
 
-            {recent.length === 0 ? (
+            {sbApplications.length === 0 ? (
               <div className="py-10 text-center">
                 <SendMail
                   width={22}
@@ -210,7 +215,7 @@ export function CandidateDashboard({ jobs }: Props) {
               </div>
             ) : (
               <ul className="flex flex-col">
-                {recent.map((a) => (
+                {sbApplications.slice(0, 4).map((a) => (
                   <li key={a.id}>
                     <Link
                       href={`/candidat/candidatures/${a.id}`}
@@ -219,7 +224,8 @@ export function CandidateDashboard({ jobs }: Props) {
                       <CompanyLogo
                         name={a.companyName}
                         domain={a.companyDomain}
-                        color={a.companyColor}
+                        logoUrl={a.companyLogoUrl}
+                        color={a.companyLogoColor}
                         initials={a.companyInitials}
                         size={36}
                         radius={11}
@@ -232,7 +238,7 @@ export function CandidateDashboard({ jobs }: Props) {
                           {a.companyName} · {formatRelative(a.appliedAt)}
                         </div>
                       </div>
-                      <StatusBadge status={a.status} />
+                      <StatusBadge status={a.status as ApplicationStatus} />
                     </Link>
                   </li>
                 ))}
@@ -309,13 +315,13 @@ export function CandidateDashboard({ jobs }: Props) {
                 href="/candidat/candidatures"
                 icon={SendMail}
                 label="Mes candidatures"
-                hint={`${applications.length} en cours`}
+                hint={`${appCount} en cours`}
               />
               <ActionLink
                 href="/candidat/sauvegardes"
                 icon={Bookmark}
                 label="Mes sauvegardes"
-                hint={`${savedJobIds.length} offre${savedJobIds.length > 1 ? "s" : ""}`}
+                hint={`${savedCount} offre${savedCount > 1 ? "s" : ""}`}
               />
               <ActionLink
                 href="/candidat/profil"

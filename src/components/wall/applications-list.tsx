@@ -12,13 +12,11 @@ import {
 } from "iconoir-react";
 import { useUser } from "@/lib/auth";
 import {
-  type Application,
   type ApplicationStatus,
   statusLabel,
   statusTone,
-  useCandidate,
-  withdrawApplication,
 } from "@/lib/candidate-store";
+import { useCandidateApplications, withdrawApplicationSupabase } from "@/lib/supabase/use-candidate-applications";
 import { CompanyLogo } from "./company-logo";
 
 const FILTERS: Array<{ key: ApplicationStatus | "all"; label: string }> = [
@@ -30,10 +28,23 @@ const FILTERS: Array<{ key: ApplicationStatus | "all"; label: string }> = [
   { key: "rejected", label: "Refusées" },
 ];
 
+// Map Supabase statuses to candidate-store statuses
+function mapStatus(s: string): ApplicationStatus {
+  switch (s) {
+    case "received": return "sent";
+    case "reviewed": return "viewed";
+    case "interview": return "interview";
+    case "offer":
+    case "hired": return "accepted";
+    case "rejected": return "rejected";
+    default: return "sent";
+  }
+}
+
 export function ApplicationsList() {
   const user = useUser();
   const router = useRouter();
-  const { applications } = useCandidate();
+  const { applications: sbApps, refetch } = useCandidateApplications();
   const [filter, setFilter] = useState<ApplicationStatus | "all">("all");
 
   useEffect(() => {
@@ -43,17 +54,26 @@ export function ApplicationsList() {
     }
   }, [user, router]);
 
+  // Map Supabase apps to local format for display
+  const apps = useMemo(() =>
+    sbApps.map((a) => ({
+      ...a,
+      displayStatus: mapStatus(a.status),
+    })),
+    [sbApps],
+  );
+
   const counts = useMemo(() => {
-    const c: Record<string, number> = { all: applications.length };
-    for (const a of applications) c[a.status] = (c[a.status] ?? 0) + 1;
+    const c: Record<string, number> = { all: apps.length };
+    for (const a of apps) c[a.displayStatus] = (c[a.displayStatus] ?? 0) + 1;
     return c;
-  }, [applications]);
+  }, [apps]);
 
   const filtered = useMemo(() => {
     return filter === "all"
-      ? applications
-      : applications.filter((a) => a.status === filter);
-  }, [applications, filter]);
+      ? apps
+      : apps.filter((a) => a.displayStatus === filter);
+  }, [apps, filter]);
 
   if (!user || user.role !== "candidate") {
     return (
@@ -126,9 +146,9 @@ export function ApplicationsList() {
             className="text-foreground/35 inline-block"
           />
           <p className="font-display italic text-[18px] text-foreground mt-3">
-            {applications.length === 0
-              ? "Tu n'as encore postulé à aucune offre."
-              : "Aucune candidature dans cette catégorie."}
+            {apps.length === 0
+              ? "Tu n'as encore postule a aucune offre."
+              : "Aucune candidature dans cette categorie."}
           </p>
           <Link
             href="/"
@@ -140,7 +160,14 @@ export function ApplicationsList() {
       ) : (
         <div className="bg-white border border-[var(--border)] rounded-2xl divide-y divide-[var(--border)]">
           {filtered.map((app) => (
-            <ApplicationRow key={app.id} app={app} />
+            <ApplicationRow
+              key={app.id}
+              app={app}
+              onWithdraw={async () => {
+                await withdrawApplicationSupabase(app.id);
+                refetch();
+              }}
+            />
           ))}
         </div>
       )}
@@ -148,13 +175,14 @@ export function ApplicationsList() {
   );
 }
 
-function ApplicationRow({ app }: { app: Application }) {
+function ApplicationRow({ app, onWithdraw }: { app: { id: string; jobTitle: string; jobSlug: string; companyName: string; companySlug: string; companyLogoColor: string; companyInitials: string; companyDomain?: string; companyLogoUrl?: string; appliedAt: string; displayStatus: ApplicationStatus }; onWithdraw: () => void }) {
   return (
     <div className="px-4 sm:px-6 lg:px-7 py-4 sm:py-5 grid grid-cols-[auto_1fr_auto] items-center gap-3 sm:gap-5 hover:bg-[var(--background-alt)]/40 transition-colors group">
       <CompanyLogo
         name={app.companyName}
         domain={app.companyDomain}
-        color={app.companyColor}
+        logoUrl={app.companyLogoUrl}
+        color={app.companyLogoColor}
         initials={app.companyInitials}
         size={44}
         radius={14}
@@ -177,20 +205,13 @@ function ApplicationRow({ app }: { app: Application }) {
             {app.companyName}
           </Link>
           <span>·</span>
-          <span>{app.jobType}</span>
-          <span>·</span>
           <span className="inline-flex items-center gap-1">
             <Calendar width={11} height={11} strokeWidth={2} />
             {formatDate(app.appliedAt)}
           </span>
         </div>
-        {app.note && (
-          <p className="text-[12px] text-foreground/70 mt-1.5 italic">
-            {app.note}
-          </p>
-        )}
         <div className="mt-2">
-          <StatusPill status={app.status} />
+          <StatusPill status={app.displayStatus} />
         </div>
       </div>
 
@@ -198,12 +219,7 @@ function ApplicationRow({ app }: { app: Application }) {
         <button
           type="button"
           onClick={() => {
-            if (
-              typeof window !== "undefined" &&
-              window.confirm("Retirer cette candidature ?")
-            ) {
-              withdrawApplication(app.id);
-            }
+            if (window.confirm("Retirer cette candidature ?")) onWithdraw();
           }}
           className="size-8 rounded-full border border-[var(--border)] bg-white text-foreground/55 hover:text-destructive hover:border-destructive/30 transition-colors flex items-center justify-center"
           aria-label="Retirer la candidature"

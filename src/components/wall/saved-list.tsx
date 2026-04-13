@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Bookmark } from "iconoir-react";
 import type { Job } from "@/lib/data";
 import { useUser } from "@/lib/auth";
-import { useCandidate } from "@/lib/candidate-store";
+import { useSavedJobs } from "@/lib/supabase/use-saved-jobs";
 import { JobCard } from "./job-card";
 
 type Props = { jobs: Job[] };
@@ -14,7 +14,7 @@ type Props = { jobs: Job[] };
 export function SavedList({ jobs }: Props) {
   const user = useUser();
   const router = useRouter();
-  const { savedJobIds } = useCandidate();
+  const { savedIds, loading } = useSavedJobs();
 
   useEffect(() => {
     if (user === null) {
@@ -27,13 +27,13 @@ export function SavedList({ jobs }: Props) {
     return (
       <div className="max-w-[1100px] mx-auto bg-white border border-[var(--border)] rounded-2xl p-12 text-center">
         <p className="font-display italic text-[18px] text-foreground">
-          Connecte-toi côté candidat pour voir tes sauvegardes.
+          Connecte-toi cote candidat pour voir tes sauvegardes.
         </p>
       </div>
     );
   }
 
-  const savedJobs = jobs.filter((j) => savedJobIds.includes(j.id));
+  const savedJobs = jobs.filter((j) => savedIds.includes(j.id));
 
   return (
     <div className="max-w-[1100px] mx-auto">
@@ -46,16 +46,16 @@ export function SavedList({ jobs }: Props) {
       </Link>
 
       <header className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-6 lg:py-7 mb-3">
-        <p className="ed-label-sm">Mises de côté</p>
+        <p className="ed-label-sm">Mises de cote</p>
         <h1 className="font-display text-[24px] sm:text-[26px] lg:text-[30px] tracking-[-0.015em] text-foreground mt-1">
-          Mes offres sauvegardées
+          Mes offres sauvegardees
         </h1>
         <p className="text-[14px] text-muted-foreground mt-2 max-w-xl">
-          Les offres que tu as mises en favori, prêtes à être reprises.
+          {loading ? "Chargement..." : `${savedJobs.length} offre${savedJobs.length > 1 ? "s" : ""} sauvegardee${savedJobs.length > 1 ? "s" : ""}`}
         </p>
       </header>
 
-      {savedJobs.length === 0 ? (
+      {savedJobs.length === 0 && !loading ? (
         <div className="bg-white border border-[var(--border)] rounded-2xl p-16 text-center">
           <Bookmark
             width={24}
@@ -64,7 +64,7 @@ export function SavedList({ jobs }: Props) {
             className="text-foreground/35 inline-block"
           />
           <p className="font-display italic text-[18px] text-foreground mt-3">
-            Aucune offre sauvegardée pour l&apos;instant.
+            Aucune offre sauvegardee pour l&apos;instant.
           </p>
           <Link
             href="/"
