@@ -110,6 +110,8 @@ create table if not exists applications (
   source text default 'platform' check (source in ('platform', 'manual', 'csv_import', 'referral')),
   added_by uuid references profiles(id),
   "order" integer default 0,
+  tags text[] default '{}',
+  notes text,
   applied_at timestamptz default now(),
   updated_at timestamptz default now(),
   -- Empecher un candidat de postuler 2 fois a la meme offre
@@ -151,13 +153,40 @@ create table if not exists manual_candidates (
   skills text[] default '{}',
   languages text[] default '{}',
   cover_letter text,
-  status text default 'received' check (status in ('received','reviewed','interview','offer','hired','rejected')),
+  status text default 'received' check (status in ('received','shortlisted','reviewed','interview','offer','hired','rejected')),
   rating integer default 0,
   source text default 'manual' check (source in ('manual','csv_import','referral')),
   added_by uuid references profiles(id),
   notes text,
+  tags text[] default '{}',
   created_at timestamptz default now(),
   updated_at timestamptz default now()
+);
+
+-- Timeline candidats manuels
+create table if not exists candidate_events (
+  id uuid primary key default uuid_generate_v4(),
+  candidate_id uuid not null references manual_candidates(id) on delete cascade,
+  type text not null,
+  text text,
+  from_status text,
+  to_status text,
+  job_id uuid references jobs(id) on delete set null,
+  created_by uuid references profiles(id),
+  created_at timestamptz default now()
+);
+
+-- Invitations equipe
+create table if not exists team_invitations (
+  id uuid primary key default uuid_generate_v4(),
+  company_id uuid not null references companies(id) on delete cascade,
+  email text not null,
+  team_role text not null check (team_role in ('admin', 'recruiter', 'viewer')),
+  invited_by uuid references profiles(id),
+  status text default 'pending' check (status in ('pending', 'accepted', 'revoked')),
+  token text unique default encode(gen_random_bytes(24), 'hex'),
+  created_at timestamptz default now(),
+  unique(company_id, email)
 );
 
 -- Vues uniques par offre (fingerprint = hash IP + UA)
