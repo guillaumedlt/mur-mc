@@ -297,14 +297,6 @@ export function CompanyEditor() {
               </p>
             </div>
           </div>
-          <Link
-            href={`/entreprises/${company.slug}`}
-            target="_blank"
-            className="h-10 px-4 rounded-full border border-[var(--border)] bg-white text-[13px] text-foreground/80 hover:text-foreground hover:bg-[var(--background-alt)] transition-colors flex items-center gap-2 shrink-0"
-          >
-            Voir la fiche publique
-            <ArrowUpRight width={11} height={11} strokeWidth={2.2} />
-          </Link>
         </div>
       </header>
 
