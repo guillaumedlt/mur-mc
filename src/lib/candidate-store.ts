@@ -89,6 +89,7 @@ export type CandidateProfile = {
   sectors: Sector[];
   linkedinUrl?: string;
   websiteUrl?: string;
+  openToWork?: boolean;
   /**
    * Photo de profil — stockée en data URL dans localStorage (limité ~1 Mo
    * en pratique, on ne resize pas pour la démo mais on warn si trop grand).

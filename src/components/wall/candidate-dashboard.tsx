@@ -117,6 +117,31 @@ export function CandidateDashboard({ jobs }: Props) {
           </Link>
         </div>
 
+        {/* Open to work toggle */}
+        <div className="mt-4 flex items-center gap-3">
+          <label className="flex items-center gap-2.5 cursor-pointer select-none">
+            <span className="wall-check" data-checked={profile.openToWork ?? false} />
+            <input
+              type="checkbox"
+              checked={profile.openToWork ?? false}
+              onChange={async (e) => {
+                const { createClient } = await import("@/lib/supabase/client");
+                const supabase = createClient();
+                await supabase.from("profiles").update({ open_to_work: e.target.checked }).eq("id", user.id);
+              }}
+              className="sr-only"
+            />
+            <span className="text-[12.5px] text-foreground/75">
+              Je suis en recherche active
+            </span>
+          </label>
+          {(profile.openToWork ?? false) && (
+            <span className="h-5 px-2 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-semibold uppercase tracking-[0.06em] inline-flex items-center">
+              Open to work
+            </span>
+          )}
+        </div>
+
         {/* Completion gauge */}
         {completion < 100 && (
           <div className="mt-5 pt-5 border-t border-[var(--border)]">

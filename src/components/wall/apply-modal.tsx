@@ -32,6 +32,7 @@ export function ApplyModal({ job, user, open, onClose }: Props) {
   const [consent, setConsent] = useState(false);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [sent, setSent] = useState(false);
+  const [aiGenerating, setAiGenerating] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -239,9 +240,45 @@ export function ApplyModal({ job, user, open, onClose }: Props) {
                   rows={6}
                   className="bg-white border border-[var(--border)] rounded-xl px-3.5 py-3 text-[13px] outline-none placeholder:text-[var(--tertiary-foreground)] focus:border-[var(--accent)] focus:shadow-[0_0_0_3px_oklch(0.355_0.066_247_/_0.12)] transition-all leading-[1.6] resize-y"
                 />
-                <p className="text-[10.5px] text-[var(--tertiary-foreground)]">
-                  {coverLetter.length} caractères · maximum 2000
-                </p>
+                <div className="flex items-center justify-between">
+                  <p className="text-[10.5px] text-[var(--tertiary-foreground)]">
+                    {coverLetter.length} caracteres · maximum 2000
+                  </p>
+                  <button
+                    type="button"
+                    disabled={aiGenerating}
+                    onClick={async () => {
+                      setAiGenerating(true);
+                      try {
+                        const res = await fetch("/api/ai/cover-letter", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            jobTitle: job.title,
+                            companyName: job.company.name,
+                            candidateName: profile.fullName || user.name,
+                            headline: profile.headline,
+                            skills: profile.skills,
+                            bio: profile.bio,
+                          }),
+                        });
+                        if (res.ok) {
+                          const data = await res.json();
+                          if (data.text) setCoverLetter(data.text);
+                        }
+                      } catch { /* ignore */ }
+                      setAiGenerating(false);
+                    }}
+                    className="text-[11px] text-[var(--accent)] hover:underline underline-offset-2 inline-flex items-center gap-1 disabled:opacity-50"
+                  >
+                    {aiGenerating ? (
+                      <span className="size-3 border-2 border-[var(--accent)]/30 border-t-[var(--accent)] rounded-full animate-spin" />
+                    ) : (
+                      <Sparks width={10} height={10} strokeWidth={2} />
+                    )}
+                    {aiGenerating ? "Generation..." : "Rediger avec l'IA"}
+                  </button>
+                </div>
               </div>
 
               {/* Custom questions from job */}
