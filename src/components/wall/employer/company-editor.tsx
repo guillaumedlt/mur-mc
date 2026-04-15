@@ -411,22 +411,17 @@ export function CompanyEditor() {
               </button>
             </div>
             <div>
-              <button
-                type="button"
-                onClick={() => setShowAiPrompt(!showAiPrompt)}
-                className="text-[11.5px] text-[var(--accent)] hover:underline underline-offset-2"
-              >
-                {showAiPrompt ? "Masquer les precisions" : "Ajouter des precisions pour l'IA"}
-              </button>
-              {showAiPrompt && (
-                <textarea
-                  value={aiPrompt}
-                  onChange={(e) => setAiPrompt(e.target.value)}
-                  rows={3}
-                  placeholder={"Ex : Nous sommes specialises dans la gestion de fortune pour familles UHNW, ambiance startup mais dans le luxe, equipe jeune et internationale..."}
-                  className="mt-2 w-full bg-white border border-[var(--border)] rounded-xl px-3.5 py-2.5 text-[13px] outline-none placeholder:text-[var(--tertiary-foreground)] focus:border-[var(--accent)] transition-all leading-[1.55] resize-y"
-                />
-              )}
+              <label className="text-[11.5px] font-medium text-foreground/70 flex items-center gap-1.5 mb-1.5">
+                Vos precisions pour l&apos;IA
+                <span className="text-[10px] font-normal text-foreground/40">(optionnel)</span>
+              </label>
+              <textarea
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                rows={2}
+                placeholder={"Ex : Specialises en gestion de fortune UHNW, ambiance startup dans le luxe, equipe jeune et internationale..."}
+                className="w-full bg-white border border-[var(--border)] rounded-xl px-3.5 py-2.5 text-[13px] outline-none placeholder:text-[var(--tertiary-foreground)] focus:border-[var(--accent)] transition-all leading-[1.55] resize-y"
+              />
             </div>
             {aiError && (
               <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-3 py-2 text-[12px] text-destructive">

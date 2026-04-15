@@ -519,24 +519,19 @@ export function PublishJobForm({ existing, onCancel }: Props) {
             </button>
           </div>
 
-          {/* Toggle champ libre */}
+          {/* Champ libre pour precisions IA */}
           <div>
-            <button
-              type="button"
-              onClick={() => setShowPrompt(!showPrompt)}
-              className="text-[11.5px] text-[var(--accent)] hover:underline underline-offset-2"
-            >
-              {showPrompt ? "Masquer les precisions" : "Ajouter des precisions pour l'IA"}
-            </button>
-            {showPrompt && (
-              <textarea
-                value={freePrompt}
-                onChange={(e) => setFreePrompt(e.target.value)}
-                rows={3}
-                placeholder={"Ex : Mettre l'accent sur le service client haut de gamme, mentionner que c'est un poste de creation, insister sur le bilinguisme FR/EN, equipe de 12 personnes..."}
-                className="mt-2 w-full bg-white border border-[var(--border)] rounded-xl px-3.5 py-2.5 text-[13px] outline-none placeholder:text-[var(--tertiary-foreground)] focus:border-[var(--accent)] transition-all leading-[1.55] resize-y"
-              />
-            )}
+            <label className="text-[11.5px] font-medium text-foreground/70 flex items-center gap-1.5 mb-1.5">
+              Vos precisions pour l&apos;IA
+              <span className="text-[10px] font-normal text-foreground/40">(optionnel)</span>
+            </label>
+            <textarea
+              value={freePrompt}
+              onChange={(e) => setFreePrompt(e.target.value)}
+              rows={2}
+              placeholder={"Ex : Mettre l'accent sur le service client haut de gamme, poste de creation, bilinguisme FR/EN requis, equipe de 12 personnes..."}
+              className="w-full bg-white border border-[var(--border)] rounded-xl px-3.5 py-2.5 text-[13px] outline-none placeholder:text-[var(--tertiary-foreground)] focus:border-[var(--accent)] transition-all leading-[1.55] resize-y"
+            />
           </div>
 
           {aiError && (
