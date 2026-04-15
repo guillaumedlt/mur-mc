@@ -117,6 +117,7 @@ export function PublishJobForm({ existing, onCancel }: Props) {
     existing?.benefits ?? [],
   );
   const [tags, setTags] = useState<string[]>(existing?.tags ?? []);
+  const [customQuestions, setCustomQuestions] = useState<string[]>([]);
 
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
@@ -286,6 +287,7 @@ export function PublishJobForm({ existing, onCancel }: Props) {
       requirements,
       benefits,
       tags,
+      custom_questions: customQuestions.length > 0 ? customQuestions : null,
       status: "published",
       featured: false,
     }).select("id").single();
@@ -557,10 +559,18 @@ export function PublishJobForm({ existing, onCancel }: Props) {
 
         <EditableList
           label="Tags"
-          hint="Mots-clés pour la recherche (SEO)"
+          hint="Mots-cles pour la recherche (SEO)"
           items={tags}
           onChange={setTags}
           placeholder="Ex : wealth management, UHNW"
+        />
+
+        <EditableList
+          label="Questions pour le candidat"
+          hint="Questions affichees dans le formulaire de candidature (optionnel)"
+          items={customQuestions}
+          onChange={setCustomQuestions}
+          placeholder="Ex : Avez-vous un permis de travail monegasque ?"
         />
 
         <div className="flex items-center justify-between pt-4 border-t border-[var(--border)] gap-3 flex-wrap">

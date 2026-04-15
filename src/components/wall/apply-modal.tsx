@@ -29,6 +29,8 @@ type Props = {
 export function ApplyModal({ job, user, open, onClose }: Props) {
   const { profile } = useCandidate();
   const [coverLetter, setCoverLetter] = useState("");
+  const [consent, setConsent] = useState(false);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
   const [sent, setSent] = useState(false);
 
   useEffect(() => {
@@ -77,6 +79,7 @@ export function ApplyModal({ job, user, open, onClose }: Props) {
           cover_letter: coverLetter.trim() || null,
           source: "platform",
           match_score: score,
+          notes: Object.keys(answers).length > 0 ? Object.entries(answers).map(([q, a]) => `${q} → ${a}`).join("\n") : null,
         })
         .select("id")
         .single();
@@ -240,6 +243,44 @@ export function ApplyModal({ job, user, open, onClose }: Props) {
                   {coverLetter.length} caractères · maximum 2000
                 </p>
               </div>
+
+              {/* Custom questions from job */}
+              {job.customQuestions && job.customQuestions.length > 0 && (
+                <div className="flex flex-col gap-3">
+                  <p className="text-[11px] uppercase tracking-[0.08em] font-semibold text-foreground/60">
+                    Questions du recruteur
+                  </p>
+                  {job.customQuestions.map((q, i) => (
+                    <div key={i} className="flex flex-col gap-1">
+                      <label className="text-[12.5px] text-foreground/80">{q}</label>
+                      <input
+                        type="text"
+                        value={answers[q] ?? ""}
+                        onChange={(e) => setAnswers({ ...answers, [q]: e.target.value })}
+                        placeholder="Votre reponse..."
+                        className="wall-input h-9 text-[13px]"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* RGPD Consent */}
+              <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                <span className="wall-check mt-0.5" data-checked={consent} />
+                <input
+                  type="checkbox"
+                  checked={consent}
+                  onChange={(e) => setConsent(e.target.checked)}
+                  required
+                  className="sr-only"
+                />
+                <span className="text-[11.5px] text-foreground/70 leading-[1.5]">
+                  J&apos;accepte que mes donnees soient traitees par {job.company.name} et Mur.mc
+                  dans le cadre de cette candidature, conformement a la reglementation CCIN de Monaco.
+                  Je pourrai exercer mes droits d&apos;acces, de rectification et de suppression a tout moment.
+                </span>
+              </label>
             </div>
 
             {/* Footer */}
@@ -253,7 +294,8 @@ export function ApplyModal({ job, user, open, onClose }: Props) {
               </button>
               <button
                 type="submit"
-                className="h-10 px-5 rounded-xl bg-foreground text-background text-[13px] font-medium hover:bg-foreground/85 transition-colors"
+                disabled={!consent}
+                className="h-10 px-5 rounded-xl bg-foreground text-background text-[13px] font-medium hover:bg-foreground/85 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 Envoyer ma candidature
               </button>

@@ -105,6 +105,7 @@ export type Job = {
   benefits: string[];
   featured?: boolean;
   urgent?: boolean;
+  customQuestions?: string[];
 };
 
 /* ─── Donnees ────────────────────────────────────────────── */

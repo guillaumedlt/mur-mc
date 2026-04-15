@@ -182,6 +182,7 @@ function mapJob(row: any): Job {
     benefits: row.benefits ?? [],
     featured: row.featured ?? false,
     urgent: row.urgent ?? false,
+    customQuestions: row.custom_questions ?? [],
   };
 }
 
