@@ -195,6 +195,20 @@ export function CandidateMessageModal({
       by: recruiterName,
     });
 
+    // Email notification to candidate
+    fetch("/api/notify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "message_recruteur",
+        data: {
+          applicationId: appId,
+          recruiterName,
+          messagePreview: text.trim().slice(0, 200),
+        },
+      }),
+    }).catch(() => {});
+
     // Auto-move si le template le demande
     if (selectedTemplate?.moveToStatus) {
       moveApplication(appId, selectedTemplate.moveToStatus);

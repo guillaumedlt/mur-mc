@@ -107,15 +107,14 @@ export function ApplyModal({ job, user, open, onClose }: Props) {
           }),
         }).catch(() => {});
 
-        // Notify recruiter
+        // Notify recruiter (email resolved server-side from jobId)
         fetch("/api/notify", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             type: score >= 80 ? "candidat_top_match" : "nouvelle_candidature",
             data: {
-              recruiterEmail: "", // Will be resolved server-side in future
-              recruiterName: "",
+              jobId: job.id,
               candidatName: user.name,
               jobTitle: job.title,
               candidateHeadline: "",

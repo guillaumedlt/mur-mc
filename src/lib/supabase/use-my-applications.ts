@@ -194,6 +194,31 @@ export async function moveApplicationSupabase(
       to_status: toStatus,
       by_name: byName,
     });
+
+    // Email notification to candidate
+    const statusLabels: Record<string, string> = {
+      shortlisted: "Pre-selectionne",
+      reviewed: "CV consulte",
+      interview: "Entretien planifie",
+      offer: "Offre recue",
+      hired: "Embauche",
+      rejected: "Candidature non retenue",
+    };
+    const label = statusLabels[toStatus];
+    if (label) {
+      fetch("/api/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "statut_mis_a_jour",
+          data: {
+            applicationId,
+            newStatus: toStatus,
+            statusLabel: label,
+          },
+        }),
+      }).catch(() => {});
+    }
   }
 }
 

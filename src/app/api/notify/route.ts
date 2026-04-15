@@ -6,17 +6,70 @@ import * as templates from "@/lib/email/templates";
 const SITE = "https://mur.mc";
 
 /**
+ * Resolve the recruiter email(s) for a given job ID.
+ * Finds all admin/recruiter profiles linked to the job's company.
+ */
+async function resolveRecruiterEmails(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  jobId: string,
+): Promise<Array<{ email: string; name: string }>> {
+  const { data: job } = await supabase
+    .from("jobs")
+    .select("company_id")
+    .eq("id", jobId)
+    .single();
+  if (!job) return [];
+
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("email, full_name")
+    .eq("company_id", job.company_id)
+    .in("team_role", ["admin", "recruiter"]);
+
+  return (profiles ?? []).map((p: { email: string; full_name: string }) => ({
+    email: p.email,
+    name: p.full_name ?? p.email.split("@")[0],
+  }));
+}
+
+/**
+ * Resolve candidate info from application ID.
+ */
+async function resolveCandidateFromApp(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  applicationId: string,
+): Promise<{ email: string; name: string; jobTitle: string; companyName: string } | null> {
+  const { data } = await supabase
+    .from("applications")
+    .select(`
+      candidate_id,
+      job:jobs(title, company:companies(name)),
+      candidate:profiles!applications_candidate_id_fkey(email, full_name)
+    `)
+    .eq("id", applicationId)
+    .single();
+
+  if (!data) return null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const c = data.candidate as any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const j = data.job as any;
+  return {
+    email: c?.email ?? "",
+    name: c?.full_name ?? "Candidat",
+    jobTitle: j?.title ?? "Offre",
+    companyName: j?.company?.name ?? "Entreprise",
+  };
+}
+
+/**
  * POST /api/notify
  * Body: { type, data }
- * Internal API — called by other server code after actions.
- * Auth-protected: requires Supabase session.
  *
- * Types:
- * - candidature_confirmee
- * - statut_mis_a_jour
- * - message_recruteur
- * - nouvelle_candidature
- * - candidat_top_match
+ * Handles all email notifications. Auto-resolves recruiter/candidate
+ * emails from Supabase when not provided.
  */
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -31,69 +84,111 @@ export async function POST(request: Request) {
   const body = await request.json();
   const { type, data } = body;
 
-  let email: { subject: string; html: string } | null = null;
-  let to: string | null = null;
+  const results: boolean[] = [];
 
   switch (type) {
+    // ─── CANDIDAT NOTIFICATIONS ─────────────────────
+
     case "candidature_confirmee": {
-      to = data.candidatEmail;
-      email = templates.candidatureConfirmee({
+      const email = templates.candidatureConfirmee({
         candidatName: data.candidatName,
         jobTitle: data.jobTitle,
         companyName: data.companyName,
         jobUrl: `${SITE}/candidat/candidatures/${data.applicationId}`,
       });
+      results.push(await sendEmail({ to: data.candidatEmail, ...email }));
       break;
     }
 
     case "statut_mis_a_jour": {
-      to = data.candidatEmail;
-      email = templates.statutMisAJour({
-        candidatName: data.candidatName,
-        jobTitle: data.jobTitle,
-        companyName: data.companyName,
+      // Resolve candidate email from application ID if not provided
+      let candidatEmail = data.candidatEmail;
+      let candidatName = data.candidatName;
+      let jobTitle = data.jobTitle;
+      let companyName = data.companyName;
+
+      if (!candidatEmail && data.applicationId) {
+        const info = await resolveCandidateFromApp(supabase, data.applicationId);
+        if (info) {
+          candidatEmail = info.email;
+          candidatName = candidatName || info.name;
+          jobTitle = jobTitle || info.jobTitle;
+          companyName = companyName || info.companyName;
+        }
+      }
+
+      if (!candidatEmail) break;
+
+      const email = templates.statutMisAJour({
+        candidatName,
+        jobTitle,
+        companyName,
         newStatus: data.newStatus,
         statusLabel: data.statusLabel,
         jobUrl: `${SITE}/candidat/candidatures/${data.applicationId}`,
       });
+      results.push(await sendEmail({ to: candidatEmail, ...email }));
       break;
     }
 
     case "message_recruteur": {
-      to = data.candidatEmail;
-      email = templates.messageRecruteur({
-        candidatName: data.candidatName,
-        jobTitle: data.jobTitle,
-        companyName: data.companyName,
-        recruiterName: data.recruiterName,
-        messagePreview: data.messagePreview,
+      let candidatEmail = data.candidatEmail;
+      let candidatName = data.candidatName;
+      let jobTitle = data.jobTitle;
+      let companyName = data.companyName;
+
+      if (!candidatEmail && data.applicationId) {
+        const info = await resolveCandidateFromApp(supabase, data.applicationId);
+        if (info) {
+          candidatEmail = info.email;
+          candidatName = candidatName || info.name;
+          jobTitle = jobTitle || info.jobTitle;
+          companyName = companyName || info.companyName;
+        }
+      }
+
+      if (!candidatEmail) break;
+
+      const email = templates.messageRecruteur({
+        candidatName,
+        jobTitle,
+        companyName,
+        recruiterName: data.recruiterName || user.user_metadata?.full_name || "Recruteur",
+        messagePreview: data.messagePreview || "",
         jobUrl: `${SITE}/candidat/candidatures/${data.applicationId}`,
       });
+      results.push(await sendEmail({ to: candidatEmail, ...email }));
       break;
     }
 
-    case "nouvelle_candidature": {
-      to = data.recruiterEmail;
-      email = templates.nouvelleCandidature({
-        recruiterName: data.recruiterName,
-        candidatName: data.candidatName,
-        jobTitle: data.jobTitle,
-        candidateHeadline: data.candidateHeadline,
-        matchScore: data.matchScore,
-        candidatureUrl: `${SITE}/recruteur/candidats/${data.applicationId}`,
-      });
-      break;
-    }
+    // ─── RECRUTEUR NOTIFICATIONS ────────────────────
 
+    case "nouvelle_candidature":
     case "candidat_top_match": {
-      to = data.recruiterEmail;
-      email = templates.candidatTopMatch({
-        recruiterName: data.recruiterName,
-        candidatName: data.candidatName,
-        jobTitle: data.jobTitle,
-        matchScore: data.matchScore,
-        candidatureUrl: `${SITE}/recruteur/candidats/${data.applicationId}`,
-      });
+      // Resolve recruiter emails from job
+      const recruiters = data.jobId
+        ? await resolveRecruiterEmails(supabase, data.jobId)
+        : [];
+
+      for (const rec of recruiters) {
+        const tpl = type === "candidat_top_match" && data.matchScore >= 80
+          ? templates.candidatTopMatch({
+              recruiterName: rec.name,
+              candidatName: data.candidatName,
+              jobTitle: data.jobTitle,
+              matchScore: data.matchScore,
+              candidatureUrl: `${SITE}/recruteur/candidats/${data.applicationId}`,
+            })
+          : templates.nouvelleCandidature({
+              recruiterName: rec.name,
+              candidatName: data.candidatName,
+              jobTitle: data.jobTitle,
+              candidateHeadline: data.candidateHeadline,
+              matchScore: data.matchScore,
+              candidatureUrl: `${SITE}/recruteur/candidats/${data.applicationId}`,
+            });
+        results.push(await sendEmail({ to: rec.email, ...tpl }));
+      }
       break;
     }
 
@@ -101,10 +196,5 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: `Unknown type: ${type}` }, { status: 400 });
   }
 
-  if (!to || !email) {
-    return NextResponse.json({ error: "Missing data" }, { status: 400 });
-  }
-
-  const sent = await sendEmail({ to, ...email });
-  return NextResponse.json({ sent });
+  return NextResponse.json({ sent: results.filter(Boolean).length, total: results.length });
 }
