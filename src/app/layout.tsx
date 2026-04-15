@@ -6,18 +6,25 @@ import "./globals.css";
 const inter = Inter({
   variable: "--font-sans",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  preload: true,
+  display: "swap",
 });
 
 const fraunces = Fraunces({
   variable: "--font-display",
   subsets: ["latin"],
-  display: "swap",
+  weight: ["400", "500", "600", "700"],
   axes: ["opsz", "SOFT"],
+  preload: true,
+  display: "swap",
 });
 
 const jetBrains = JetBrains_Mono({
   variable: "--font-mono",
   subsets: ["latin"],
+  weight: ["400", "500"],
+  preload: true,
   display: "swap",
 });
 
@@ -98,6 +105,12 @@ export default function RootLayout({
       lang="fr"
       className={`${inter.variable} ${fraunces.variable} ${jetBrains.variable} h-full antialiased`}
     >
+      <head>
+        <link rel="preconnect" href="https://www.google.com" />
+        <link rel="dns-prefetch" href="https://www.google.com" />
+        <link rel="preconnect" href="https://icons.duckduckgo.com" />
+        <link rel="dns-prefetch" href="https://icons.duckduckgo.com" />
+      </head>
       <body className="min-h-full bg-background text-foreground font-sans">
         <SupabaseAuthSync />
         {children}

@@ -37,15 +37,44 @@ type Filter = "all" | "application" | "message" | "status" | "system";
 
 const READ_KEY = "mur.notif.lastRead";
 
+/**
+ * Wrapper: only renders the heavy NotificationPanel when opened.
+ * Saves 4+ Supabase queries per page load.
+ */
 export function NotificationsBell() {
   const user = useUser();
   const [open, setOpen] = useState(false);
+  const [hasOpened, setHasOpened] = useState(false);
+
+  if (!user) return null;
+
+  const onOpen = () => {
+    setOpen(true);
+    setHasOpened(true);
+  };
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => (open ? setOpen(false) : onOpen())}
+        className="relative size-9 rounded-full border border-[var(--border)] bg-white text-foreground/70 hover:text-foreground hover:bg-[var(--background-alt)] transition-colors flex items-center justify-center"
+        aria-label="Notifications"
+      >
+        <BellNotification width={14} height={14} strokeWidth={2} />
+      </button>
+      {hasOpened && (
+        <NotificationPanel open={open} onClose={() => setOpen(false)} user={user} />
+      )}
+    </div>
+  );
+}
+
+/** Heavy component — only mounted after first bell click. */
+function NotificationPanel({ open, onClose, user }: { open: boolean; onClose: () => void; user: NonNullable<ReturnType<typeof useUser>> }) {
   const [filter, setFilter] = useState<Filter>("all");
 
-  // Candidate notifications
   const { applications: candidateApps } = useCandidateApplications();
-
-  // Employer notifications
   const { applications: employerApps, candidates: employerCandidates } = useMyApplications(null);
   const { candidates: manualCands } = useManualCandidates();
   const { jobs } = useMyJobs();
@@ -145,20 +174,15 @@ export function NotificationsBell() {
     (n) => new Date(n.at).getTime() > lastRead,
   ).length;
 
-  const onOpen = () => {
-    setOpen(true);
-  };
-
   const markAllRead = () => {
     if (typeof window !== "undefined") {
       window.localStorage.setItem(READ_KEY, String(Date.now()));
     }
-    setOpen(false);
-    // Force re-render by toggling
-    setTimeout(() => setOpen(true), 10);
+    onClose();
+    setTimeout(() => {}, 10);
   };
 
-  if (!user) return null;
+  if (!open) return null;
 
   const FILTERS: Array<{ key: Filter; label: string; count: number }> = [
     { key: "all", label: "Tout", count: notifs.length },
@@ -168,31 +192,12 @@ export function NotificationsBell() {
   ];
 
   return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => (open ? setOpen(false) : onOpen())}
-        className="relative size-9 rounded-full border border-[var(--border)] bg-white text-foreground/70 hover:text-foreground hover:bg-[var(--background-alt)] transition-colors flex items-center justify-center"
-        aria-label="Notifications"
-      >
-        <BellNotification width={14} height={14} strokeWidth={2} />
-        {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[var(--accent)] text-white text-[10px] font-mono font-medium flex items-center justify-center tabular-nums ring-2 ring-white">
-            {unreadCount > 9 ? "9+" : unreadCount}
-          </span>
-        )}
-      </button>
+    <>
+      {/* Backdrop */}
+      <div className="fixed inset-0 z-20" onClick={onClose} />
 
-      {open && (
-        <>
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 z-20"
-            onClick={() => setOpen(false)}
-          />
-
-          {/* Panel */}
-          <div className="absolute right-0 top-11 z-30 w-[400px] bg-white border border-[var(--border)] rounded-2xl shadow-[0_16px_48px_-8px_rgba(10,10,10,0.2)] overflow-hidden">
+      {/* Panel */}
+      <div className="absolute right-0 top-11 z-30 w-[400px] bg-white border border-[var(--border)] rounded-2xl shadow-[0_16px_48px_-8px_rgba(10,10,10,0.2)] overflow-hidden">
             {/* Header */}
             <div className="px-5 py-4 border-b border-[var(--border)]">
               <div className="flex items-center justify-between">
@@ -219,7 +224,7 @@ export function NotificationsBell() {
                   )}
                   <button
                     type="button"
-                    onClick={() => setOpen(false)}
+                    onClick={onClose}
                     className="size-7 rounded-full hover:bg-foreground/5 flex items-center justify-center text-foreground/55"
                     aria-label="Fermer"
                   >
@@ -275,7 +280,7 @@ export function NotificationsBell() {
                     <li key={n.id}>
                       <Link
                         href={n.linkHref}
-                        onClick={() => setOpen(false)}
+                        onClick={onClose}
                         className={`flex items-start gap-3 px-5 py-3.5 hover:bg-[var(--background-alt)]/60 transition-colors ${
                           isUnread ? "bg-[var(--accent)]/[0.04]" : ""
                         }`}
@@ -320,7 +325,7 @@ export function NotificationsBell() {
               <div className="px-5 py-3 border-t border-[var(--border)] text-center">
                 <Link
                   href={user.role === "employer" ? "/recruteur/candidats" : "/candidat/candidatures"}
-                  onClick={() => setOpen(false)}
+                  onClick={onClose}
                   className="text-[12px] text-[var(--accent)] hover:underline underline-offset-2"
                 >
                   Voir tout
@@ -328,9 +333,7 @@ export function NotificationsBell() {
               </div>
             )}
           </div>
-        </>
-      )}
-    </div>
+    </>
   );
 }
 

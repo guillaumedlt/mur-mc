@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Job } from "@/lib/data";
 import { createClient } from "@/lib/supabase/client";
 import { TopBar } from "./top-bar";
@@ -13,13 +13,14 @@ type Props = {
   children: React.ReactNode;
 };
 
-/** Fetch published job count from Supabase once. */
+/** Fetch published job count from Supabase once per session. */
 function useJobCount(fallback: number): number {
   const [count, setCount] = useState(fallback);
-  const [fetched, setFetched] = useState(fallback > 0);
+  const fetched = useRef(fallback > 0);
 
-  if (!fetched) {
-    setFetched(true);
+  useEffect(() => {
+    if (fetched.current) return;
+    fetched.current = true;
     const supabase = createClient();
     supabase
       .from("jobs")
@@ -28,7 +29,7 @@ function useJobCount(fallback: number): number {
       .then(({ count: c }) => {
         if (typeof c === "number") setCount(c);
       });
-  }
+  }, []);
 
   return count;
 }
