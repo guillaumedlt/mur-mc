@@ -1,21 +1,36 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
   Bag,
   BadgeCheck,
+  Calendar,
   EditPencil,
+  Hashtag,
   Mail,
   MapPin,
   Phone,
+  PlusCircle,
+  SendMail,
   Suitcase,
   Trash,
+  Xmark,
 } from "iconoir-react";
 import type { EmployerApplicationStatus } from "@/lib/employer-store";
 import { statusLabel } from "@/lib/employer-store";
-import { useManualCandidates, updateManualCandidateSupabase, deleteManualCandidateSupabase } from "@/lib/supabase/use-manual-candidates";
+import { useUser } from "@/lib/auth";
+import {
+  type CandidateEvent,
+  useManualCandidates,
+  updateManualCandidateSupabase,
+  deleteManualCandidateSupabase,
+  fetchCandidateEvents,
+  addCandidateEvent,
+  duplicateCandidateForJob,
+  resetToPool,
+} from "@/lib/supabase/use-manual-candidates";
 import { useMyJobs } from "@/lib/supabase/use-my-jobs";
 import { useRouter } from "next/navigation";
 import { ApplicationStatusPill } from "./status-pill";
@@ -27,11 +42,32 @@ const STATUSES: EmployerApplicationStatus[] = [
   "received", "shortlisted", "reviewed", "interview", "offer", "hired", "rejected",
 ];
 
+const SUGGESTED_TAGS = ["Top profil", "A recontacter", "Senior", "Bilingue", "Disponible", "Urgent"];
+
 export function ManualCandidateDetail({ id }: Props) {
   const router = useRouter();
+  const user = useUser();
   const { candidates, refetch } = useManualCandidates();
   const { jobs } = useMyJobs();
   const mc = candidates.find((c) => c.id === id);
+
+  // Events timeline
+  const [events, setEvents] = useState<CandidateEvent[]>([]);
+  const [eventsLoaded, setEventsLoaded] = useState(false);
+  useEffect(() => {
+    if (id && !eventsLoaded) {
+      setEventsLoaded(true);
+      fetchCandidateEvents(id).then(setEvents);
+    }
+  }, [id, eventsLoaded]);
+
+  const reloadEvents = () => fetchCandidateEvents(id).then(setEvents);
+
+  // Tags
+  const [tagInput, setTagInput] = useState("");
+
+  // Propose for job
+  const [proposeJobId, setProposeJobId] = useState("");
 
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState("");
@@ -73,8 +109,19 @@ export function ManualCandidateDetail({ id }: Props) {
   const job = mc.jobId ? jobs.find((j) => j.id === mc.jobId) : null;
 
   const onStatusChange = async (status: string) => {
+    const prev = mc.status;
     await updateManualCandidateSupabase(mc.id, { status });
+    if (user) {
+      await addCandidateEvent({
+        candidateId: mc.id,
+        type: "status_changed",
+        fromStatus: prev,
+        toStatus: status,
+        createdBy: user.id,
+      });
+    }
     refetch();
+    reloadEvents();
   };
 
   const onRatingChange = async (rating: number) => {
@@ -102,6 +149,45 @@ export function ManualCandidateDetail({ id }: Props) {
       await deleteManualCandidateSupabase(mc.id);
       router.push("/recruteur/candidats");
     }
+  };
+
+  const addTag = async (tag: string) => {
+    const t = tag.trim();
+    if (!t || mc.tags.includes(t)) return;
+    const newTags = [...mc.tags, t];
+    await updateManualCandidateSupabase(mc.id, { tags: newTags });
+    if (user) {
+      await addCandidateEvent({ candidateId: mc.id, type: "tag_added", text: t, createdBy: user.id });
+    }
+    setTagInput("");
+    refetch();
+    reloadEvents();
+  };
+
+  const removeTag = async (tag: string) => {
+    const newTags = mc.tags.filter((t) => t !== tag);
+    await updateManualCandidateSupabase(mc.id, { tags: newTags });
+    refetch();
+  };
+
+  const onProposeForJob = async () => {
+    if (!proposeJobId || !user) return;
+    await duplicateCandidateForJob(mc.id, proposeJobId, mc.companyId, user.id);
+    if (user) {
+      await addCandidateEvent({ candidateId: mc.id, type: "job_linked", jobId: proposeJobId, createdBy: user.id, text: jobs.find((j) => j.id === proposeJobId)?.title });
+    }
+    setProposeJobId("");
+    refetch();
+    reloadEvents();
+  };
+
+  const onResetToPool = async () => {
+    await resetToPool(mc.id);
+    if (user) {
+      await addCandidateEvent({ candidateId: mc.id, type: "job_unlinked", createdBy: user.id, text: "Remis dans le vivier" });
+    }
+    refetch();
+    reloadEvents();
   };
 
   return (
@@ -237,9 +323,39 @@ export function ManualCandidateDetail({ id }: Props) {
               </dl>
             )}
           </article>
+
+          {/* Timeline */}
+          <article className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-6 lg:py-7">
+            <h2 className="font-display text-[20px] tracking-[-0.01em] mb-5">Historique</h2>
+            {events.length === 0 ? (
+              <p className="text-[13px] text-muted-foreground italic">Aucun historique pour l&apos;instant.</p>
+            ) : (
+              <ol className="relative">
+                <span className="absolute left-[15px] top-2 bottom-2 w-px bg-[var(--border)]" aria-hidden />
+                {events.map((evt) => (
+                  <li key={evt.id} className="relative pl-11 pb-5 last:pb-0">
+                    <span className="absolute left-0 top-0.5 size-8 rounded-full bg-white border border-[var(--border)] flex items-center justify-center">
+                      <EventIcon type={evt.type} />
+                    </span>
+                    <div>
+                      <div className="flex items-baseline gap-2 flex-wrap">
+                        <span className="text-[13px] font-medium text-foreground">{eventTypeLabel(evt.type)}</span>
+                        <span className="text-[10.5px] font-mono text-[var(--tertiary-foreground)]">{formatRelative(evt.createdAt)}</span>
+                      </div>
+                      {evt.text && <p className="text-[12.5px] text-foreground/70 mt-0.5">{evt.text}</p>}
+                      {evt.fromStatus && evt.toStatus && (
+                        <p className="text-[11.5px] text-muted-foreground mt-0.5">{statusLabel(evt.fromStatus as EmployerApplicationStatus)} → {statusLabel(evt.toStatus as EmployerApplicationStatus)}</p>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </article>
         </div>
 
         {/* Sidebar */}
+
         <aside className="lg:sticky lg:top-[140px] flex flex-col gap-3">
           {/* Status */}
           <div className="bg-white border border-[var(--border)] rounded-2xl p-5">
@@ -266,6 +382,81 @@ export function ManualCandidateDetail({ id }: Props) {
           <div className="bg-white border border-[var(--border)] rounded-2xl p-5">
             <p className="ed-label-sm mb-3">Evaluation</p>
             <StarRating value={mc.rating} onChange={onRatingChange} />
+          </div>
+
+          {/* Tags */}
+          <div className="bg-white border border-[var(--border)] rounded-2xl p-5">
+            <p className="ed-label-sm mb-3">Tags</p>
+            {mc.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {mc.tags.map((tag) => (
+                  <span key={tag} className="inline-flex items-center gap-1 h-7 pl-2.5 pr-1 rounded-full bg-[var(--accent)]/10 border border-[var(--accent)]/20 text-[11.5px] text-[var(--accent)]">
+                    <Hashtag width={10} height={10} strokeWidth={2} />
+                    {tag}
+                    <button type="button" onClick={() => removeTag(tag)} className="size-4 rounded-full hover:bg-[var(--accent)]/20 flex items-center justify-center">
+                      <Xmark width={9} height={9} strokeWidth={2.5} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <div className="flex items-center gap-1.5">
+              <input
+                type="text"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag(tagInput); } }}
+                placeholder="Ajouter un tag..."
+                className="flex-1 wall-input h-8 text-[12px]"
+              />
+              <button type="button" onClick={() => addTag(tagInput)} disabled={!tagInput.trim()} className="h-8 px-2 rounded-full bg-foreground text-background text-[11px] disabled:opacity-30 flex items-center">
+                <PlusCircle width={11} height={11} strokeWidth={2} />
+              </button>
+            </div>
+            {mc.tags.length === 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {SUGGESTED_TAGS.map((t) => (
+                  <button key={t} type="button" onClick={() => addTag(t)} className="h-6 px-2 rounded-full text-[10px] border border-[var(--border)] text-foreground/50 hover:text-foreground hover:border-foreground/30 transition-colors">
+                    + {t}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Proposer pour une offre */}
+          <div className="bg-white border border-[var(--border)] rounded-2xl p-5">
+            <p className="ed-label-sm mb-3">Proposer pour une offre</p>
+            <div className="flex flex-col gap-2">
+              <select
+                value={proposeJobId}
+                onChange={(e) => setProposeJobId(e.target.value)}
+                className="wall-select h-9 text-[12.5px]"
+              >
+                <option value="">Choisir une offre...</option>
+                {jobs.filter((j) => j.status === "published" && j.id !== mc.jobId).map((j) => (
+                  <option key={j.id} value={j.id}>{j.title}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={onProposeForJob}
+                disabled={!proposeJobId}
+                className="h-9 rounded-xl bg-[var(--accent)] text-background text-[12.5px] font-medium hover:bg-[var(--accent)]/85 disabled:opacity-40 transition-colors flex items-center justify-center gap-1.5"
+              >
+                <SendMail width={12} height={12} strokeWidth={2} />
+                Proposer
+              </button>
+            </div>
+            {mc.jobId && (
+              <button
+                type="button"
+                onClick={onResetToPool}
+                className="mt-2 w-full h-8 rounded-lg border border-[var(--border)] bg-white text-[11.5px] text-foreground/60 hover:text-foreground transition-colors flex items-center justify-center gap-1.5"
+              >
+                Remettre dans le vivier
+              </button>
+            )}
           </div>
 
           {/* Offre associee */}
@@ -326,6 +517,44 @@ export function ManualCandidateDetail({ id }: Props) {
       </div>
     </div>
   );
+}
+
+function EventIcon({ type }: { type: string }) {
+  const cls = "text-foreground/50";
+  switch (type) {
+    case "status_changed": return <BadgeCheck width={13} height={13} strokeWidth={2} className={cls} />;
+    case "tag_added": return <Hashtag width={13} height={13} strokeWidth={2} className={cls} />;
+    case "job_linked": return <Bag width={13} height={13} strokeWidth={2} className="text-[var(--accent)]" />;
+    case "job_unlinked": return <Xmark width={13} height={13} strokeWidth={2} className={cls} />;
+    case "note": return <EditPencil width={13} height={13} strokeWidth={2} className={cls} />;
+    case "contacted": return <Mail width={13} height={13} strokeWidth={2} className={cls} />;
+    default: return <Calendar width={13} height={13} strokeWidth={2} className={cls} />;
+  }
+}
+
+function eventTypeLabel(type: string): string {
+  switch (type) {
+    case "status_changed": return "Statut modifie";
+    case "tag_added": return "Tag ajoute";
+    case "job_linked": return "Propose pour une offre";
+    case "job_unlinked": return "Retire du pipeline";
+    case "note": return "Note ajoutee";
+    case "contacted": return "Contacte";
+    default: return "Evenement";
+  }
+}
+
+function formatRelative(iso: string): string {
+  const d = new Date(iso);
+  const diff = Math.round((Date.now() - d.getTime()) / (1000 * 60));
+  if (diff < 1) return "a l'instant";
+  if (diff < 60) return `il y a ${diff} min`;
+  const h = Math.round(diff / 60);
+  if (h < 24) return `il y a ${h}h`;
+  const days = Math.round(h / 24);
+  if (days === 1) return "hier";
+  if (days < 7) return `il y a ${days}j`;
+  return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
 }
 
 function InfoRow({

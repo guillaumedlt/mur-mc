@@ -129,12 +129,13 @@ export function CandidatesPool() {
   return (
     <div className="max-w-[1100px] mx-auto">
       <header className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-6 lg:py-7 mb-3">
-        <p className="ed-label-sm">Tous les candidats</p>
+        <p className="ed-label-sm">Vivier de talents</p>
         <h1 className="font-display text-[24px] sm:text-[28px] lg:text-[30px] tracking-[-0.015em] text-foreground mt-1">
-          Pool de candidatures
+          Tous les candidats
         </h1>
         <p className="text-[13.5px] text-muted-foreground mt-2">
-          {allRows.length} candidat{allRows.length > 1 ? "s" : ""} sur{" "}
+          {allRows.length} candidat{allRows.length > 1 ? "s" : ""} ·{" "}
+          {manualCands.filter((mc) => !mc.jobId).length} dans le vivier ·{" "}
           {jobs.length} offre{jobs.length > 1 ? "s" : ""}
         </p>
         <div className="flex items-center gap-2 mt-4">

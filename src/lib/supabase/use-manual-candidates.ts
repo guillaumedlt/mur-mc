@@ -20,11 +20,22 @@ export type ManualCandidate = {
   rating: number;
   source: string;
   notes?: string;
+  tags: string[];
   createdAt: string;
   updatedAt: string;
   /** Computed */
   initials: string;
   avatarColor: string;
+};
+
+export type CandidateEvent = {
+  id: string;
+  type: string;
+  text?: string;
+  fromStatus?: string;
+  toStatus?: string;
+  jobId?: string;
+  createdAt: string;
 };
 
 const PALETTE = ["#1C3D5A", "#7c1d2c", "#0a4d3a", "#062b3e", "#6B4423", "#5A2A2A", "#4A3D5A"];
@@ -53,6 +64,7 @@ function mapCandidate(row: any, i: number): ManualCandidate {
     rating: row.rating ?? 0,
     source: row.source ?? "manual",
     notes: row.notes ?? undefined,
+    tags: row.tags ?? [],
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     initials,
@@ -152,4 +164,96 @@ export async function updateManualCandidateSupabase(
 export async function deleteManualCandidateSupabase(id: string): Promise<void> {
   const supabase = createClient();
   await supabase.from("manual_candidates").delete().eq("id", id);
+}
+
+/** Fetch events for a manual candidate. */
+export async function fetchCandidateEvents(candidateId: string): Promise<CandidateEvent[]> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("candidate_events")
+    .select("*")
+    .eq("candidate_id", candidateId)
+    .order("created_at", { ascending: false });
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (data ?? []).map((e: any) => ({
+    id: e.id,
+    type: e.type,
+    text: e.text ?? undefined,
+    fromStatus: e.from_status ?? undefined,
+    toStatus: e.to_status ?? undefined,
+    jobId: e.job_id ?? undefined,
+    createdAt: e.created_at,
+  }));
+}
+
+/** Add an event to a manual candidate's timeline. */
+export async function addCandidateEvent(input: {
+  candidateId: string;
+  type: string;
+  text?: string;
+  fromStatus?: string;
+  toStatus?: string;
+  jobId?: string;
+  createdBy: string;
+}): Promise<void> {
+  const supabase = createClient();
+  await supabase.from("candidate_events").insert({
+    candidate_id: input.candidateId,
+    type: input.type,
+    text: input.text ?? null,
+    from_status: input.fromStatus ?? null,
+    to_status: input.toStatus ?? null,
+    job_id: input.jobId ?? null,
+    created_by: input.createdBy,
+  });
+}
+
+/** Duplicate a candidate for a different job (propose for new offer). */
+export async function duplicateCandidateForJob(
+  candidateId: string,
+  newJobId: string,
+  companyId: string,
+  addedBy: string,
+): Promise<ManualCandidate | null> {
+  const supabase = createClient();
+  const { data: original } = await supabase
+    .from("manual_candidates")
+    .select("*")
+    .eq("id", candidateId)
+    .single();
+
+  if (!original) return null;
+
+  const { data, error } = await supabase
+    .from("manual_candidates")
+    .insert({
+      company_id: companyId,
+      job_id: newJobId,
+      full_name: original.full_name,
+      email: original.email,
+      phone: original.phone,
+      location: original.location,
+      headline: original.headline,
+      skills: original.skills,
+      languages: original.languages,
+      tags: original.tags,
+      source: "referral",
+      added_by: addedBy,
+      status: "received",
+    })
+    .select("*")
+    .single();
+
+  if (error) return null;
+  return data ? mapCandidate(data, 0) : null;
+}
+
+/** Reset a candidate back to the talent pool (remove job link, reset status). */
+export async function resetToPool(candidateId: string): Promise<void> {
+  const supabase = createClient();
+  await supabase
+    .from("manual_candidates")
+    .update({ job_id: null, status: "received" })
+    .eq("id", candidateId);
 }

@@ -13,7 +13,7 @@ import {
 const TABS = [
   { href: "/recruteur", label: "Dashboard", icon: ViewGrid, exact: true },
   { href: "/recruteur/offres", label: "Offres & Pipeline", icon: Bag, exact: false },
-  { href: "/recruteur/candidats", label: "Candidats", icon: Group, exact: false },
+  { href: "/recruteur/candidats", label: "Vivier", icon: Group, exact: false },
   { href: "/recruteur/equipe", label: "Equipe", icon: Group, exact: true },
   { href: "/recruteur/entreprise", label: "Ma fiche entreprise", icon: Building, exact: true },
   { href: "/recruteur/publier", label: "Publier", icon: PlusCircle, exact: true },
