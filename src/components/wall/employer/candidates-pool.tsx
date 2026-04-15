@@ -41,6 +41,8 @@ type CandidateRow = {
   appliedAt: string;
   jobId: string;
   source: string;
+  tags: string[];
+  notes?: string;
 };
 
 export function CandidatesPool() {
@@ -68,6 +70,8 @@ export function CandidatesPool() {
         appliedAt: app.appliedAt,
         jobId: app.jobId,
         source: "platform",
+        tags: [],
+        notes: undefined,
       });
     }
 
@@ -86,6 +90,8 @@ export function CandidatesPool() {
         appliedAt: mc.createdAt,
         jobId: mc.jobId ?? "",
         source: mc.source,
+        tags: mc.tags ?? [],
+        notes: mc.notes,
       });
     }
 
@@ -95,13 +101,23 @@ export function CandidatesPool() {
   const [statusFilter, setStatusFilter] =
     useState<EmployerApplicationStatus | "all">("all");
   const [jobFilter, setJobFilter] = useState<string>("all");
+  const [tagFilter, setTagFilter] = useState<string>("all");
+  const [vivierOnly, setVivierOnly] = useState(false);
   const [sort, setSort] = useState<SortKey>("recent");
 
   const allStatuses: Array<EmployerApplicationStatus | "all"> = [
     "all",
     ...KANBAN_STATUSES,
-    "rejected",
   ];
+
+  // Collect all unique tags across manual candidates
+  const allTags = useMemo(() => {
+    const tags = new Set<string>();
+    for (const mc of manualCands) {
+      for (const t of mc.tags ?? []) tags.add(t);
+    }
+    return Array.from(tags).sort();
+  }, [manualCands]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -112,9 +128,15 @@ export function CandidatesPool() {
     if (jobFilter !== "all") {
       list = list.filter((a) => a.jobId === jobFilter);
     }
+    if (tagFilter !== "all") {
+      list = list.filter((a) => a.tags.includes(tagFilter));
+    }
+    if (vivierOnly) {
+      list = list.filter((a) => !a.jobId);
+    }
     if (q) {
       list = list.filter((a) => {
-        const hay = `${a.fullName} ${a.headline ?? ""} ${a.email}`.toLowerCase();
+        const hay = `${a.fullName} ${a.headline ?? ""} ${a.email} ${a.tags.join(" ")} ${a.notes ?? ""}`.toLowerCase();
         return hay.includes(q);
       });
     }
@@ -124,7 +146,7 @@ export function CandidatesPool() {
       return b.appliedAt.localeCompare(a.appliedAt);
     });
     return list;
-  }, [allRows, query, statusFilter, jobFilter, sort]);
+  }, [allRows, query, statusFilter, jobFilter, tagFilter, vivierOnly, sort]);
 
   return (
     <div className="max-w-[1100px] mx-auto">
@@ -213,36 +235,79 @@ export function CandidatesPool() {
         </select>
       </div>
 
-      {/* Status chips */}
-      <div className="flex flex-wrap items-center gap-1.5 mb-3">
-        {allStatuses.map((s) => {
-          const count =
-            s === "all"
-              ? applications.length
-              : applications.filter((a) => a.status === s).length;
-          const active = statusFilter === s;
-          return (
-            <button
-              key={s}
-              type="button"
-              onClick={() => setStatusFilter(s)}
-              className={`h-8 px-3 rounded-full text-[12px] border transition-colors inline-flex items-center gap-1.5 ${
-                active
-                  ? "bg-foreground text-background border-foreground"
-                  : "bg-white text-foreground/75 border-[var(--border)] hover:border-foreground/30"
-              }`}
-            >
-              {s === "all" ? "Tous" : statusLabel(s)}
-              <span
-                className={`text-[10.5px] font-mono tabular-nums ${
-                  active ? "text-background/70" : "text-foreground/45"
+      {/* Filters row */}
+      <div className="bg-white border border-[var(--border)] rounded-2xl px-5 py-4 mb-3 flex flex-col gap-3">
+        {/* Status chips */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-[10.5px] uppercase tracking-[0.08em] font-semibold text-foreground/40 mr-1">Statut</span>
+          {allStatuses.map((s) => {
+            const count = s === "all" ? allRows.length : allRows.filter((a) => a.status === s).length;
+            const active = statusFilter === s;
+            return (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setStatusFilter(s)}
+                className={`h-7 px-2.5 rounded-full text-[11.5px] border transition-colors inline-flex items-center gap-1 ${
+                  active
+                    ? "bg-foreground text-background border-foreground"
+                    : "bg-white text-foreground/70 border-[var(--border)] hover:border-foreground/30"
                 }`}
               >
-                {count}
-              </span>
+                {s === "all" ? "Tous" : statusLabel(s)}
+                <span className={`text-[10px] font-mono tabular-nums ${active ? "text-background/60" : "text-foreground/40"}`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Tag chips */}
+        {allTags.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[10.5px] uppercase tracking-[0.08em] font-semibold text-foreground/40 mr-1">Tags</span>
+            <button
+              type="button"
+              onClick={() => setTagFilter("all")}
+              className={`h-7 px-2.5 rounded-full text-[11.5px] border transition-colors ${
+                tagFilter === "all"
+                  ? "bg-foreground text-background border-foreground"
+                  : "bg-white text-foreground/70 border-[var(--border)] hover:border-foreground/30"
+              }`}
+            >
+              Tous
             </button>
-          );
-        })}
+            {allTags.map((tag) => {
+              const active = tagFilter === tag;
+              const count = allRows.filter((r) => r.tags.includes(tag)).length;
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => setTagFilter(active ? "all" : tag)}
+                  className={`h-7 px-2.5 rounded-full text-[11.5px] border transition-colors inline-flex items-center gap-1 ${
+                    active
+                      ? "bg-[var(--accent)] text-background border-[var(--accent)]"
+                      : "bg-[var(--accent)]/5 text-[var(--accent)] border-[var(--accent)]/20 hover:border-[var(--accent)]/40"
+                  }`}
+                >
+                  {tag}
+                  <span className={`text-[10px] font-mono ${active ? "text-background/60" : "text-[var(--accent)]/60"}`}>{count}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Vivier toggle + source */}
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-2 text-[12px] text-foreground/70 cursor-pointer select-none">
+            <span className="wall-check" data-checked={vivierOnly} />
+            <input type="checkbox" checked={vivierOnly} onChange={(e) => setVivierOnly(e.target.checked)} className="sr-only" />
+            Vivier uniquement (sans offre)
+          </label>
+        </div>
       </div>
 
       {/* List */}
@@ -255,6 +320,8 @@ export function CandidatesPool() {
             setQuery("");
             setStatusFilter("all");
             setJobFilter("all");
+            setTagFilter("all");
+            setVivierOnly(false);
           }}
         />
       ) : (
@@ -285,20 +352,23 @@ export function CandidatesPool() {
                     {row.headline ?? row.email}{job ? ` · ${job.title}` : ""}
                   </div>
                 </div>
+                {/* Tags */}
+                {row.tags.length > 0 && (
+                  <div className="hidden sm:flex items-center gap-1 shrink-0">
+                    {row.tags.slice(0, 2).map((tag) => (
+                      <span key={tag} className="h-5 px-1.5 rounded-full bg-[var(--accent)]/10 text-[var(--accent)] text-[10px] inline-flex items-center">
+                        {tag}
+                      </span>
+                    ))}
+                    {row.tags.length > 2 && (
+                      <span className="text-[10px] text-foreground/40">+{row.tags.length - 2}</span>
+                    )}
+                  </div>
+                )}
                 <div className="hidden sm:flex items-center gap-2 shrink-0">
-                  {row.matchScore >= 65 && (
-                    <span className="wall-badge" data-tone="accent">
-                      <Sparks /> {row.matchScore}%
-                    </span>
-                  )}
                   {row.rating > 0 && <StarRatingCompact value={row.rating} />}
                 </div>
                 <ApplicationStatusPill status={row.status} />
-                {row.source !== "platform" && (
-                  <span className="wall-badge hidden lg:inline-flex" data-tone="muted">
-                    {candidateSourceLabel(row.source as "manual" | "csv_import" | "referral" | "platform")}
-                  </span>
-                )}
                 <span className="text-[10.5px] font-mono text-[var(--tertiary-foreground)] hidden md:inline-flex items-center gap-1 shrink-0">
                   <Calendar width={10} height={10} strokeWidth={2} />
                   {formatShort(row.appliedAt)}
