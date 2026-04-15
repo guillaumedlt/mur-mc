@@ -119,6 +119,16 @@ export function PublishJobForm({ existing, onCancel }: Props) {
   const [tags, setTags] = useState<string[]>(existing?.tags ?? []);
   const [customQuestions, setCustomQuestions] = useState<string[]>([]);
 
+  // Compliance Monaco
+  const [workPermitRequired, setWorkPermitRequired] = useState(false);
+  const [hiringPriority, setHiringPriority] = useState("all");
+  const [conventionCollective, setConventionCollective] = useState("");
+
+  // Bilingual EN
+  const [titleEn, setTitleEn] = useState("");
+  const [shortDescEn, setShortDescEn] = useState("");
+  const [descriptionEn, setDescriptionEn] = useState("");
+
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [freePrompt, setFreePrompt] = useState("");
@@ -288,6 +298,12 @@ export function PublishJobForm({ existing, onCancel }: Props) {
       benefits,
       tags,
       custom_questions: customQuestions.length > 0 ? customQuestions : null,
+      work_permit_required: workPermitRequired,
+      hiring_priority: hiringPriority !== "all" ? hiringPriority : null,
+      convention_collective: conventionCollective || null,
+      title_en: titleEn || null,
+      short_description_en: shortDescEn || null,
+      description_en: descriptionEn || null,
       status: "published",
       featured: false,
     }).select("id").single();
@@ -461,6 +477,49 @@ export function PublishJobForm({ existing, onCancel }: Props) {
             />
           </FormRow>
         </div>
+
+        {/* Compliance Monaco */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormRow label="Priorite d'embauche" hint="Reglementation Service de l'Emploi de Monaco">
+            <Select
+              value={hiringPriority}
+              onChange={setHiringPriority}
+              options={["all", "monegasque", "resident", "frontalier"]}
+            />
+          </FormRow>
+          <FormRow label="Convention collective" hint="optionnel">
+            <Input
+              placeholder="Ex. Hotellerie, Banque..."
+              value={conventionCollective}
+              onChange={setConventionCollective}
+            />
+          </FormRow>
+        </div>
+
+        <label className="flex items-center gap-2.5 text-[13px] text-foreground/80 cursor-pointer select-none">
+          <span className="wall-check" data-checked={workPermitRequired} />
+          <input type="checkbox" checked={workPermitRequired} onChange={(e) => setWorkPermitRequired(e.target.checked)} className="sr-only" />
+          Permis de travail monegasque requis
+        </label>
+
+        {/* Version anglaise (optionnel) */}
+        {lang === "fr" && (
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--background-alt)]/30 p-5 flex flex-col gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] uppercase tracking-[0.08em] font-semibold text-foreground/60">Version anglaise</span>
+              <span className="text-[10.5px] text-foreground/40">optionnel — pour les candidats internationaux</span>
+            </div>
+            <FormRow label="Titre EN">
+              <Input placeholder="Ex. Head Chef — Fine Dining" value={titleEn} onChange={setTitleEn} />
+            </FormRow>
+            <FormRow label="Accroche EN">
+              <Textarea placeholder="Short description in English..." value={shortDescEn} onChange={setShortDescEn} rows={2} />
+            </FormRow>
+            <FormRow label="Description EN">
+              <Textarea placeholder="Full description in English..." value={descriptionEn} onChange={setDescriptionEn} rows={4} />
+            </FormRow>
+          </div>
+        )}
 
         {/* AI Generate */}
         <div className="rounded-xl border border-[var(--accent)]/20 bg-[var(--accent)]/[0.04] p-4 flex flex-col gap-3">
