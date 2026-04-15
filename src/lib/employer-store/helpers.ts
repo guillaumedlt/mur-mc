@@ -15,6 +15,7 @@ export const KANBAN_STATUSES: EmployerApplicationStatus[] = [
   "interview",
   "offer",
   "hired",
+  "rejected",
 ];
 
 export function statusLabel(s: EmployerApplicationStatus): string {
