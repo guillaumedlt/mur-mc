@@ -291,7 +291,7 @@ export function PublishJobForm({ existing, onCancel }: Props) {
       .replace(/(^-|-$)/g, "")
       .slice(0, 50) + "-" + Date.now().toString(36).slice(-5);
 
-    await supabase.from("jobs").insert({
+    const { data: newJob } = await supabase.from("jobs").insert({
       company_id: user.companyId,
       slug,
       title,
@@ -313,7 +313,12 @@ export function PublishJobForm({ existing, onCancel }: Props) {
       tags,
       status: "published",
       featured: false,
-    });
+    }).select("id").single();
+
+    // Use Supabase ID for navigation (not localStorage ID)
+    if (newJob) {
+      job.id = newJob.id;
+    }
 
     setSubmitted(job);
   };

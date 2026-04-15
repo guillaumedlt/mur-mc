@@ -1,0 +1,8 @@
+{
+  "/candidat/page": "app/candidat/page.js",
+  "/candidat/profil/page": "app/candidat/profil/page.js",
+  "/connexion/page": "app/connexion/page.js",
+  "/recruteur/candidats/page": "app/recruteur/candidats/page.js",
+  "/recruteur/entreprise/page": "app/recruteur/entreprise/page.js",
+  "/recruteur/page": "app/recruteur/page.js"
+}
