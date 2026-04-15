@@ -357,44 +357,17 @@ export function ManualCandidateDetail({ id }: Props) {
         {/* Sidebar */}
 
         <aside className="lg:sticky lg:top-[140px] flex flex-col gap-3">
-          {/* Status */}
-          <div className="bg-white border border-[var(--border)] rounded-2xl p-5">
-            <p className="ed-label-sm mb-3">Statut</p>
-            <div className="flex flex-col gap-1.5">
-              {STATUSES.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => onStatusChange(s)}
-                  className={`h-9 px-3 rounded-lg text-[12.5px] text-left transition-colors ${
-                    mc.status === s
-                      ? "bg-foreground text-background font-medium"
-                      : "text-foreground/70 hover:bg-[var(--background-alt)]"
-                  }`}
-                >
-                  {statusLabel(s)}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Rating */}
-          <div className="bg-white border border-[var(--border)] rounded-2xl p-5">
-            <p className="ed-label-sm mb-3">Evaluation</p>
-            <StarRating value={mc.rating} onChange={onRatingChange} />
-          </div>
-
-          {/* Tags */}
-          <div className="bg-white border border-[var(--border)] rounded-2xl p-5">
-            <p className="ed-label-sm mb-3">Tags</p>
+          {/* Tags — first and most prominent */}
+          <div className="bg-white border border-[var(--accent)]/20 rounded-2xl p-5">
+            <p className="ed-label-sm mb-3 text-[var(--accent)]">Tags</p>
             {mc.tags.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mb-3">
                 {mc.tags.map((tag) => (
-                  <span key={tag} className="inline-flex items-center gap-1 h-7 pl-2.5 pr-1 rounded-full bg-[var(--accent)]/10 border border-[var(--accent)]/20 text-[11.5px] text-[var(--accent)]">
+                  <span key={tag} className="inline-flex items-center gap-1 h-7 pl-2.5 pr-1 rounded-full bg-[var(--accent)]/10 border border-[var(--accent)]/20 text-[12px] text-[var(--accent)] font-medium">
                     <Hashtag width={10} height={10} strokeWidth={2} />
                     {tag}
-                    <button type="button" onClick={() => removeTag(tag)} className="size-4 rounded-full hover:bg-[var(--accent)]/20 flex items-center justify-center">
-                      <Xmark width={9} height={9} strokeWidth={2.5} />
+                    <button type="button" onClick={() => removeTag(tag)} className="size-5 rounded-full hover:bg-[var(--accent)]/20 flex items-center justify-center ml-0.5">
+                      <Xmark width={10} height={10} strokeWidth={2.5} />
                     </button>
                   </span>
                 ))}
@@ -407,21 +380,47 @@ export function ManualCandidateDetail({ id }: Props) {
                 onChange={(e) => setTagInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag(tagInput); } }}
                 placeholder="Ajouter un tag..."
-                className="flex-1 wall-input h-8 text-[12px]"
+                className="flex-1 wall-input h-9 text-[12.5px]"
               />
-              <button type="button" onClick={() => addTag(tagInput)} disabled={!tagInput.trim()} className="h-8 px-2 rounded-full bg-foreground text-background text-[11px] disabled:opacity-30 flex items-center">
+              <button type="button" onClick={() => addTag(tagInput)} disabled={!tagInput.trim()} className="h-9 px-3 rounded-full bg-[var(--accent)] text-background text-[11.5px] font-medium disabled:opacity-30 flex items-center gap-1">
                 <PlusCircle width={11} height={11} strokeWidth={2} />
+                Ajouter
               </button>
             </div>
-            {mc.tags.length === 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
-                {SUGGESTED_TAGS.map((t) => (
-                  <button key={t} type="button" onClick={() => addTag(t)} className="h-6 px-2 rounded-full text-[10px] border border-[var(--border)] text-foreground/50 hover:text-foreground hover:border-foreground/30 transition-colors">
-                    + {t}
+            <div className="flex flex-wrap gap-1 mt-3">
+              {SUGGESTED_TAGS.filter((t) => !mc.tags.includes(t)).map((t) => (
+                <button key={t} type="button" onClick={() => addTag(t)} className="h-6 px-2 rounded-full text-[10.5px] border border-[var(--border)] text-foreground/55 hover:text-[var(--accent)] hover:border-[var(--accent)]/30 transition-colors">
+                  + {t}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Status + Rating side by side */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-white border border-[var(--border)] rounded-2xl p-4">
+              <p className="ed-label-sm mb-2.5">Statut</p>
+              <div className="flex flex-col gap-1">
+                {STATUSES.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => onStatusChange(s)}
+                    className={`h-7 px-2 rounded-lg text-[11px] text-left transition-colors ${
+                      mc.status === s
+                        ? "bg-foreground text-background font-medium"
+                        : "text-foreground/65 hover:bg-[var(--background-alt)]"
+                    }`}
+                  >
+                    {statusLabel(s)}
                   </button>
                 ))}
               </div>
-            )}
+            </div>
+            <div className="bg-white border border-[var(--border)] rounded-2xl p-4">
+              <p className="ed-label-sm mb-2.5">Note</p>
+              <StarRating value={mc.rating} onChange={onRatingChange} />
+            </div>
           </div>
 
           {/* Proposer pour une offre */}
