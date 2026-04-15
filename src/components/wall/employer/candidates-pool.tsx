@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Calendar,
-  EditPencil,
   Group,
   PlusCircle,
   Search,
@@ -325,60 +324,77 @@ export function CandidatesPool() {
           }}
         />
       ) : (
-        <div className="bg-white border border-[var(--border)] rounded-2xl divide-y divide-[var(--border)]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {filtered.map((row) => {
             const job = jobs.find((j) => j.id === row.jobId);
             const href = `/recruteur/candidats/${row.id}`;
+            const hasTopTag = row.tags.some((t) => t === "Top profil" || t === "Urgent");
             return (
               <Link
                 key={row.id}
                 href={href}
-                className="group flex items-center gap-3 sm:gap-4 px-4 sm:px-6 lg:px-7 py-3 sm:py-4 hover:bg-[var(--background-alt)]/40 transition-colors"
+                className={`group bg-white border rounded-2xl p-4 sm:p-5 hover:shadow-[0_4px_24px_rgba(10,10,10,0.06)] transition-all flex flex-col ${
+                  hasTopTag
+                    ? "border-[var(--accent)]/30 ring-1 ring-[var(--accent)]/10"
+                    : "border-[var(--border)] hover:border-foreground/20"
+                }`}
               >
-                <span
-                  className="size-10 rounded-xl flex items-center justify-center text-white font-display text-[12px] font-medium ring-1 ring-black/5 shrink-0"
-                  style={{
-                    background: `linear-gradient(155deg, ${row.avatarColor}, #122a3f)`,
-                  }}
-                  aria-hidden
-                >
-                  {row.initials}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="text-[14px] font-medium text-foreground line-clamp-1 group-hover:text-[var(--accent)] transition-colors">
-                    {row.fullName}
+                {/* Header: avatar + name + status */}
+                <div className="flex items-start gap-3">
+                  <span
+                    className="size-11 rounded-xl flex items-center justify-center text-white font-display text-[13px] font-medium ring-1 ring-black/5 shrink-0"
+                    style={{ background: `linear-gradient(155deg, ${row.avatarColor}, #122a3f)` }}
+                    aria-hidden
+                  >
+                    {row.initials}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[14px] font-medium text-foreground line-clamp-1 group-hover:text-[var(--accent)] transition-colors">
+                      {row.fullName}
+                    </div>
+                    {row.headline && (
+                      <div className="text-[12px] text-muted-foreground line-clamp-1 mt-0.5">
+                        {row.headline}
+                      </div>
+                    )}
                   </div>
-                  <div className="text-[11.5px] text-muted-foreground line-clamp-1 mt-0.5">
-                    {row.headline ?? row.email}{job ? ` · ${job.title}` : ""}
-                  </div>
+                  <ApplicationStatusPill status={row.status} />
                 </div>
+
                 {/* Tags */}
                 {row.tags.length > 0 && (
-                  <div className="hidden sm:flex items-center gap-1 shrink-0">
-                    {row.tags.slice(0, 2).map((tag) => (
-                      <span key={tag} className="h-5 px-1.5 rounded-full bg-[var(--accent)]/10 text-[var(--accent)] text-[10px] inline-flex items-center">
+                  <div className="flex flex-wrap gap-1 mt-3">
+                    {row.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className={`h-5 px-1.5 rounded-full text-[10px] inline-flex items-center ${
+                          tag === "Top profil" || tag === "Urgent"
+                            ? "bg-[var(--accent)]/15 text-[var(--accent)] font-medium"
+                            : "bg-[var(--background-alt)] text-foreground/60 border border-[var(--border)]"
+                        }`}
+                      >
                         {tag}
                       </span>
                     ))}
-                    {row.tags.length > 2 && (
-                      <span className="text-[10px] text-foreground/40">+{row.tags.length - 2}</span>
-                    )}
                   </div>
                 )}
-                <div className="hidden sm:flex items-center gap-2 shrink-0">
+
+                {/* Meta row */}
+                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[var(--border)] text-[11px] text-foreground/50">
+                  {job && (
+                    <span className="truncate max-w-[140px]">
+                      <Sparks width={10} height={10} strokeWidth={2} className="inline -mt-px mr-0.5" />
+                      {job.title}
+                    </span>
+                  )}
+                  {!job && row.jobId === "" && (
+                    <span className="text-[var(--accent)]/70">Vivier</span>
+                  )}
+                  <span className="ml-auto font-mono shrink-0">
+                    {formatShort(row.appliedAt)}
+                  </span>
                   {row.rating > 0 && <StarRatingCompact value={row.rating} />}
                 </div>
-                <ApplicationStatusPill status={row.status} />
-                <span className="text-[10.5px] font-mono text-[var(--tertiary-foreground)] hidden md:inline-flex items-center gap-1 shrink-0">
-                  <Calendar width={10} height={10} strokeWidth={2} />
-                  {formatShort(row.appliedAt)}
-                </span>
-                <EditPencil
-                  width={13}
-                  height={13}
-                  strokeWidth={2}
-                  className="text-foreground/30 group-hover:text-[var(--accent)] transition-colors shrink-0"
-                />
               </Link>
             );
           })}
