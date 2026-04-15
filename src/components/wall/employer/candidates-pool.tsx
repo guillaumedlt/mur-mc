@@ -19,7 +19,7 @@ import {
 } from "@/lib/employer-store";
 import { useMyJobs } from "@/lib/supabase/use-my-jobs";
 import { useMyApplications } from "@/lib/supabase/use-my-applications";
-import { useManualCandidates } from "@/lib/supabase/use-manual-candidates";
+import { useManualCandidates, updateManualCandidateSupabase } from "@/lib/supabase/use-manual-candidates";
 import { ApplicationStatusPill } from "./status-pill";
 import { StarRatingCompact } from "./star-rating";
 import { EmployerEmptyState } from "./employer-empty-state";
@@ -47,7 +47,7 @@ type CandidateRow = {
 export function CandidatesPool() {
   const { jobs } = useMyJobs();
   const { applications, candidates } = useMyApplications(null);
-  const { candidates: manualCands } = useManualCandidates();
+  const { candidates: manualCands, refetch: refetchManual } = useManualCandidates();
 
   // Merge real applications + manual candidates into unified list
   const allRows: CandidateRow[] = useMemo(() => {
@@ -101,8 +101,13 @@ export function CandidatesPool() {
     useState<EmployerApplicationStatus | "all">("all");
   const [jobFilter, setJobFilter] = useState<string>("all");
   const [tagFilter, setTagFilter] = useState<string>("all");
+  const [ratingFilter, setRatingFilter] = useState<number>(0); // 0 = all, 1-5 = min stars
   const [vivierOnly, setVivierOnly] = useState(false);
   const [sort, setSort] = useState<SortKey>("recent");
+
+  // Quick tag add state
+  const [quickTagTarget, setQuickTagTarget] = useState<string | null>(null);
+  const [quickTagInput, setQuickTagInput] = useState("");
 
   const allStatuses: Array<EmployerApplicationStatus | "all"> = [
     "all",
@@ -130,6 +135,9 @@ export function CandidatesPool() {
     if (tagFilter !== "all") {
       list = list.filter((a) => a.tags.includes(tagFilter));
     }
+    if (ratingFilter > 0) {
+      list = list.filter((a) => a.rating >= ratingFilter);
+    }
     if (vivierOnly) {
       list = list.filter((a) => !a.jobId);
     }
@@ -145,7 +153,17 @@ export function CandidatesPool() {
       return b.appliedAt.localeCompare(a.appliedAt);
     });
     return list;
-  }, [allRows, query, statusFilter, jobFilter, tagFilter, vivierOnly, sort]);
+  }, [allRows, query, statusFilter, jobFilter, tagFilter, ratingFilter, vivierOnly, sort]);
+
+  const quickAddTag = async (candidateId: string, tag: string) => {
+    const mc = manualCands.find((c) => `mc-${c.id}` === candidateId);
+    if (!mc) return;
+    const newTags = [...(mc.tags ?? []), tag];
+    await updateManualCandidateSupabase(mc.id, { tags: newTags });
+    setQuickTagTarget(null);
+    setQuickTagInput("");
+    refetchManual();
+  };
 
   return (
     <div className="max-w-[1100px] mx-auto">
@@ -299,7 +317,26 @@ export function CandidatesPool() {
           </div>
         )}
 
-        {/* Vivier toggle + source */}
+        {/* Rating filter */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-[10.5px] uppercase tracking-[0.08em] font-semibold text-foreground/40 mr-1">Note</span>
+          {[0, 1, 2, 3, 4, 5].map((r) => (
+            <button
+              key={r}
+              type="button"
+              onClick={() => setRatingFilter(r)}
+              className={`h-7 px-2.5 rounded-full text-[11.5px] border transition-colors ${
+                ratingFilter === r
+                  ? "bg-foreground text-background border-foreground"
+                  : "bg-white text-foreground/70 border-[var(--border)] hover:border-foreground/30"
+              }`}
+            >
+              {r === 0 ? "Toutes" : `${r}+ ★`}
+            </button>
+          ))}
+        </div>
+
+        {/* Vivier toggle */}
         <div className="flex items-center gap-3">
           <label className="flex items-center gap-2 text-[12px] text-foreground/70 cursor-pointer select-none">
             <span className="wall-check" data-checked={vivierOnly} />
@@ -320,6 +357,7 @@ export function CandidatesPool() {
             setStatusFilter("all");
             setJobFilter("all");
             setTagFilter("all");
+            setRatingFilter(0);
             setVivierOnly(false);
           }}
         />
@@ -361,23 +399,54 @@ export function CandidatesPool() {
                   <ApplicationStatusPill status={row.status} />
                 </div>
 
-                {/* Tags */}
-                {row.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-3">
-                    {row.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className={`h-5 px-1.5 rounded-full text-[10px] inline-flex items-center ${
-                          tag === "Top profil" || tag === "Urgent"
-                            ? "bg-[var(--accent)]/15 text-[var(--accent)] font-medium"
-                            : "bg-[var(--background-alt)] text-foreground/60 border border-[var(--border)]"
-                        }`}
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
+                {/* Tags + quick add */}
+                <div className="flex flex-wrap items-center gap-1 mt-3">
+                  {row.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className={`h-5 px-1.5 rounded-full text-[10px] inline-flex items-center ${
+                        tag === "Top profil" || tag === "Urgent"
+                          ? "bg-[var(--accent)]/15 text-[var(--accent)] font-medium"
+                          : "bg-[var(--background-alt)] text-foreground/60 border border-[var(--border)]"
+                      }`}
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                  {row.id.startsWith("mc-") && (
+                    <>
+                      {quickTagTarget === row.id ? (
+                        <div className="flex items-center gap-1" onClick={(e) => e.preventDefault()}>
+                          <input
+                            type="text"
+                            value={quickTagInput}
+                            onChange={(e) => setQuickTagInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") { e.preventDefault(); quickAddTag(row.id, quickTagInput); }
+                              if (e.key === "Escape") { setQuickTagTarget(null); setQuickTagInput(""); }
+                            }}
+                            placeholder="Tag..."
+                            autoFocus
+                            className="h-5 w-20 px-1.5 rounded-full bg-white border border-[var(--accent)]/30 text-[10px] outline-none focus:border-[var(--accent)]"
+                          />
+                          {["Top profil", "A recontacter", "Senior"].filter((t) => !row.tags.includes(t)).slice(0, 2).map((t) => (
+                            <button key={t} type="button" onClick={(e) => { e.preventDefault(); quickAddTag(row.id, t); }} className="h-5 px-1.5 rounded-full bg-[var(--accent)]/10 text-[var(--accent)] text-[9px] hover:bg-[var(--accent)]/20 transition-colors">
+                              {t}
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.preventDefault(); setQuickTagTarget(row.id); }}
+                          className="size-5 rounded-full border border-dashed border-[var(--border)] text-foreground/30 hover:text-[var(--accent)] hover:border-[var(--accent)]/30 transition-colors flex items-center justify-center"
+                        >
+                          <PlusCircle width={10} height={10} strokeWidth={2} />
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
 
                 {/* Meta row */}
                 <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[var(--border)] text-[11px] text-foreground/50">
