@@ -90,6 +90,40 @@ export function ApplyModal({ job, user, open, onClose }: Props) {
             : "Candidature recue",
           by_name: user.name,
         });
+
+        // Email notifications (fire and forget)
+        fetch("/api/notify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "candidature_confirmee",
+            data: {
+              candidatEmail: user.email,
+              candidatName: user.name,
+              jobTitle: job.title,
+              companyName: job.company.name,
+              applicationId: newApp.id,
+            },
+          }),
+        }).catch(() => {});
+
+        // Notify recruiter
+        fetch("/api/notify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: score >= 80 ? "candidat_top_match" : "nouvelle_candidature",
+            data: {
+              recruiterEmail: "", // Will be resolved server-side in future
+              recruiterName: "",
+              candidatName: user.name,
+              jobTitle: job.title,
+              candidateHeadline: "",
+              matchScore: score,
+              applicationId: newApp.id,
+            },
+          }),
+        }).catch(() => {});
       }
     }
 
