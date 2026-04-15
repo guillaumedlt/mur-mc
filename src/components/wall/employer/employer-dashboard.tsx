@@ -3,11 +3,9 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import {
-  ArrowRight,
   ArrowUpRight,
   Bag,
   Calendar,
-  Check,
   Eye,
   Group,
   MultiplePages,
@@ -19,8 +17,6 @@ import { useUser } from "@/lib/auth";
 import {
   type EmployerApplicationStatus,
   KANBAN_STATUSES,
-  ONBOARDING_STEPS,
-  onboardingProgress,
   useEmployer,
 } from "@/lib/employer-store";
 import { useMyJobs } from "@/lib/supabase/use-my-jobs";
@@ -45,7 +41,7 @@ type CandidateRow = {
 
 export function EmployerDashboard() {
   const user = useUser();
-  const { onboarding } = useEmployer();
+  useEmployer(); // ownership check
   const { jobs: supabaseJobs, loading: jobsLoading } = useMyJobs();
   const { applications, candidates } = useMyApplications(null);
   const { candidates: manualCands } = useManualCandidates();
@@ -411,81 +407,6 @@ function ActionLink({
 }
 
 
-function OnboardingBanner({
-  onboarding,
-}: {
-  onboarding: ReturnType<typeof useEmployer>["onboarding"];
-}) {
-  const progress = onboardingProgress();
-  if (progress.isComplete || onboarding.skippedAt) return null;
-
-  return (
-    <div className="bg-white border border-[var(--accent)]/20 rounded-2xl px-5 sm:px-7 lg:px-9 py-5 lg:py-6 mb-3">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div className="flex items-start gap-3 min-w-0">
-          <span className="size-10 rounded-xl bg-[var(--accent)]/10 text-[var(--accent)] flex items-center justify-center shrink-0 mt-0.5">
-            <Sparks width={18} height={18} strokeWidth={2} />
-          </span>
-          <div className="min-w-0">
-            <h3 className="font-display text-[18px] tracking-[-0.01em] text-foreground">
-              Configurez votre espace
-            </h3>
-            <p className="text-[13px] text-muted-foreground mt-0.5">
-              {progress.done}/{progress.total} etapes completees — quelques minutes suffisent.
-            </p>
-          </div>
-        </div>
-        <Link
-          href="/recruteur/onboarding"
-          className="h-9 px-3.5 rounded-full bg-[var(--accent)] text-background text-[12.5px] font-medium hover:bg-[var(--accent)]/85 transition-colors flex items-center gap-1.5 shrink-0"
-        >
-          Continuer
-          <ArrowRight width={12} height={12} strokeWidth={2} />
-        </Link>
-      </div>
-
-      {/* Progress gauge */}
-      <div className="mt-4 h-1.5 rounded-full bg-[var(--accent)]/10 overflow-hidden">
-        <div
-          className="h-full rounded-full bg-[var(--accent)] transition-[width] duration-500 ease-out"
-          style={{ width: `${progress.percent}%` }}
-        />
-      </div>
-
-      {/* Steps checklist */}
-      <ul className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-        {ONBOARDING_STEPS.map((s) => {
-          const done = onboarding.completed.includes(s.key);
-          return (
-            <li
-              key={s.key}
-              className={`flex items-center gap-2 text-[12.5px] ${
-                done
-                  ? "text-foreground/55 line-through"
-                  : "text-foreground"
-              }`}
-            >
-              <span
-                className={`size-5 rounded-md flex items-center justify-center shrink-0 ${
-                  done
-                    ? "bg-[oklch(0.92_0.12_145_/_0.18)] text-[oklch(0.42_0.13_145)]"
-                    : "bg-[var(--background-alt)] text-foreground/45"
-                }`}
-              >
-                {done ? (
-                  <Check width={11} height={11} strokeWidth={2.4} />
-                ) : (
-                  <span className="size-1.5 rounded-full bg-current" />
-                )}
-              </span>
-              {s.label}
-            </li>
-          );
-        })}
-      </ul>
-    </div>
-  );
-}
 
 function formatRelative(iso: string): string {
   const d = new Date(iso);

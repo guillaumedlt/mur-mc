@@ -122,21 +122,9 @@ export const sectors: { name: Sector; count: number }[] = [
   { name: "Famille / Office", count: 0 },
 ];
 
-export const companies: Company[] = [];
-
-export const jobs: Job[] = [];
-
 export const allJobs: Job[] = [];
 
 /* ─── Helpers ────────────────────────────────────────────── */
-
-export function getJob(slug: string): Job | undefined {
-  return allJobs.find((j) => j.slug === slug);
-}
-
-export function getCompany(slug: string): Company | undefined {
-  return companies.find((c) => c.slug === slug);
-}
 
 export function formatSalary(job: Job): string | null {
   if (!job.salaryMin && !job.salaryMax) return null;
@@ -186,39 +174,10 @@ export function daysSincePosted(iso: string): number {
   );
 }
 
-export function jobCountByCompany(): Record<string, number> {
-  const counts: Record<string, number> = {};
-  for (const j of allJobs) {
-    counts[j.company.id] = (counts[j.company.id] ?? 0) + 1;
-  }
-  return counts;
-}
-
 export function jobsForCompany(companyId: string): Job[] {
   return allJobs
     .filter((j) => j.company.id === companyId)
     .sort((a, b) => b.postedAt.localeCompare(a.postedAt));
-}
-
-export function similarJobs(job: Job, limit = 3): Job[] {
-  const sameCompany = allJobs.filter(
-    (j) => j.id !== job.id && j.company.id === job.company.id,
-  );
-  const sameSector = allJobs.filter(
-    (j) =>
-      j.id !== job.id &&
-      j.company.id !== job.company.id &&
-      j.sector === job.sector,
-  );
-  return [...sameCompany, ...sameSector].slice(0, limit);
-}
-
-export function jobCountBySector(): Record<string, number> {
-  const counts: Record<string, number> = {};
-  for (const j of jobs) {
-    counts[j.sector] = (counts[j.sector] ?? 0) + 1;
-  }
-  return counts;
 }
 
 export const COMPANY_BAR_PALETTE = [
@@ -240,10 +199,3 @@ export function companyBarColor(companyId: string): string {
   return COMPANY_BAR_PALETTE[Math.abs(h) % COMPANY_BAR_PALETTE.length];
 }
 
-export function sectorTileColor(sectorName: string): string {
-  let h = 0;
-  for (let i = 0; i < sectorName.length; i++) {
-    h = (h * 31 + sectorName.charCodeAt(i)) | 0;
-  }
-  return COMPANY_BAR_PALETTE[Math.abs(h) % COMPANY_BAR_PALETTE.length];
-}

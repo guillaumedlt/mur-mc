@@ -14,10 +14,7 @@ import {
   Xmark,
 } from "iconoir-react";
 import { useUser } from "@/lib/auth";
-import {
-  type EmployerJob,
-  createJob,
-} from "@/lib/employer-store";
+import type { EmployerJob } from "@/lib/employer-store";
 import { useMyJobs } from "@/lib/supabase/use-my-jobs";
 import { useMyCompany } from "@/lib/supabase/use-my-company";
 import { createClient } from "@/lib/supabase/client";
@@ -260,29 +257,6 @@ export function PublishJobForm({ existing, onCancel }: Props) {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 1. Sauver dans le store local (pour le dashboard recruteur)
-    const job = createJob({
-      companyId: user.companyId ?? "",
-      title,
-      type: contract,
-      level,
-      sector,
-      location,
-      remote,
-      workTime,
-      lang,
-      languages: lang === "fr" ? ["Français"] : ["Anglais"],
-      salaryMin: salaryMin ? parseInt(salaryMin, 10) : undefined,
-      salaryMax: salaryMax ? parseInt(salaryMax, 10) : undefined,
-      shortDescription: shortDesc,
-      description,
-      responsibilities,
-      requirements,
-      benefits,
-      tags,
-    });
-
-    // 2. Inserer aussi dans Supabase (pour que l'offre soit visible publiquement)
     const supabase = createClient();
     const slug = title
       .toLowerCase()
@@ -316,12 +290,10 @@ export function PublishJobForm({ existing, onCancel }: Props) {
       featured: false,
     }).select("id").single();
 
-    // Use Supabase ID for navigation (not localStorage ID)
-    if (newJob) {
-      job.id = newJob.id;
-    }
-
-    setSubmitted(job);
+    setSubmitted({
+      id: newJob?.id ?? "",
+      title,
+    } as EmployerJob);
   };
 
   if (submitted) {
