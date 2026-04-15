@@ -200,6 +200,67 @@ create table if not exists job_views (
   unique(job_id, fingerprint)
 );
 
+-- Cooptation / referral
+create table if not exists referrals (
+  id uuid primary key default uuid_generate_v4(),
+  company_id uuid not null references companies(id) on delete cascade,
+  job_id uuid references jobs(id) on delete set null,
+  referrer_id uuid not null references profiles(id),
+  referrer_name text not null,
+  token text unique default encode(gen_random_bytes(12), 'hex'),
+  candidate_name text,
+  candidate_email text,
+  status text default 'pending' check (status in ('pending', 'applied', 'hired', 'expired')),
+  application_id uuid references applications(id) on delete set null,
+  notes text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+-- Entretiens
+create table if not exists interviews (
+  id uuid primary key default uuid_generate_v4(),
+  application_id uuid not null references applications(id) on delete cascade,
+  job_id uuid not null references jobs(id) on delete cascade,
+  candidate_name text not null,
+  interviewer_id uuid references profiles(id),
+  interviewer_name text,
+  type text default 'onsite' check (type in ('onsite', 'visio', 'phone')),
+  status text default 'scheduled' check (status in ('scheduled', 'confirmed', 'completed', 'cancelled')),
+  scheduled_at timestamptz not null,
+  duration_minutes integer default 45,
+  location text,
+  visio_link text,
+  notes text,
+  created_by uuid references profiles(id),
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+-- Scorecards d'entretien
+create table if not exists interview_scorecards (
+  id uuid primary key default uuid_generate_v4(),
+  application_id uuid not null references applications(id) on delete cascade,
+  interviewer_id uuid not null references profiles(id),
+  interviewer_name text not null,
+  overall_rating integer default 0 check (overall_rating >= 0 and overall_rating <= 5),
+  recommendation text check (recommendation in ('strong_yes', 'yes', 'maybe', 'no', 'strong_no')),
+  notes text,
+  criteria jsonb default '[]',
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+-- Log des vues de profil candidat
+create table if not exists profile_views_log (
+  id uuid primary key default uuid_generate_v4(),
+  profile_id uuid not null references profiles(id) on delete cascade,
+  viewer_id uuid references profiles(id),
+  fingerprint text,
+  created_at timestamptz default now(),
+  unique(profile_id, fingerprint)
+);
+
 -- Articles du magazine
 create table if not exists stories (
   id uuid primary key default uuid_generate_v4(),
