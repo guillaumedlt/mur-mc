@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 /**
  * POST /api/ai/parse-cv
@@ -12,6 +13,11 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Non authentifie" }, { status: 401 });
+  }
+
+  const rl = checkRateLimit(user.id, "parse-cv", "recruiter");
+  if (!rl.allowed) {
+    return NextResponse.json({ error: "Limite atteinte. Reessayez plus tard." }, { status: 429 });
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;

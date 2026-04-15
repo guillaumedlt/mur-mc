@@ -1,15 +1,20 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 /**
  * POST /api/ai/cover-letter
- * Body: { jobTitle, companyName, candidateName, headline, skills[], bio }
- * Returns: { text } — generated cover letter
+ * Rate limited: 3/day free, 30/day pro.
  */
 export async function POST(request: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Non authentifie" }, { status: 401 });
+
+  const rl = checkRateLimit(user.id, "cover-letter", "free");
+  if (!rl.allowed) {
+    return NextResponse.json({ error: "Limite atteinte (3/jour). Passez Pro pour plus." }, { status: 429 });
+  }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return NextResponse.json({ error: "ANTHROPIC_API_KEY not configured" }, { status: 500 });

@@ -1,22 +1,26 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 /**
  * API Route : genere une fiche de poste complete via Claude API.
- * POST /api/ai/generate-job
- * Body: { title, contract, level, sector, location, remote, workTime, salaryMin?, salaryMax?, companyName, lang, freePrompt? }
- *
- * Retourne : { shortDescription, description, responsibilities[], requirements[], benefits[], tags[] }
- * Protegee : requiert un user Supabase authentifie.
+ * Rate limited: 50 calls/day for recruiters.
  */
 export async function POST(request: Request) {
-  // Auth check
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Non authentifie" }, { status: 401 });
+  }
+
+  const rl = checkRateLimit(user.id, "generate-job", "recruiter");
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Limite atteinte. Reessayez dans " + Math.ceil(rl.resetIn / 3600000) + "h." },
+      { status: 429 },
+    );
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
