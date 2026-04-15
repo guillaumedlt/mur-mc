@@ -42,6 +42,7 @@ const SECTORS = [
   "Ressources Humaines",
   "Securite",
   "Services a la personne",
+  "Consulting",
   "Autre",
 ];
 

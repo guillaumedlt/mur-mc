@@ -37,6 +37,7 @@ export type Sector =
   | "Ressources Humaines"
   | "Sécurité"
   | "Services à la personne"
+  | "Consulting"
   | "Autre";
 
 export type Company = {

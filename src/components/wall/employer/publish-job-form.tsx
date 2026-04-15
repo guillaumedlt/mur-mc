@@ -62,6 +62,7 @@ const SECTORS: string[] = [
   "Ressources Humaines",
   "Sécurité",
   "Services à la personne",
+  "Consulting",
   "Autre",
 ];
 const LEVELS: ExperienceLevel[] = [

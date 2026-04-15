@@ -46,6 +46,7 @@ const SECTORS: Sector[] = [
   "Ressources Humaines",
   "Sécurité",
   "Services à la personne",
+  "Consulting",
   "Autre",
 ];
 
