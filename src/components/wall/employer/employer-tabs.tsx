@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   Bag,
   Building,
+  Eye,
   Group,
   PlusCircle,
   ViewGrid,
@@ -14,8 +15,9 @@ const TABS = [
   { href: "/recruteur", label: "Dashboard", icon: ViewGrid, exact: true },
   { href: "/recruteur/offres", label: "Offres & Pipeline", icon: Bag, exact: false },
   { href: "/recruteur/candidats", label: "Vivier", icon: Group, exact: false },
+  { href: "/recruteur/reporting", label: "Reporting", icon: Eye, exact: true },
   { href: "/recruteur/equipe", label: "Equipe", icon: Group, exact: true },
-  { href: "/recruteur/entreprise", label: "Ma fiche entreprise", icon: Building, exact: true },
+  { href: "/recruteur/entreprise", label: "Ma fiche", icon: Building, exact: true },
   { href: "/recruteur/publier", label: "Publier", icon: PlusCircle, exact: true },
 ] as const;
 
