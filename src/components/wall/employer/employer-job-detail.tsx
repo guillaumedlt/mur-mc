@@ -36,7 +36,7 @@ type Props = { id: string };
 export function EmployerJobDetail({ id }: Props) {
   const user = useUser();
   const router = useRouter();
-  const { job, loading } = useMyJob(id);
+  const { job, loading, refetch } = useMyJob(id);
   const { applications } = useMyApplications(id);
   const { candidates: manualCands } = useManualCandidates(id);
 
@@ -83,12 +83,12 @@ export function EmployerJobDetail({ id }: Props) {
   const togglePause = async () => {
     const next = job.status === "paused" ? "published" : "paused";
     await updateJobSupabase(job.id, { status: next });
-    router.refresh();
+    refetch();
   };
   const close = async () => {
     if (window.confirm("Fermer cette offre ? Elle n'apparaitra plus dans le mur.")) {
       await updateJobSupabase(job.id, { status: "closed" });
-      router.refresh();
+      refetch();
     }
   };
   const onDelete = async () => {

@@ -98,7 +98,9 @@ export function useMyJobs() {
     }
   }
 
-  return { jobs, loading };
+  const refetch = () => setFetchedFor(null);
+
+  return { jobs, loading, refetch };
 }
 
 /**
@@ -129,7 +131,9 @@ export function useMyJob(jobId: string | null) {
     }
   }
 
-  return { job, loading };
+  const refetch = () => setFetchedFor(null);
+
+  return { job, loading, refetch };
 }
 
 /**
