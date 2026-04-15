@@ -18,7 +18,7 @@ export async function POST(request: Request) {
   const rl = checkRateLimit(user.id, "generate-job", "recruiter");
   if (!rl.allowed) {
     return NextResponse.json(
-      { error: "Limite atteinte. Reessayez dans " + Math.ceil(rl.resetIn / 3600000) + "h." },
+      { error: "Vous avez depasse votre limite journaliere. Reessayez demain." },
       { status: 429 },
     );
   }

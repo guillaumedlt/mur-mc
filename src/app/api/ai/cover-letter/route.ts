@@ -13,7 +13,7 @@ export async function POST(request: Request) {
 
   const rl = checkRateLimit(user.id, "cover-letter", "free");
   if (!rl.allowed) {
-    return NextResponse.json({ error: "Limite atteinte (3/jour). Passez Pro pour plus." }, { status: 429 });
+    return NextResponse.json({ error: "Vous avez depasse votre limite journaliere. Reessayez demain." }, { status: 429 });
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;

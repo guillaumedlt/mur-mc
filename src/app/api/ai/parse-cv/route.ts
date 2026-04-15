@@ -17,7 +17,7 @@ export async function POST(request: Request) {
 
   const rl = checkRateLimit(user.id, "parse-cv", "recruiter");
   if (!rl.allowed) {
-    return NextResponse.json({ error: "Limite atteinte. Reessayez plus tard." }, { status: 429 });
+    return NextResponse.json({ error: "Vous avez depasse votre limite journaliere. Reessayez demain." }, { status: 429 });
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
