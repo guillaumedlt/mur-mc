@@ -34,6 +34,8 @@ import { StarRating } from "./star-rating";
 import { CandidateMessageModal } from "./candidate-message-modal";
 import { CandidateNoteModal } from "./candidate-note-modal";
 import { CvPreviewModal } from "./cv-preview-modal";
+import { ScorecardModal } from "./scorecard-modal";
+import { ScheduleInterviewModal } from "./schedule-interview-modal";
 
 type Props = { id: string; recruiterName: string };
 
@@ -43,6 +45,8 @@ export function CandidateDetail({ id, recruiterName }: Props) {
   const [msgOpen, setMsgOpen] = useState(false);
   const [noteOpen, setNoteOpen] = useState(false);
   const [cvPreviewOpen, setCvPreviewOpen] = useState(false);
+  const [scorecardOpen, setScorecardOpen] = useState(false);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
 
   const [tagInput, setTagInput] = useState("");
 
@@ -339,6 +343,22 @@ export function CandidateDetail({ id, recruiterName }: Props) {
               </button>
               <button
                 type="button"
+                onClick={() => setScheduleOpen(true)}
+                className="h-10 rounded-xl border border-[var(--accent)]/30 bg-[var(--accent)]/[0.04] text-[12.5px] text-[var(--accent)] hover:bg-[var(--accent)]/10 transition-colors flex items-center justify-center gap-2"
+              >
+                <Calendar width={12} height={12} strokeWidth={2} />
+                Planifier un entretien
+              </button>
+              <button
+                type="button"
+                onClick={() => setScorecardOpen(true)}
+                className="h-10 rounded-xl border border-[var(--border)] bg-white text-[12.5px] text-foreground/85 hover:bg-[var(--background-alt)] transition-colors flex items-center justify-center gap-2"
+              >
+                <BadgeCheck width={12} height={12} strokeWidth={2} />
+                Remplir une scorecard
+              </button>
+              <button
+                type="button"
                 onClick={() => setMsgOpen(true)}
                 className="h-10 rounded-xl border border-[var(--border)] bg-white text-[12.5px] text-foreground/85 hover:bg-[var(--background-alt)] transition-colors flex items-center justify-center gap-2"
               >
@@ -465,6 +485,23 @@ export function CandidateDetail({ id, recruiterName }: Props) {
         open={cvPreviewOpen}
         onClose={() => setCvPreviewOpen(false)}
       />
+      {scorecardOpen && (
+        <ScorecardModal
+          applicationId={app.id}
+          candidateName={cand.fullName}
+          onClose={() => setScorecardOpen(false)}
+          onSaved={refetch}
+        />
+      )}
+      {scheduleOpen && (
+        <ScheduleInterviewModal
+          applicationId={app.id}
+          jobId={app.jobId}
+          candidateName={cand.fullName}
+          onClose={() => setScheduleOpen(false)}
+          onScheduled={refetch}
+        />
+      )}
     </div>
   );
 }
