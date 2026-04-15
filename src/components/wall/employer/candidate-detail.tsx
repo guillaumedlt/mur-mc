@@ -27,7 +27,7 @@ import {
   eventLabel,
   statusLabel,
 } from "@/lib/employer-store";
-import { useMyApplications, moveApplicationSupabase, rateApplicationSupabase } from "@/lib/supabase/use-my-applications";
+import { useMyApplications, moveApplicationSupabase, rateApplicationSupabase, updateApplicationSupabase } from "@/lib/supabase/use-my-applications";
 import { useMyJobs } from "@/lib/supabase/use-my-jobs";
 import { ApplicationStatusPill } from "./status-pill";
 import { StarRating } from "./star-rating";
@@ -44,9 +44,27 @@ export function CandidateDetail({ id, recruiterName }: Props) {
   const [noteOpen, setNoteOpen] = useState(false);
   const [cvPreviewOpen, setCvPreviewOpen] = useState(false);
 
+  const [tagInput, setTagInput] = useState("");
+
   const app = applications.find((a) => a.id === id);
   const cand = app ? candidates.find((c) => c.id === app.candidateId) : null;
   const sbJob = app ? jobs.find((j) => j.id === app.jobId) : null;
+
+  const appTags = app?.tags ?? [];
+
+  const addTag = async (tag: string) => {
+    const t = tag.trim();
+    if (!t || !app || appTags.includes(t)) return;
+    await updateApplicationSupabase(app.id, { tags: [...appTags, t] });
+    setTagInput("");
+    refetch();
+  };
+
+  const removeTag = async (tag: string) => {
+    if (!app) return;
+    await updateApplicationSupabase(app.id, { tags: appTags.filter((t) => t !== tag) });
+    refetch();
+  };
 
   if (!app || !cand) {
     return (
@@ -260,6 +278,44 @@ export function CandidateDetail({ id, recruiterName }: Props) {
 
         {/* Sidebar : actions */}
         <aside className="lg:sticky lg:top-[140px] flex flex-col gap-3">
+          {/* Tags */}
+          <div className="bg-white border border-[var(--accent)]/20 rounded-2xl p-5">
+            <p className="ed-label-sm mb-3 text-[var(--accent)]">Tags</p>
+            {appTags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {appTags.map((tag) => (
+                  <span key={tag} className="inline-flex items-center gap-1 h-7 pl-2.5 pr-1 rounded-full bg-[var(--accent)]/10 border border-[var(--accent)]/20 text-[12px] text-[var(--accent)] font-medium">
+                    <Hashtag width={10} height={10} strokeWidth={2} />
+                    {tag}
+                    <button type="button" onClick={() => removeTag(tag)} className="size-5 rounded-full hover:bg-[var(--accent)]/20 flex items-center justify-center ml-0.5">
+                      <Xmark width={10} height={10} strokeWidth={2.5} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <div className="flex items-center gap-1.5">
+              <input
+                type="text"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag(tagInput); } }}
+                placeholder="Ajouter un tag..."
+                className="flex-1 wall-input h-9 text-[12.5px]"
+              />
+              <button type="button" onClick={() => addTag(tagInput)} disabled={!tagInput.trim()} className="h-9 px-3 rounded-full bg-[var(--accent)] text-background text-[11.5px] font-medium disabled:opacity-30 flex items-center gap-1">
+                + Ajouter
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-1 mt-3">
+              {["Top profil", "A recontacter", "Senior", "Bilingue", "Disponible", "Urgent"].filter((t) => !appTags.includes(t)).map((t) => (
+                <button key={t} type="button" onClick={() => addTag(t)} className="h-6 px-2 rounded-full text-[10.5px] border border-[var(--border)] text-foreground/55 hover:text-[var(--accent)] hover:border-[var(--accent)]/30 transition-colors">
+                  + {t}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="bg-white border border-[var(--border)] rounded-2xl p-5">
             <p className="ed-label-sm mb-3">Actions</p>
             <div className="flex flex-col gap-2">

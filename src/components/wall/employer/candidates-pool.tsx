@@ -69,8 +69,8 @@ export function CandidatesPool() {
         appliedAt: app.appliedAt,
         jobId: app.jobId,
         source: "platform",
-        tags: [],
-        notes: undefined,
+        tags: app.tags ?? [],
+        notes: app.notes ?? undefined,
       });
     }
 

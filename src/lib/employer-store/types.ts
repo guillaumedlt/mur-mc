@@ -95,6 +95,8 @@ export type EmployerApplication = {
   appliedAt: string;
   updatedAt: string;
   coverLetter?: string;
+  tags?: string[];
+  notes?: string;
   events: EmployerApplicationEvent[];
   /** Position dans la colonne, pour le drag&drop reorder. */
   order: number;

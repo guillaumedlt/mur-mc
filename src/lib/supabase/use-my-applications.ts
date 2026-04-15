@@ -109,6 +109,8 @@ export function useMyApplications(jobId: string | null): UseMyApplicationsResult
         appliedAt: row.applied_at,
         updatedAt: row.updated_at,
         coverLetter: row.cover_letter ?? undefined,
+        tags: row.tags ?? [],
+        notes: row.notes ?? undefined,
         events,
         order: row.order ?? 0,
       });
@@ -228,6 +230,14 @@ export async function addApplicationEventSupabase(
 /**
  * Rate an application in Supabase.
  */
+export async function updateApplicationSupabase(
+  applicationId: string,
+  patch: Record<string, unknown>,
+): Promise<void> {
+  const supabase = createClient();
+  await supabase.from("applications").update(patch).eq("id", applicationId);
+}
+
 export async function rateApplicationSupabase(
   applicationId: string,
   rating: number,
