@@ -12,10 +12,10 @@ const SITE = "https://mur.mc";
  * Protected by CRON_SECRET header.
  */
 export async function GET(request: Request) {
-  // Verify cron secret
+  // Verify cron secret — bloque si CRON_SECRET n'est pas configure ou si le header ne matche pas
   const secret = request.headers.get("authorization");
   const expected = process.env.CRON_SECRET;
-  if (expected && secret !== `Bearer ${expected}`) {
+  if (!expected || secret !== `Bearer ${expected}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

@@ -57,6 +57,8 @@ create table if not exists profiles (
   website_url text,
   cv_url text,
   cv_file_name text,
+  -- Candidat Pro
+  open_to_work boolean default false,
   -- Employer-specific
   company_id uuid references companies(id) on delete set null,
   team_role text check (team_role in ('admin', 'recruiter', 'viewer')),
@@ -344,6 +346,25 @@ create table if not exists messages (
 create index if not exists idx_messages_application on messages(application_id);
 create index if not exists idx_messages_created on messages(created_at desc);
 
+-- Alertes email emploi (cf migration 0007)
+create table if not exists job_alerts (
+  id uuid primary key default uuid_generate_v4(),
+  profile_id uuid references profiles(id) on delete cascade,
+  email text not null,
+  keywords text[] default '{}',
+  sector text,
+  contract_type text,
+  frequency text not null default 'daily' check (frequency in ('daily', 'weekly')),
+  active boolean default true,
+  token text unique default encode(gen_random_bytes(16), 'hex'),
+  last_sent_at timestamptz,
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_job_alerts_email on job_alerts(email);
+create index if not exists idx_job_alerts_active on job_alerts(active) where active = true;
+create index if not exists idx_job_alerts_profile on job_alerts(profile_id);
+
 -- ============================================================
 -- INDEX pour la performance
 -- ============================================================
@@ -407,6 +428,7 @@ alter table profile_views_log enable row level security;
 alter table rate_limits enable row level security;
 alter table job_templates enable row level security;
 alter table messages enable row level security;
+alter table job_alerts enable row level security;
 
 -- Companies : lecture publique
 create policy "companies_read" on companies for select using (true);
@@ -753,6 +775,15 @@ for insert with check (
     and p.team_role in ('admin', 'recruiter')
   )
 );
+
+-- job_alerts : le user voit/supprime ses propres alertes, insert si authentifie.
+-- Les inscriptions anonymes passent par service_role via /api/alerts.
+create policy "job_alerts_own_read" on job_alerts
+for select using (profile_id = auth.uid());
+create policy "job_alerts_insert" on job_alerts
+for insert with check (profile_id = auth.uid());
+create policy "job_alerts_own_delete" on job_alerts
+for delete using (profile_id = auth.uid());
 
 
 -- ============================================================
