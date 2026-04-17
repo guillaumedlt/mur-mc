@@ -30,6 +30,10 @@ export type MyJob = {
   created_at: string;
   updated_at: string;
   applicationsCount: number;
+  /** Criteres customises de scorecard (null = fallback aux 6 par defaut). */
+  scorecard_criteria: string[] | null;
+  /** Profile id du recruteur assigne a cette offre (null = pas d'owner). */
+  assigned_to: string | null;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -63,6 +67,10 @@ function mapMyJob(j: any): MyJob {
       Array.isArray(j.applications) && j.applications.length > 0
         ? j.applications[0]?.count ?? 0
         : 0,
+    scorecard_criteria: Array.isArray(j.scorecard_criteria)
+      ? (j.scorecard_criteria as unknown[]).map((x) => String(x))
+      : null,
+    assigned_to: j.assigned_to ?? null,
   };
 }
 
@@ -150,4 +158,59 @@ export async function updateJobSupabase(
 export async function deleteJobSupabase(jobId: string): Promise<void> {
   const supabase = createClient();
   await supabase.from("jobs").delete().eq("id", jobId);
+}
+
+/**
+ * Clone une offre existante en brouillon. Retourne l'id du nouveau job.
+ * Copie tous les champs sauf l'id, le slug (regenere), les metrics (views),
+ * et force le status a "draft".
+ */
+export async function cloneJobSupabase(
+  jobId: string,
+): Promise<{ ok: boolean; error?: string; id?: string }> {
+  const supabase = createClient();
+
+  const { data: source, error: fetchErr } = await supabase
+    .from("jobs")
+    .select("*")
+    .eq("id", jobId)
+    .single();
+
+  if (fetchErr || !source) {
+    return { ok: false, error: fetchErr?.message ?? "Offre introuvable" };
+  }
+
+  const baseSlug = (source.slug as string).replace(/-[a-z0-9]{5}$/, "");
+  const newSlug = `${baseSlug}-${Date.now().toString(36).slice(-5)}`;
+
+  // On retire les champs qu'on ne doit pas copier
+  const {
+    id: _id,
+    slug: _slug,
+    created_at: _created,
+    updated_at: _updated,
+    published_at: _pub,
+    views: _views,
+    assigned_to: _assigned,
+    ...rest
+  } = source as Record<string, unknown>;
+  void _id; void _slug; void _created; void _updated; void _pub; void _views; void _assigned;
+
+  const { data: newJob, error: insertErr } = await supabase
+    .from("jobs")
+    .insert({
+      ...rest,
+      slug: newSlug,
+      title: `${source.title} (copie)`,
+      status: "draft",
+      featured: false,
+      assigned_to: null,
+    })
+    .select("id")
+    .single();
+
+  if (insertErr || !newJob) {
+    return { ok: false, error: insertErr?.message ?? "Echec de la duplication" };
+  }
+  return { ok: true, id: newJob.id };
 }

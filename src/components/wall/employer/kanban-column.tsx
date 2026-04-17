@@ -24,6 +24,8 @@ type Props = {
   onDragOverColumn: (status: EmployerApplicationStatus) => void;
   onDragOverSlot: (status: EmployerApplicationStatus, index: number) => void;
   onDrop: (status: EmployerApplicationStatus, index: number) => void;
+  isSelected?: (appId: string) => boolean;
+  onToggleSelect?: (appId: string) => void;
 };
 
 export function KanbanColumn({
@@ -36,6 +38,8 @@ export function KanbanColumn({
   onDragOverColumn,
   onDragOverSlot,
   onDrop,
+  isSelected,
+  onToggleSelect,
 }: Props) {
   const isOver = drag.draggingId !== null && drag.overColumn === status;
   const count = items.length;
@@ -94,6 +98,8 @@ export function KanbanColumn({
                 isDragging={drag.draggingId === app.id}
                 onDragStart={onDragStart}
                 onDragEnd={onDragEnd}
+                selected={isSelected?.(app.id)}
+                onToggleSelect={onToggleSelect}
               />
               {/* Drop slot après chaque card */}
               <DropSlot

@@ -23,6 +23,8 @@ type Props = {
   isDragging: boolean;
   onDragStart: (appId: string) => void;
   onDragEnd: () => void;
+  selected?: boolean;
+  onToggleSelect?: (appId: string) => void;
 };
 
 export function KanbanCard({
@@ -31,6 +33,8 @@ export function KanbanCard({
   isDragging,
   onDragStart,
   onDragEnd,
+  selected = false,
+  onToggleSelect,
 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -55,12 +59,36 @@ export function KanbanCard({
         onDragStart(app.id);
       }}
       onDragEnd={onDragEnd}
-      className={`rounded-xl border border-[var(--border)] bg-white p-3 cursor-grab active:cursor-grabbing transition-all ${
+      className={`relative rounded-xl border bg-white p-3 cursor-grab active:cursor-grabbing transition-all ${
+        selected
+          ? "border-[var(--accent)] ring-2 ring-[var(--accent)]/30"
+          : "border-[var(--border)]"
+      } ${
         isDragging
           ? "opacity-40 scale-[0.97]"
           : "opacity-100 hover:border-foreground/20 hover:shadow-[0_2px_12px_rgba(10,10,10,0.08)]"
       }`}
     >
+      {onToggleSelect && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            onToggleSelect(app.id);
+          }}
+          className={`absolute top-2 right-2 size-5 rounded-md border flex items-center justify-center transition-colors z-10 ${
+            selected
+              ? "bg-[var(--accent)] border-[var(--accent)] text-background"
+              : "bg-white border-[var(--border)] text-transparent hover:border-foreground/40"
+          }`}
+          aria-label={selected ? "Deselectionner" : "Selectionner"}
+        >
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+            <path d="M2 5.5L4 7.5L8 2.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+      )}
       {/* Top row : avatar + name + headline */}
       <Link
         href={`/recruteur/candidats/${app.id}`}
@@ -79,7 +107,7 @@ export function KanbanCard({
           >
             {candidate.initials}
           </span>
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1 pr-5">
             <div className="text-[13px] font-medium text-foreground line-clamp-1">
               {candidate.fullName}
             </div>

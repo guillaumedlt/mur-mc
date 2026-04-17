@@ -183,6 +183,7 @@ function mapJob(row: any): Job {
     featured: row.featured ?? false,
     urgent: row.urgent ?? false,
     customQuestions: row.custom_questions ?? [],
+    status: (row.status ?? "published") as "draft" | "published" | "paused" | "closed",
   };
 }
 

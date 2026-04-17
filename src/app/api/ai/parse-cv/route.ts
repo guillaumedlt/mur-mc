@@ -1,21 +1,23 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { getAuthorizedEmployer } from "@/lib/supabase/authz";
 
 /**
  * POST /api/ai/parse-cv
  * Body: { text } — plain text extracted from CV
  * Returns: { fullName, headline, skills[], languages[], experienceYears, location, bio }
  * Uses Claude to parse unstructured CV text into structured data.
+ *
+ * Reserve aux employers admin/recruiter (les viewers en lecture seule sont bloques).
  */
 export async function POST(request: Request) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Non authentifie" }, { status: 401 });
-  }
+  const authz = await getAuthorizedEmployer(supabase, "recruiter");
+  if (!authz.ok) return authz.response;
+  const { userId } = authz.employer;
 
-  const rl = checkRateLimit(user.id, "parse-cv", "recruiter");
+  const rl = await checkRateLimit(userId, "parse-cv", "recruiter");
   if (!rl.allowed) {
     return NextResponse.json({ error: "Vous avez depasse votre limite journaliere. Reessayez demain." }, { status: 429 });
   }
@@ -26,11 +28,14 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { text } = body;
+  const rawText: string | undefined = body?.text;
 
-  if (!text || text.length < 20) {
+  if (!rawText || rawText.length < 20) {
     return NextResponse.json({ error: "Texte trop court" }, { status: 400 });
   }
+
+  const { sanitizeForPrompt } = await import("@/lib/ai/sanitize");
+  const text = sanitizeForPrompt(rawText, 5000);
 
   const systemPrompt = `Tu es un parseur de CV pour un job board a Monaco (Mur.mc).
 On te donne le texte brut d'un CV. Extrais les informations structurees.

@@ -1,58 +1,70 @@
 /**
- * Simple in-memory rate limiter for API routes.
- * Tracks calls per user per endpoint with a sliding window.
+ * Rate limiter persistant pour les API routes AI.
  *
- * Limits:
- * - Free users: 3 AI calls / day
- * - Pro users: 30 AI calls / day
- * - Recruiter: 50 AI calls / day
+ * Persiste via la table `rate_limits` + la RPC Supabase `check_rate_limit`
+ * (cf supabase/migrations/0002_security_hardening.sql). Atomique, partage
+ * entre toutes les instances serverless, survit aux redeploys.
+ *
+ * Limites / 24h glissantes :
+ *  - free      : 3  appels / endpoint
+ *  - pro       : 30 appels / endpoint
+ *  - recruiter : 50 appels / endpoint
+ *
+ * Fail-open sur erreur RPC : si Supabase est down, on laisse passer plutot que
+ * de bloquer tous les users. Le service_role key doit etre configuree cote env.
  */
 
-const store = new Map<string, { count: number; resetAt: number }>();
+import { createAdminClient } from "@/lib/supabase/admin";
 
-const WINDOW_MS = 24 * 60 * 60 * 1000; // 24h
+const WINDOW_SECONDS = 24 * 60 * 60;
 
-const LIMITS: Record<string, number> = {
+const LIMITS: Record<"free" | "pro" | "recruiter", number> = {
   free: 3,
   pro: 30,
   recruiter: 50,
 };
 
-/**
- * Check if a user can make an AI call.
- * Returns { allowed, remaining, resetAt } or { allowed: false, ... }
- */
-export function checkRateLimit(
+export type RateLimitResult = {
+  allowed: boolean;
+  remaining: number;
+  resetIn: number;
+};
+
+export async function checkRateLimit(
   userId: string,
   endpoint: string,
   tier: "free" | "pro" | "recruiter" = "free",
-): { allowed: boolean; remaining: number; resetIn: number } {
-  const key = `${userId}:${endpoint}`;
-  const now = Date.now();
+): Promise<RateLimitResult> {
   const limit = LIMITS[tier] ?? LIMITS.free;
 
-  const entry = store.get(key);
+  try {
+    const admin = createAdminClient();
+    const { data, error } = await admin.rpc("check_rate_limit", {
+      p_user_id: userId,
+      p_endpoint: endpoint,
+      p_limit: limit,
+      p_window_seconds: WINDOW_SECONDS,
+    });
 
-  if (!entry || now > entry.resetAt) {
-    // New window
-    store.set(key, { count: 1, resetAt: now + WINDOW_MS });
-    return { allowed: true, remaining: limit - 1, resetIn: WINDOW_MS };
-  }
-
-  if (entry.count >= limit) {
-    return { allowed: false, remaining: 0, resetIn: entry.resetAt - now };
-  }
-
-  entry.count++;
-  return { allowed: true, remaining: limit - entry.count, resetIn: entry.resetAt - now };
-}
-
-// Cleanup stale entries every hour
-if (typeof setInterval !== "undefined") {
-  setInterval(() => {
-    const now = Date.now();
-    for (const [key, entry] of store) {
-      if (now > entry.resetAt) store.delete(key);
+    if (error || !data) {
+      // Fail-open plutot que bloquer tout le monde si la RPC est inaccessible
+      console.error("[rate-limit] RPC error, failing open:", error);
+      return { allowed: true, remaining: limit, resetIn: WINDOW_SECONDS * 1000 };
     }
-  }, 60 * 60 * 1000);
+
+    const payload = data as {
+      allowed: boolean;
+      remaining: number;
+      reset_in_seconds: number;
+    };
+
+    return {
+      allowed: payload.allowed,
+      remaining: payload.remaining,
+      resetIn: payload.reset_in_seconds * 1000,
+    };
+  } catch (err) {
+    console.error("[rate-limit] unexpected error, failing open:", err);
+    return { allowed: true, remaining: limit, resetIn: WINDOW_SECONDS * 1000 };
+  }
 }

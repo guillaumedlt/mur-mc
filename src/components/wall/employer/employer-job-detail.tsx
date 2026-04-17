@@ -11,6 +11,7 @@ import {
   Calendar,
   Check,
   Clock,
+  Copy,
   EuroSquare,
   Eye,
   Globe,
@@ -26,7 +27,7 @@ import {
 } from "iconoir-react";
 import type { EmployerApplicationStatus } from "@/lib/employer-store";
 import { useUser } from "@/lib/auth";
-import { useMyJob, updateJobSupabase, deleteJobSupabase } from "@/lib/supabase/use-my-jobs";
+import { useMyJob, updateJobSupabase, deleteJobSupabase, cloneJobSupabase } from "@/lib/supabase/use-my-jobs";
 import { useMyApplications } from "@/lib/supabase/use-my-applications";
 import { useManualCandidates } from "@/lib/supabase/use-manual-candidates";
 import { ApplicationStatusPill, JobStatusPill } from "./status-pill";
@@ -85,6 +86,10 @@ export function EmployerJobDetail({ id }: Props) {
     await updateJobSupabase(job.id, { status: next });
     refetch();
   };
+  const publishDraft = async () => {
+    await updateJobSupabase(job.id, { status: "published" });
+    refetch();
+  };
   const close = async () => {
     if (window.confirm("Fermer cette offre ? Elle n'apparaitra plus dans le mur.")) {
       await updateJobSupabase(job.id, { status: "closed" });
@@ -96,6 +101,14 @@ export function EmployerJobDetail({ id }: Props) {
       await deleteJobSupabase(job.id);
       router.push("/recruteur/offres");
     }
+  };
+  const onDuplicate = async () => {
+    const res = await cloneJobSupabase(job.id);
+    if (!res.ok || !res.id) {
+      window.alert(res.error ?? "Impossible de dupliquer l'offre");
+      return;
+    }
+    router.push(`/recruteur/offres/${res.id}`);
   };
 
   const salary = formatSalary(job.salary_min, job.salary_max);
@@ -297,7 +310,16 @@ export function EmployerJobDetail({ id }: Props) {
                 <Group width={13} height={13} strokeWidth={2} />
                 Pipeline candidats
               </Link>
-              {job.status === "published" || job.status === "draft" ? (
+              {job.status === "draft" ? (
+                <button
+                  type="button"
+                  onClick={publishDraft}
+                  className="h-10 px-4 rounded-xl bg-[var(--accent)] text-background text-[12.5px] font-medium hover:bg-[var(--accent)]/85 transition-colors flex items-center justify-center gap-2"
+                >
+                  <PlaySolid width={12} height={12} strokeWidth={2} />
+                  Publier maintenant
+                </button>
+              ) : job.status === "published" ? (
                 <button
                   type="button"
                   onClick={togglePause}
@@ -326,6 +348,14 @@ export function EmployerJobDetail({ id }: Props) {
                   Fermer l&apos;offre
                 </button>
               )}
+              <button
+                type="button"
+                onClick={onDuplicate}
+                className="h-10 px-4 rounded-xl border border-[var(--border)] bg-white text-[12.5px] text-foreground/85 hover:bg-[var(--background-alt)] transition-colors flex items-center justify-center gap-2"
+              >
+                <Copy width={12} height={12} strokeWidth={2} />
+                Dupliquer
+              </button>
               <button
                 type="button"
                 onClick={onDelete}

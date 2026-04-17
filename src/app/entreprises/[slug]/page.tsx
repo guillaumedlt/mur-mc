@@ -20,25 +20,31 @@ export async function generateMetadata(
 ): Promise<Metadata> {
   const { slug } = await props.params;
   const company = await fetchCompanyBySlug(slug);
-  if (!company) return { title: "Entreprise introuvable" };
+  if (!company) return { title: "Entreprise introuvable", robots: { index: false } };
+  const desc = (company.tagline || company.description || "").slice(0, 160);
   return {
-    title: company.name,
-    description: company.tagline || company.description,
+    title: `${company.name} — Offres d'emploi a Monaco`,
+    description: desc || `Decouvrez ${company.name} sur Mur.mc — ${company.sector}, ${company.location}.`,
     alternates: { canonical: `/entreprises/${company.slug}` },
     openGraph: {
       type: "profile",
       title: company.name,
-      description: company.tagline || company.description,
+      description: desc,
       url: `${SITE_URL}/entreprises/${company.slug}`,
       siteName: "Mur.mc",
-      images: company.hasCover ? [coverUrl(company)] : undefined,
+      locale: "fr_MC",
+      images: company.coverUrl
+        ? [{ url: company.coverUrl, width: 1200, height: 630, alt: company.name }]
+        : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: company.name,
+      description: desc,
     },
   };
 }
 
-function coverUrl(company: Company): string {
-  return `https://picsum.photos/seed/${company.slug}-cover/1600/520`;
-}
 
 export default async function CompanyPage(
   props: PageProps<"/entreprises/[slug]">,
@@ -69,11 +75,21 @@ export default async function CompanyPage(
     sameAs: company.website ? [`https://${company.website}`] : undefined,
   };
 
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Mur.mc", item: SITE_URL },
+      { "@type": "ListItem", position: 2, name: "Entreprises", item: `${SITE_URL}/entreprises` },
+      { "@type": "ListItem", position: 3, name: company.name, item: `${SITE_URL}/entreprises/${company.slug}` },
+    ],
+  };
+
   return (
     <Shell jobs={allJobs}>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify([orgJsonLd, breadcrumbJsonLd]) }}
       />
       <div className="max-w-[1100px] mx-auto">
         <Link

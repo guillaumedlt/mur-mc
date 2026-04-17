@@ -228,11 +228,14 @@ export function ApplicationDetail({ id }: Props) {
               <button
                 type="button"
                 onClick={async () => {
-                  if (window.confirm("Retirer cette candidature ?")) {
-                    await withdrawApplicationSupabase(app.id);
-                    refetch();
-                    router.push("/candidat/candidatures");
+                  if (!window.confirm("Retirer cette candidature ?")) return;
+                  const res = await withdrawApplicationSupabase(app.id);
+                  if (!res.ok) {
+                    window.alert(res.error ?? "Impossible de retirer la candidature");
+                    return;
                   }
+                  refetch();
+                  router.push("/candidat/candidatures");
                 }}
                 className="h-9 rounded-xl border border-[var(--border)] bg-white text-[12.5px] text-foreground/65 hover:text-destructive hover:border-destructive/30 transition-colors flex items-center justify-center gap-1.5"
               >

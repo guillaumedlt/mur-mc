@@ -12,6 +12,7 @@ import {
   Sparks,
 } from "iconoir-react";
 import { type EmployerJobStatus } from "@/lib/employer-store";
+import { useUser } from "@/lib/auth";
 import { useMyJobs } from "@/lib/supabase/use-my-jobs";
 import { useMyCompany } from "@/lib/supabase/use-my-company";
 import { JobStatusPill } from "./status-pill";
@@ -29,12 +30,14 @@ const FILTERS: Array<{ key: Filter; label: string }> = [
 ];
 
 export function EmployerJobsList() {
+  const user = useUser();
   const { jobs: supabaseJobs, loading } = useMyJobs();
   const { company } = useMyCompany();
   const quota = company?.job_quota ?? 1;
   const boostedCount = supabaseJobs.filter((j) => j.featured).length;
   const [filter, setFilter] = useState<Filter>("all");
   const [sort, setSort] = useState<SortKey>("recent");
+  const [ownerScope, setOwnerScope] = useState<"all" | "mine">("all");
 
   const counts = useMemo(() => {
     const c: Record<Filter, number> = {
@@ -54,13 +57,16 @@ export function EmployerJobsList() {
   const filtered = useMemo(() => {
     let list = supabaseJobs;
     if (filter !== "all") list = list.filter((j) => j.status === filter);
+    if (ownerScope === "mine" && user) {
+      list = list.filter((j) => j.assigned_to === user.id);
+    }
     list = [...list].sort((a, b) => {
       if (sort === "recent") return b.created_at.localeCompare(a.created_at);
       if (sort === "views") return (b.views ?? 0) - (a.views ?? 0);
       return b.applicationsCount - a.applicationsCount;
     });
     return list;
-  }, [supabaseJobs, filter, sort]);
+  }, [supabaseJobs, filter, sort, ownerScope, user]);
 
   return (
     <div className="max-w-[1100px] mx-auto">
@@ -141,16 +147,38 @@ export function EmployerJobsList() {
           })}
         </div>
 
-        <select
-          value={sort}
-          onChange={(e) => setSort(e.target.value as SortKey)}
-          className="wall-select-pill"
-          aria-label="Trier"
-        >
-          <option value="recent">Plus récentes</option>
-          <option value="applications">Plus de candidatures</option>
-          <option value="views">Plus de vues</option>
-        </select>
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="inline-flex rounded-full border border-[var(--border)] bg-white p-0.5">
+            <button
+              type="button"
+              onClick={() => setOwnerScope("all")}
+              className={`h-7 px-3 rounded-full text-[11.5px] font-medium transition-colors ${
+                ownerScope === "all" ? "bg-foreground text-background" : "text-foreground/65 hover:text-foreground"
+              }`}
+            >
+              Toutes
+            </button>
+            <button
+              type="button"
+              onClick={() => setOwnerScope("mine")}
+              className={`h-7 px-3 rounded-full text-[11.5px] font-medium transition-colors ${
+                ownerScope === "mine" ? "bg-foreground text-background" : "text-foreground/65 hover:text-foreground"
+              }`}
+            >
+              Mes offres
+            </button>
+          </div>
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value as SortKey)}
+            className="wall-select-pill"
+            aria-label="Trier"
+          >
+            <option value="recent">Plus récentes</option>
+            <option value="applications">Plus de candidatures</option>
+            <option value="views">Plus de vues</option>
+          </select>
+        </div>
       </div>
 
       {/* List */}

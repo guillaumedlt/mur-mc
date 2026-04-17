@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Sparks } from "iconoir-react";
@@ -8,6 +8,7 @@ import { useAuthLoading, useUser } from "@/lib/auth";
 import { ensureOwnership } from "@/lib/employer-store";
 import { Shell } from "../shell";
 import { EmployerTabs } from "./employer-tabs";
+import { EmployerCommandPalette } from "./employer-command-palette";
 
 type Props = {
   children: React.ReactNode;
@@ -36,6 +37,19 @@ export function EmployerShell({ children }: Props) {
   useEffect(() => {
     if (user) ensureOwnership(user.id);
   }, [user]);
+
+  // Command palette Cmd+K / Ctrl+K
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setPaletteOpen((o) => !o);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   // Pendant le sync Supabase
   if (loading) {
@@ -103,6 +117,10 @@ export function EmployerShell({ children }: Props) {
     <Shell jobs={[]}>
       <EmployerTabs />
       {children}
+      <EmployerCommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+      />
     </Shell>
   );
 }

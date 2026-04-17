@@ -1,9 +1,41 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/send";
 import * as templates from "@/lib/email/templates";
 
 const SITE = "https://mur.mc";
+
+/**
+ * Log un message sortant dans la table `messages` (pour afficher l'historique
+ * dans la fiche candidat + alimenter le reporting). On utilise la service_role
+ * pour bypass RLS sur l'update delivery_status.
+ */
+async function logOutboundMessage(params: {
+  applicationId: string;
+  kind: string;
+  subject: string;
+  body: string;
+  sentById: string;
+  sentByName: string;
+  sent: boolean;
+}): Promise<void> {
+  try {
+    const admin = createAdminClient();
+    await admin.from("messages").insert({
+      application_id: params.applicationId,
+      direction: "outbound",
+      kind: params.kind,
+      subject: params.subject,
+      body: params.body,
+      sent_by: params.sentById,
+      sent_by_name: params.sentByName,
+      delivery_status: params.sent ? "sent" : "failed",
+    });
+  } catch {
+    // Fail-silent : si le log casse, on ne veut pas bloquer l'envoi email.
+  }
+}
 
 /**
  * Resolve the recruiter email(s) for a given job ID.
@@ -127,7 +159,19 @@ export async function POST(request: Request) {
         statusLabel: data.statusLabel,
         jobUrl: `${SITE}/candidat/candidatures/${data.applicationId}`,
       });
-      results.push(await sendEmail({ to: candidatEmail, ...email }));
+      const sent = await sendEmail({ to: candidatEmail, ...email });
+      results.push(sent);
+      if (data.applicationId) {
+        await logOutboundMessage({
+          applicationId: data.applicationId,
+          kind: `status_${data.newStatus ?? "update"}`,
+          subject: email.subject,
+          body: `Statut mis a jour : ${data.statusLabel ?? data.newStatus}`,
+          sentById: user.id,
+          sentByName: user.user_metadata?.full_name ?? "Systeme",
+          sent,
+        });
+      }
       break;
     }
 
@@ -149,15 +193,28 @@ export async function POST(request: Request) {
 
       if (!candidatEmail) break;
 
+      const recruiterName = data.recruiterName || user.user_metadata?.full_name || "Recruteur";
       const email = templates.messageRecruteur({
         candidatName,
         jobTitle,
         companyName,
-        recruiterName: data.recruiterName || user.user_metadata?.full_name || "Recruteur",
+        recruiterName,
         messagePreview: data.messagePreview || "",
         jobUrl: `${SITE}/candidat/candidatures/${data.applicationId}`,
       });
-      results.push(await sendEmail({ to: candidatEmail, ...email }));
+      const sent = await sendEmail({ to: candidatEmail, ...email });
+      results.push(sent);
+      if (data.applicationId) {
+        await logOutboundMessage({
+          applicationId: data.applicationId,
+          kind: data.kind ?? "custom",
+          subject: email.subject,
+          body: data.messagePreview || data.fullBody || "",
+          sentById: user.id,
+          sentByName: recruiterName,
+          sent,
+        });
+      }
       break;
     }
 

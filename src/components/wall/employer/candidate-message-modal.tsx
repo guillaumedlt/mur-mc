@@ -195,7 +195,7 @@ export function CandidateMessageModal({
       by: recruiterName,
     });
 
-    // Email notification to candidate
+    // Email notification to candidate + log persistent dans la table `messages`
     fetch("/api/notify", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -205,6 +205,8 @@ export function CandidateMessageModal({
           applicationId: appId,
           recruiterName,
           messagePreview: text.trim().slice(0, 200),
+          fullBody: text.trim(),
+          kind: selectedTemplate?.category ?? "custom",
         },
       }),
     }).catch(() => {});

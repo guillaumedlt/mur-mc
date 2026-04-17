@@ -47,7 +47,7 @@ const SECTORS = [
 export const revalidate = 300;
 
 function seoJsonLd(jobCount: number) {
-  return {
+  const webPage = {
     "@context": "https://schema.org",
     "@type": "WebPage",
     name: "Emploi a Monaco",
@@ -62,6 +62,39 @@ function seoJsonLd(jobCount: number) {
       ],
     },
   };
+
+  const faq = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: [
+      {
+        "@type": "Question",
+        name: "Combien d'offres d'emploi y a-t-il a Monaco ?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: `Mur.mc reference actuellement ${jobCount} offres d'emploi actives en Principaute de Monaco, mises a jour en continu.`,
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Quels secteurs recrutent le plus a Monaco ?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Les cinq secteurs qui recrutent le plus a Monaco sont la banque privee et la finance, l'hotellerie de luxe et la restauration, le yachting, le luxe et le retail, et le secteur tech et digital.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Comment postuler a une offre sur Mur.mc ?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Creez un compte candidat gratuit, completez votre profil avec vos competences et votre CV, puis postulez en un clic. Vous recevrez les mises a jour de votre candidature par email.",
+        },
+      },
+    ],
+  };
+
+  return [webPage, faq];
 }
 
 export default async function EmploiMonacoPage() {

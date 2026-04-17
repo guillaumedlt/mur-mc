@@ -106,6 +106,7 @@ export type Job = {
   featured?: boolean;
   urgent?: boolean;
   customQuestions?: string[];
+  status?: "draft" | "published" | "paused" | "closed";
 };
 
 /* ─── Donnees ────────────────────────────────────────────── */

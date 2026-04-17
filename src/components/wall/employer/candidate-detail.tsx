@@ -36,6 +36,9 @@ import { CandidateNoteModal } from "./candidate-note-modal";
 import { CvPreviewModal } from "./cv-preview-modal";
 import { ScorecardModal } from "./scorecard-modal";
 import { ScheduleInterviewModal } from "./schedule-interview-modal";
+import { RejectReasonModal, REJECTION_REASONS, type RejectionReason } from "./reject-reason-modal";
+import { CandidateMessagesThread } from "./candidate-messages-thread";
+import { ScorecardCalibration } from "./scorecard-calibration";
 
 type Props = { id: string; recruiterName: string };
 
@@ -47,6 +50,7 @@ export function CandidateDetail({ id, recruiterName }: Props) {
   const [cvPreviewOpen, setCvPreviewOpen] = useState(false);
   const [scorecardOpen, setScorecardOpen] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [rejectOpen, setRejectOpen] = useState(false);
 
   const [tagInput, setTagInput] = useState("");
 
@@ -123,6 +127,13 @@ export function CandidateDetail({ id, recruiterName }: Props) {
             {cand.headline && (
               <p className="text-[14px] text-muted-foreground mt-1">
                 {cand.headline}
+              </p>
+            )}
+            {app.status === "rejected" && app.rejectionReason && (
+              <p className="mt-2 inline-flex items-center gap-1.5 text-[11.5px] text-destructive bg-destructive/10 border border-destructive/20 rounded-full px-2.5 py-1">
+                <span className="font-semibold">Motif :</span>
+                {REJECTION_REASONS.find((r) => r.value === app.rejectionReason)?.label ?? app.rejectionReason}
+                {app.rejectionNote && <span className="text-destructive/70 italic">· {app.rejectionNote}</span>}
               </p>
             )}
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-3 text-[12.5px] text-foreground/65">
@@ -221,6 +232,22 @@ export function CandidateDetail({ id, recruiterName }: Props) {
                 </p>
               </Section>
             )}
+          </article>
+
+          {/* Evaluations */}
+          <article className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-6 lg:py-7">
+            <h2 className="font-display text-[20px] tracking-[-0.01em] mb-4">
+              Evaluations
+            </h2>
+            <ScorecardCalibration applicationId={app.id} />
+          </article>
+
+          {/* Messages envoyes */}
+          <article className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-6 lg:py-7">
+            <h2 className="font-display text-[20px] tracking-[-0.01em] mb-4">
+              Messages envoyes
+            </h2>
+            <CandidateMessagesThread applicationId={app.id} />
           </article>
 
           {/* Timeline */}
@@ -376,9 +403,7 @@ export function CandidateDetail({ id, recruiterName }: Props) {
               {app.status !== "rejected" && (
                 <button
                   type="button"
-                  onClick={() =>
-                    moveApplicationSupabase(app.id, "rejected", 0, app.status, recruiterName).then(refetch)
-                  }
+                  onClick={() => setRejectOpen(true)}
                   className="h-10 rounded-xl border border-[var(--border)] bg-white text-[12.5px] text-foreground/55 hover:text-destructive hover:border-destructive/30 transition-colors flex items-center justify-center gap-2"
                 >
                   <Xmark width={12} height={12} strokeWidth={2.2} />
@@ -489,6 +514,7 @@ export function CandidateDetail({ id, recruiterName }: Props) {
         <ScorecardModal
           applicationId={app.id}
           candidateName={cand.fullName}
+          jobCriteria={jobs.find((j) => j.id === app.jobId)?.scorecard_criteria ?? null}
           onClose={() => setScorecardOpen(false)}
           onSaved={refetch}
         />
@@ -500,6 +526,24 @@ export function CandidateDetail({ id, recruiterName }: Props) {
           candidateName={cand.fullName}
           onClose={() => setScheduleOpen(false)}
           onScheduled={refetch}
+        />
+      )}
+      {rejectOpen && (
+        <RejectReasonModal
+          candidateName={cand.fullName}
+          onCancel={() => setRejectOpen(false)}
+          onConfirm={async (reason: RejectionReason, note: string) => {
+            await moveApplicationSupabase(
+              app.id,
+              "rejected",
+              0,
+              app.status,
+              recruiterName,
+              { reason, note },
+            );
+            setRejectOpen(false);
+            refetch();
+          }}
         />
       )}
     </div>

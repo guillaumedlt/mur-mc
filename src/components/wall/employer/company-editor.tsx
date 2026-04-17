@@ -60,6 +60,7 @@ export function CompanyEditor() {
   const logoRef = useRef<HTMLInputElement>(null);
   const coverRef = useRef<HTMLInputElement>(null);
   const [savedFlash, setSavedFlash] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [logoError, setLogoError] = useState<string | null>(null);
   const [coverError, setCoverError] = useState<string | null>(null);
 
@@ -229,7 +230,8 @@ export function CompanyEditor() {
       blocks.push({ id: `video-${i}`, type: "video", title: "Video", content: videos[i] });
     }
 
-    await updateCompanySupabase(company.id, {
+    setSaveError(null);
+    const result = await updateCompanySupabase(company.id, {
       name: companyName || company.name,
       sector: sector || null,
       size: size || null,
@@ -253,6 +255,11 @@ export function CompanyEditor() {
       has_cover: !!coverPreview,
       blocks,
     });
+
+    if (!result.ok) {
+      setSaveError(result.error ?? "Impossible d'enregistrer la fiche entreprise");
+      return;
+    }
 
     setSavedFlash(true);
     window.setTimeout(() => {
@@ -769,6 +776,11 @@ export function CompanyEditor() {
                 "Enregistrer"
               )}
             </button>
+            {saveError && (
+              <div className="rounded-xl bg-destructive/10 border border-destructive/20 px-3 py-2 text-[11.5px] text-destructive">
+                {saveError}
+              </div>
+            )}
             <Link
               href={`/entreprises/${company.slug}`}
               target="_blank"

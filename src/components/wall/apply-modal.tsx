@@ -33,6 +33,8 @@ export function ApplyModal({ job, user, open, onClose }: Props) {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [sent, setSent] = useState(false);
   const [aiGenerating, setAiGenerating] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -50,87 +52,106 @@ export function ApplyModal({ job, user, open, onClose }: Props) {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return; // garde-fou double-submit (au-dela du disabled)
+    setSubmitting(true);
+    setSubmitError(null);
 
-    // 1. Sauver dans le store local (pour le dashboard candidat)
-    createApplication({
-      jobId: job.id,
-      jobSlug: job.slug,
-      jobTitle: job.title,
-      jobType: job.type,
-      jobLocation: job.location,
-      companyId: job.company.id,
-      companySlug: job.company.slug,
-      companyName: job.company.name,
-      companyDomain: job.company.domain,
-      companyColor: job.company.logoColor,
-      companyInitials: job.company.initials,
-      coverLetter: coverLetter.trim() || undefined,
-    });
+    try {
+      // 1. Sauver dans le store local (pour le dashboard candidat)
+      createApplication({
+        jobId: job.id,
+        jobSlug: job.slug,
+        jobTitle: job.title,
+        jobType: job.type,
+        jobLocation: job.location,
+        companyId: job.company.id,
+        companySlug: job.company.slug,
+        companyName: job.company.name,
+        companyDomain: job.company.domain,
+        companyColor: job.company.logoColor,
+        companyInitials: job.company.initials,
+        coverLetter: coverLetter.trim() || undefined,
+      });
 
-    // 2. Inserer dans Supabase (pour que le recruteur voie la candidature)
-    if (user) {
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
-      const { data: newApp } = await supabase
-        .from("applications")
-        .insert({
-          job_id: job.id,
-          candidate_id: user.id,
-          status: "received",
-          cover_letter: coverLetter.trim() || null,
-          source: "platform",
-          match_score: score,
-          notes: Object.keys(answers).length > 0 ? Object.entries(answers).map(([q, a]) => `${q} → ${a}`).join("\n") : null,
-        })
-        .select("id")
-        .single();
+      // 2. Inserer dans Supabase (pour que le recruteur voie la candidature)
+      if (user) {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        const { data: newApp, error: insertErr } = await supabase
+          .from("applications")
+          .insert({
+            job_id: job.id,
+            candidate_id: user.id,
+            status: "received",
+            cover_letter: coverLetter.trim() || null,
+            source: "platform",
+            match_score: score,
+            notes: Object.keys(answers).length > 0 ? Object.entries(answers).map(([q, a]) => `${q} → ${a}`).join("\n") : null,
+          })
+          .select("id")
+          .single();
 
-      if (newApp) {
-        await supabase.from("application_events").insert({
-          application_id: newApp.id,
-          type: "received",
-          text: coverLetter.trim()
-            ? "Candidature recue avec lettre de motivation"
-            : "Candidature recue",
-          by_name: user.name,
-        });
+        if (insertErr) {
+          // Code 23505 = unique_violation = deja candidate sur cette offre
+          if (insertErr.code === "23505") {
+            setSubmitError("Vous avez deja postule a cette offre.");
+          } else {
+            setSubmitError(insertErr.message || "Impossible d'envoyer la candidature");
+          }
+          setSubmitting(false);
+          return;
+        }
 
-        // Email notifications (fire and forget)
-        fetch("/api/notify", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: "candidature_confirmee",
-            data: {
-              candidatEmail: user.email,
-              candidatName: user.name,
-              jobTitle: job.title,
-              companyName: job.company.name,
-              applicationId: newApp.id,
-            },
-          }),
-        }).catch(() => {});
+        if (newApp) {
+          await supabase.from("application_events").insert({
+            application_id: newApp.id,
+            type: "received",
+            text: coverLetter.trim()
+              ? "Candidature recue avec lettre de motivation"
+              : "Candidature recue",
+            by_name: user.name,
+          });
 
-        // Notify recruiter (email resolved server-side from jobId)
-        fetch("/api/notify", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: score >= 80 ? "candidat_top_match" : "nouvelle_candidature",
-            data: {
-              jobId: job.id,
-              candidatName: user.name,
-              jobTitle: job.title,
-              candidateHeadline: "",
-              matchScore: score,
-              applicationId: newApp.id,
-            },
-          }),
-        }).catch(() => {});
+          // Email notifications (fire and forget)
+          fetch("/api/notify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              type: "candidature_confirmee",
+              data: {
+                candidatEmail: user.email,
+                candidatName: user.name,
+                jobTitle: job.title,
+                companyName: job.company.name,
+                applicationId: newApp.id,
+              },
+            }),
+          }).catch(() => {});
+
+          // Notify recruiter (email resolved server-side from jobId)
+          fetch("/api/notify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              type: score >= 80 ? "candidat_top_match" : "nouvelle_candidature",
+              data: {
+                jobId: job.id,
+                candidatName: user.name,
+                jobTitle: job.title,
+                candidateHeadline: "",
+                matchScore: score,
+                applicationId: newApp.id,
+              },
+            }),
+          }).catch(() => {});
+        }
       }
-    }
 
-    setSent(true);
+      setSent(true);
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Erreur inattendue");
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -320,21 +341,33 @@ export function ApplyModal({ job, user, open, onClose }: Props) {
               </label>
             </div>
 
+            {submitError && (
+              <div className="px-7 pb-3">
+                <div className="rounded-xl bg-destructive/10 border border-destructive/20 px-3.5 py-2.5 text-[12px] text-destructive">
+                  {submitError}
+                </div>
+              </div>
+            )}
+
             {/* Footer */}
             <div className="px-7 py-4 border-t border-[var(--border)] bg-[var(--background-alt)]/50 flex items-center justify-between gap-3">
               <button
                 type="button"
                 onClick={onClose}
-                className="text-[12.5px] text-foreground/65 hover:text-foreground transition-colors"
+                disabled={submitting}
+                className="text-[12.5px] text-foreground/65 hover:text-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Annuler
               </button>
               <button
                 type="submit"
-                disabled={!consent}
-                className="h-10 px-5 rounded-xl bg-foreground text-background text-[13px] font-medium hover:bg-foreground/85 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                disabled={!consent || submitting}
+                className="h-10 px-5 rounded-xl bg-foreground text-background text-[13px] font-medium hover:bg-foreground/85 disabled:opacity-40 disabled:cursor-not-allowed transition-colors inline-flex items-center gap-2"
               >
-                Envoyer ma candidature
+                {submitting && (
+                  <span className="size-3.5 border-2 border-background/30 border-t-background rounded-full animate-spin" />
+                )}
+                {submitting ? "Envoi..." : "Envoyer ma candidature"}
               </button>
             </div>
           </form>

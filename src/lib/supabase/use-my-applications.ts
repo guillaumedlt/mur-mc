@@ -113,6 +113,8 @@ export function useMyApplications(jobId: string | null): UseMyApplicationsResult
         notes: row.notes ?? undefined,
         events,
         order: row.order ?? 0,
+        rejectionReason: row.rejection_reason ?? undefined,
+        rejectionNote: row.rejection_note ?? undefined,
       });
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -171,6 +173,9 @@ export function useMyApplications(jobId: string | null): UseMyApplicationsResult
 
 /**
  * Move an application to a new status in Supabase.
+ *
+ * Si toStatus === "rejected" et qu'un reason/note est fourni, ils sont
+ * persistes dans applications.rejection_reason / rejection_note.
  */
 export async function moveApplicationSupabase(
   applicationId: string,
@@ -178,12 +183,23 @@ export async function moveApplicationSupabase(
   toIndex: number,
   fromStatus: EmployerApplicationStatus,
   byName: string,
+  rejection?: { reason: string; note?: string },
 ): Promise<void> {
   const supabase = createClient();
 
+  const patch: Record<string, unknown> = { status: toStatus, order: toIndex };
+  if (toStatus === "rejected" && rejection?.reason) {
+    patch.rejection_reason = rejection.reason;
+    patch.rejection_note = rejection.note ?? null;
+  } else if (toStatus !== "rejected") {
+    // Si on sort de rejected, on efface le motif (ex: reopening)
+    patch.rejection_reason = null;
+    patch.rejection_note = null;
+  }
+
   await supabase
     .from("applications")
-    .update({ status: toStatus, order: toIndex })
+    .update(patch)
     .eq("id", applicationId);
 
   if (fromStatus !== toStatus) {

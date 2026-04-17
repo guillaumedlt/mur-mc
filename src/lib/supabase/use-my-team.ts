@@ -107,108 +107,73 @@ export function useMyTeam() {
   return { members, invitations, loading, refetch };
 }
 
+/**
+ * Les mutations d'equipe passent toutes par des API routes serveur
+ * (/api/team/*) qui verifient team_role = 'admin' + meme company.
+ * Ne jamais faire de .update/.insert/.delete direct sur les tables
+ * profiles/team_invitations depuis le client — la RLS + le trigger
+ * anti-self-escalation bloqueront, mais les messages d'erreur seraient
+ * obscurs et on perd les verifications business (dernier admin, IDOR…).
+ */
+
+async function fetchJson(
+  input: string,
+  init: RequestInit,
+): Promise<{ ok: boolean; error?: string; data?: Record<string, unknown> }> {
+  try {
+    const res = await fetch(input, {
+      ...init,
+      headers: { "Content-Type": "application/json", ...(init.headers ?? {}) },
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { ok: false, error: data?.error ?? `Erreur ${res.status}` };
+    }
+    return { ok: true, data };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Erreur reseau" };
+  }
+}
+
 export async function updateMemberRole(
   memberId: string,
   teamRole: "admin" | "recruiter" | "viewer",
-): Promise<void> {
-  const supabase = createClient();
-  await supabase
-    .from("profiles")
-    .update({ team_role: teamRole })
-    .eq("id", memberId);
+): Promise<{ ok: boolean; error?: string }> {
+  return fetchJson("/api/team/member", {
+    method: "PATCH",
+    body: JSON.stringify({ memberId, teamRole }),
+  });
 }
 
 export async function removeMemberFromCompany(
   memberId: string,
-): Promise<void> {
-  const supabase = createClient();
-  await supabase
-    .from("profiles")
-    .update({ company_id: null, team_role: null })
-    .eq("id", memberId);
+): Promise<{ ok: boolean; error?: string }> {
+  return fetchJson(`/api/team/member?id=${encodeURIComponent(memberId)}`, {
+    method: "DELETE",
+  });
 }
 
 export async function inviteTeamMember(
-  companyId: string,
   email: string,
   teamRole: "admin" | "recruiter" | "viewer",
-  invitedBy: string,
-  opts?: { companyName?: string; inviterName?: string },
-): Promise<{ ok: boolean; error?: string; linked?: boolean }> {
-  const supabase = createClient();
-
-  // Check if already invited
-  const { data: existing } = await supabase
-    .from("team_invitations")
-    .select("id")
-    .eq("company_id", companyId)
-    .eq("email", email)
-    .eq("status", "pending")
-    .single();
-
-  if (existing) {
-    return { ok: false, error: "Cette personne a deja une invitation en attente." };
-  }
-
-  // Check if already a member
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("id, company_id")
-    .eq("email", email)
-    .single();
-
-  if (profile?.company_id === companyId) {
-    return { ok: false, error: "Cette personne fait deja partie de votre equipe." };
-  }
-
-  // If they have an account, link them directly
-  if (profile) {
-    await supabase
-      .from("profiles")
-      .update({ company_id: companyId, team_role: teamRole })
-      .eq("id", profile.id);
-    return { ok: true, linked: true };
-  }
-
-  // Create a pending invitation
-  const { data: inv, error } = await supabase
-    .from("team_invitations")
-    .insert({
-      company_id: companyId,
-      email,
-      team_role: teamRole,
-      invited_by: invitedBy,
-    })
-    .select("token")
-    .single();
-
-  if (error) {
-    return { ok: false, error: error.message };
-  }
-
-  // Send invitation email via API route
-  const roleLabel = teamRole === "admin" ? "Admin" : teamRole === "recruiter" ? "Recruteur" : "Lecteur";
-  fetch("/api/invite", {
+): Promise<{ ok: boolean; error?: string; linked?: boolean; emailSent?: boolean; inviteLink?: string }> {
+  const res = await fetchJson("/api/team/invite", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      email,
-      companyName: opts?.companyName ?? "",
-      role: roleLabel,
-      inviterName: opts?.inviterName ?? "",
-      token: inv?.token ?? "",
-    }),
-  }).catch(() => {
-    // Fire and forget
+    body: JSON.stringify({ email, teamRole }),
   });
-
-  return { ok: true, linked: false };
+  if (!res.ok) return { ok: false, error: res.error };
+  return {
+    ok: true,
+    linked: Boolean(res.data?.linked),
+    emailSent: Boolean(res.data?.emailSent),
+    inviteLink: typeof res.data?.inviteLink === "string" ? res.data.inviteLink : undefined,
+  };
 }
 
-export async function revokeInvitation(invitationId: string): Promise<void> {
-  const supabase = createClient();
-  await supabase
-    .from("team_invitations")
-    .update({ status: "revoked" })
-    .eq("id", invitationId);
+export async function revokeInvitation(
+  invitationId: string,
+): Promise<{ ok: boolean; error?: string }> {
+  return fetchJson(`/api/team/invitation?id=${encodeURIComponent(invitationId)}`, {
+    method: "DELETE",
+  });
 }

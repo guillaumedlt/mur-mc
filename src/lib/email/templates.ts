@@ -3,6 +3,17 @@
  * All templates return { subject, html } ready for Resend.
  */
 
+/** Echappe les caracteres dangereux pour insertion dans du HTML email. */
+function esc(s: string | number | undefined | null): string {
+  const str = String(s ?? "");
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 const BRAND = {
   name: "Mur.mc",
   url: "https://mur.mc",
@@ -69,11 +80,11 @@ export function candidatureConfirmee(data: {
   jobUrl: string;
 }) {
   return {
-    subject: `Candidature envoyee — ${data.jobTitle}`,
+    subject: `Candidature envoyee — ${esc(data.jobTitle)}`,
     html: layout(`
       ${heading(`Candidature envoyee`)}
-      ${paragraph(`Bonjour ${data.candidatName},`)}
-      ${paragraph(`Votre candidature pour le poste de <strong>${data.jobTitle}</strong> chez <strong>${data.companyName}</strong> a bien ete transmise.`)}
+      ${paragraph(`Bonjour ${esc(data.candidatName)},`)}
+      ${paragraph(`Votre candidature pour le poste de <strong>${esc(data.jobTitle)}</strong> chez <strong>${esc(data.companyName)}</strong> a bien ete transmise.`)}
       ${paragraph(`Le recruteur recevra votre profil et vous contactera s'il souhaite avancer. Vous serez notifie par email a chaque etape.`)}
       ${button("Voir ma candidature", data.jobUrl)}
     `),
@@ -98,13 +109,13 @@ export function statutMisAJour(data: {
   const color = statusColors[data.newStatus] ?? BRAND.accentColor;
 
   return {
-    subject: `${data.statusLabel} — ${data.jobTitle}`,
+    subject: `${esc(data.statusLabel)} — ${esc(data.jobTitle)}`,
     html: layout(`
-      ${heading(data.statusLabel)}
-      ${paragraph(`Bonjour ${data.candidatName},`)}
-      ${paragraph(`Mise a jour de votre candidature pour <strong>${data.jobTitle}</strong> chez <strong>${data.companyName}</strong> :`)}
+      ${heading(esc(data.statusLabel))}
+      ${paragraph(`Bonjour ${esc(data.candidatName)},`)}
+      ${paragraph(`Mise a jour de votre candidature pour <strong>${esc(data.jobTitle)}</strong> chez <strong>${esc(data.companyName)}</strong> :`)}
       <div style="padding:16px;background:#f9f9f8;border-radius:12px;border:1px solid #e5e4e0;margin-bottom:16px">
-        ${badge(data.statusLabel, color)}
+        ${badge(esc(data.statusLabel), color)}
       </div>
       ${button("Voir le detail", data.jobUrl)}
     `),
@@ -120,13 +131,13 @@ export function messageRecruteur(data: {
   jobUrl: string;
 }) {
   return {
-    subject: `Message de ${data.companyName} — ${data.jobTitle}`,
+    subject: `Message de ${esc(data.companyName)} — ${esc(data.jobTitle)}`,
     html: layout(`
       ${heading(`Nouveau message`)}
-      ${paragraph(`Bonjour ${data.candidatName},`)}
-      ${paragraph(`<strong>${data.recruiterName}</strong> de <strong>${data.companyName}</strong> vous a envoye un message concernant votre candidature pour <strong>${data.jobTitle}</strong> :`)}
+      ${paragraph(`Bonjour ${esc(data.candidatName)},`)}
+      ${paragraph(`<strong>${esc(data.recruiterName)}</strong> de <strong>${esc(data.companyName)}</strong> vous a envoye un message concernant votre candidature pour <strong>${esc(data.jobTitle)}</strong> :`)}
       <div style="padding:16px 20px;background:#f9f9f8;border-left:3px solid ${BRAND.color};border-radius:0 12px 12px 0;margin-bottom:16px">
-        <p style="margin:0;font-size:14px;color:#333;line-height:1.6;font-style:italic">${data.messagePreview}</p>
+        <p style="margin:0;font-size:14px;color:#333;line-height:1.6;font-style:italic">${esc(data.messagePreview)}</p>
       </div>
       ${button("Repondre", data.jobUrl)}
     `),
@@ -143,15 +154,15 @@ export function nouvelleOffreMatchante(data: {
   type: string;
 }) {
   return {
-    subject: `Offre recommandee : ${data.jobTitle} (${data.matchScore}% match)`,
+    subject: `Offre recommandee : ${esc(data.jobTitle)} (${esc(data.matchScore)}% match)`,
     html: layout(`
       ${heading(`Une offre qui vous correspond`)}
-      ${paragraph(`Bonjour ${data.candidatName},`)}
+      ${paragraph(`Bonjour ${esc(data.candidatName)},`)}
       ${paragraph(`Nous avons trouve une offre qui correspond a votre profil :`)}
       <div style="padding:20px;background:#f9f9f8;border-radius:12px;border:1px solid #e5e4e0;margin-bottom:16px">
-        <p style="margin:0 0 4px;font-size:18px;font-weight:700;color:#0a0a0a">${data.jobTitle}</p>
-        <p style="margin:0 0 12px;font-size:13px;color:#666">${data.companyName} · ${data.location} · ${data.type}</p>
-        ${badge(`${data.matchScore}% match`)}
+        <p style="margin:0 0 4px;font-size:18px;font-weight:700;color:#0a0a0a">${esc(data.jobTitle)}</p>
+        <p style="margin:0 0 12px;font-size:13px;color:#666">${esc(data.companyName)} · ${esc(data.location)} · ${esc(data.type)}</p>
+        ${badge(`${esc(data.matchScore)}% match`)}
       </div>
       ${button("Voir l'offre", data.jobUrl)}
     `),
@@ -169,15 +180,15 @@ export function nouvelleCandidature(data: {
   candidatureUrl: string;
 }) {
   return {
-    subject: `Nouvelle candidature — ${data.jobTitle}`,
+    subject: `Nouvelle candidature — ${esc(data.jobTitle)}`,
     html: layout(`
       ${heading(`Nouvelle candidature`)}
-      ${paragraph(`Bonjour ${data.recruiterName},`)}
-      ${paragraph(`<strong>${data.candidatName}</strong> a postule pour <strong>${data.jobTitle}</strong>.`)}
+      ${paragraph(`Bonjour ${esc(data.recruiterName)},`)}
+      ${paragraph(`<strong>${esc(data.candidatName)}</strong> a postule pour <strong>${esc(data.jobTitle)}</strong>.`)}
       <div style="padding:16px 20px;background:#f9f9f8;border-radius:12px;border:1px solid #e5e4e0;margin-bottom:16px">
-        <p style="margin:0;font-size:16px;font-weight:600;color:#0a0a0a">${data.candidatName}</p>
-        ${data.candidateHeadline ? `<p style="margin:4px 0 0;font-size:13px;color:#666">${data.candidateHeadline}</p>` : ""}
-        ${data.matchScore && data.matchScore >= 60 ? `<div style="margin-top:8px">${badge(`${data.matchScore}% match`)}</div>` : ""}
+        <p style="margin:0;font-size:16px;font-weight:600;color:#0a0a0a">${esc(data.candidatName)}</p>
+        ${data.candidateHeadline ? `<p style="margin:4px 0 0;font-size:13px;color:#666">${esc(data.candidateHeadline)}</p>` : ""}
+        ${data.matchScore && data.matchScore >= 60 ? `<div style="margin-top:8px">${badge(`${esc(data.matchScore)}% match`)}</div>` : ""}
       </div>
       ${button("Consulter le profil", data.candidatureUrl)}
     `),
@@ -192,15 +203,15 @@ export function candidatTopMatch(data: {
   candidatureUrl: string;
 }) {
   return {
-    subject: `Top Match (${data.matchScore}%) — ${data.candidatName} pour ${data.jobTitle}`,
+    subject: `Top Match (${esc(data.matchScore)}%) — ${esc(data.candidatName)} pour ${esc(data.jobTitle)}`,
     html: layout(`
       ${heading(`Candidat Top Match`)}
-      ${paragraph(`Bonjour ${data.recruiterName},`)}
-      ${paragraph(`Un candidat avec un score de compatibilite eleve a postule pour <strong>${data.jobTitle}</strong> :`)}
+      ${paragraph(`Bonjour ${esc(data.recruiterName)},`)}
+      ${paragraph(`Un candidat avec un score de compatibilite eleve a postule pour <strong>${esc(data.jobTitle)}</strong> :`)}
       <div style="padding:20px;background:#f0fdf4;border-radius:12px;border:1px solid #bbf7d0;margin-bottom:16px;text-align:center">
-        <p style="margin:0;font-size:36px;font-weight:700;color:#16a34a">${data.matchScore}%</p>
+        <p style="margin:0;font-size:36px;font-weight:700;color:#16a34a">${esc(data.matchScore)}%</p>
         <p style="margin:4px 0 0;font-size:14px;color:#333">Score de compatibilite</p>
-        <p style="margin:8px 0 0;font-size:16px;font-weight:600;color:#0a0a0a">${data.candidatName}</p>
+        <p style="margin:8px 0 0;font-size:16px;font-weight:600;color:#0a0a0a">${esc(data.candidatName)}</p>
       </div>
       ${button("Voir le profil", data.candidatureUrl)}
     `),
@@ -214,11 +225,11 @@ export function rappelCandidaturesEnAttente(data: {
   dashboardUrl: string;
 }) {
   return {
-    subject: `${data.count} candidature${data.count > 1 ? "s" : ""} en attente de traitement`,
+    subject: `${esc(data.count)} candidature${data.count > 1 ? "s" : ""} en attente de traitement`,
     html: layout(`
       ${heading(`Candidatures en attente`)}
-      ${paragraph(`Bonjour ${data.recruiterName},`)}
-      ${paragraph(`Vous avez <strong>${data.count} candidature${data.count > 1 ? "s" : ""}</strong> en attente de traitement, dont certaines depuis <strong>${data.oldestDays} jours</strong>.`)}
+      ${paragraph(`Bonjour ${esc(data.recruiterName)},`)}
+      ${paragraph(`Vous avez <strong>${esc(data.count)} candidature${data.count > 1 ? "s" : ""}</strong> en attente de traitement, dont certaines depuis <strong>${esc(data.oldestDays)} jours</strong>.`)}
       ${paragraph(`Les candidats attendent votre retour — un traitement rapide ameliore votre marque employeur.`)}
       ${button("Traiter les candidatures", data.dashboardUrl)}
     `),
@@ -270,6 +281,37 @@ export function rapportHebdo(data: {
       ` : ""}
 
       ${button("Voir le dashboard", data.dashboardUrl)}
+    `),
+  };
+}
+
+// ─── ALERTE EMPLOI (candidat / visiteur SEO) ──────────
+
+export function alerteNouvellesOffres(data: {
+  email: string;
+  label: string;
+  jobCount: number;
+  jobLines: string[];
+  siteUrl: string;
+  unsubUrl: string;
+}) {
+  const jobList = data.jobLines
+    .map((line) => `<li style="margin-bottom:6px;font-size:14px;color:#333;line-height:1.5">${esc(line)}</li>`)
+    .join("");
+
+  return {
+    subject: `${esc(data.jobCount)} nouvelle${data.jobCount > 1 ? "s" : ""} offre${data.jobCount > 1 ? "s" : ""} : ${esc(data.label)} a Monaco`,
+    html: layout(`
+      ${heading(`${esc(data.jobCount)} offre${data.jobCount > 1 ? "s" : ""} pour vous`)}
+      ${paragraph(`Voici les nouvelles offres correspondant a votre alerte <strong>${esc(data.label)}</strong> a Monaco :`)}
+      <ul style="margin:0 0 20px;padding-left:18px">
+        ${jobList}
+      </ul>
+      ${data.jobCount > 8 ? paragraph(`<em>... et ${esc(data.jobCount - 8)} autre${data.jobCount - 8 > 1 ? "s" : ""}.</em>`) : ""}
+      ${button("Voir toutes les offres", data.siteUrl + "/emploi-monaco")}
+      <p style="margin:24px 0 0;font-size:11px;color:#999;line-height:1.5">
+        <a href="${data.unsubUrl}" style="color:#999;text-decoration:underline">Se desabonner de cette alerte</a>
+      </p>
     `),
   };
 }

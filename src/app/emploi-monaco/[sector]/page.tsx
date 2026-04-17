@@ -4,6 +4,8 @@ import { ArrowLeft, Bag, MapPin, Sparks } from "iconoir-react";
 import { Shell } from "@/components/wall/shell";
 import { JobCard } from "@/components/wall/job-card";
 import { fetchAllJobs } from "@/lib/supabase/queries";
+import { CONTRACT_MAP } from "./contracts";
+import { JobAlertForm } from "@/components/wall/job-alert-form";
 
 const SITE_URL = "https://mur.mc";
 
@@ -64,8 +66,33 @@ export async function generateMetadata(
   props: PageProps<"/emploi-monaco/[sector]">,
 ): Promise<Metadata> {
   const { sector: slug } = await props.params;
+
+  // Contrat type pages (/emploi-monaco/cdi, /stage, etc.)
+  const contract = CONTRACT_MAP[slug];
+  if (contract) {
+    return {
+      title: `Offre d'emploi ${contract.label} a Monaco — Emploi ${contract.label} | Mur.mc`,
+      description: `${contract.description} Postulez en direct sur Mur.mc.`,
+      keywords: [
+        `emploi ${contract.label} Monaco`,
+        `offre ${contract.label} Monaco`,
+        `${contract.label} Monaco`,
+        `job ${contract.label} Monaco`,
+      ],
+      alternates: { canonical: `/emploi-monaco/${slug}` },
+      openGraph: {
+        type: "website",
+        url: `${SITE_URL}/emploi-monaco/${slug}`,
+        title: `Emploi ${contract.label} a Monaco | Mur.mc`,
+        description: `Toutes les offres ${contract.label} en Principaute de Monaco.`,
+        siteName: "Mur.mc",
+      },
+    };
+  }
+
+  // Sector pages
   const info = SECTOR_MAP[slug];
-  if (!info) return { title: "Secteur introuvable" };
+  if (!info) return { title: "Secteur introuvable", robots: { index: false } };
 
   return {
     title: `Emploi ${info.label} a Monaco — Offres ${info.label} | Mur.mc`,
@@ -93,8 +120,66 @@ export default async function SectorPage(
   props: PageProps<"/emploi-monaco/[sector]">,
 ) {
   const { sector: slug } = await props.params;
-  const info = SECTOR_MAP[slug];
   const allJobs = await fetchAllJobs();
+
+  // Contract type page (/emploi-monaco/cdi, /stage, etc.)
+  const contract = CONTRACT_MAP[slug];
+  if (contract) {
+    const contractJobs = allJobs.filter((j) => j.type === contract.type);
+    const jsonLd = {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      name: `Emploi ${contract.label} a Monaco`,
+      description: contract.description,
+      url: `${SITE_URL}/emploi-monaco/${slug}`,
+      breadcrumb: {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Mur.mc", item: SITE_URL },
+          { "@type": "ListItem", position: 2, name: "Emploi a Monaco", item: `${SITE_URL}/emploi-monaco` },
+          { "@type": "ListItem", position: 3, name: contract.label, item: `${SITE_URL}/emploi-monaco/${slug}` },
+        ],
+      },
+    };
+    return (
+      <Shell jobs={allJobs}>
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+        <div className="max-w-[1100px] mx-auto">
+          <Link href="/emploi-monaco" className="inline-flex items-center gap-1.5 text-[12.5px] text-foreground/55 hover:text-foreground transition-colors mb-3 px-1">
+            <ArrowLeft width={12} height={12} strokeWidth={2} /> Emploi a Monaco
+          </Link>
+          <header className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-8 lg:py-10 mb-3">
+            <p className="ed-label-sm text-[var(--accent)]">Emploi {contract.label}</p>
+            <h1 className="font-display text-[28px] sm:text-[34px] tracking-[-0.02em] text-foreground mt-2 leading-[1.08]">
+              Offres d&apos;emploi {contract.label} a Monaco
+            </h1>
+            <p className="text-[14.5px] text-muted-foreground mt-3 max-w-2xl leading-[1.7]">
+              {contract.description}
+            </p>
+            <div className="flex flex-wrap items-center gap-2 mt-5">
+              <span className="wall-badge" data-tone="accent"><Bag width={11} height={11} strokeWidth={2} /> {contractJobs.length} offre{contractJobs.length > 1 ? "s" : ""}</span>
+              <span className="wall-badge" data-tone="muted"><MapPin width={11} height={11} strokeWidth={2} /> Monaco</span>
+            </div>
+          </header>
+          <div className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-6 lg:py-8 mb-3">
+            {contractJobs.length === 0 ? (
+              <p className="text-[13.5px] text-muted-foreground italic font-display">Aucune offre {contract.label} en ce moment. Revenez bientot.</p>
+            ) : (
+              <div className="wall-grid" data-density="standard">
+                {contractJobs.map((j, i) => (<JobCard key={j.id} job={j} index={i} />))}
+              </div>
+            )}
+          </div>
+          <div className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-6 lg:py-7">
+            <JobAlertForm label={`${contract.label} a Monaco`} contractType={contract.type} />
+          </div>
+        </div>
+      </Shell>
+    );
+  }
+
+  // Sector page
+  const info = SECTOR_MAP[slug];
 
   if (!info) {
     return (
@@ -183,7 +268,7 @@ export default async function SectorPage(
             </Link>
           </div>
         ) : (
-          <section className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-6 lg:py-8">
+          <section className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-6 lg:py-8 mb-3">
             <div className="wall-grid" data-density="standard">
               {sectorJobs.map((j, i) => (
                 <JobCard key={j.id} job={j} index={i} />
@@ -191,6 +276,11 @@ export default async function SectorPage(
             </div>
           </section>
         )}
+
+        {/* Alerte email */}
+        <section className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-6 lg:py-7">
+          <JobAlertForm label={`${info.label} a Monaco`} sector={info.sector} />
+        </section>
       </div>
     </Shell>
   );

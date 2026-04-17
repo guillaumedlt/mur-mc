@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/send";
 import * as templates from "@/lib/email/templates";
 
@@ -31,7 +32,11 @@ export async function GET(request: Request) {
     return await handleHebdo(supabase);
   }
 
-  return NextResponse.json({ error: "Unknown type. Use ?type=rappel or ?type=hebdo" }, { status: 400 });
+  if (type === "alertes") {
+    return await handleAlertes();
+  }
+
+  return NextResponse.json({ error: "Unknown type. Use ?type=rappel, ?type=hebdo or ?type=alertes" }, { status: 400 });
 }
 
 /**
@@ -85,7 +90,7 @@ async function handleRappel(supabase: any) {
     }
   }
 
-  return NextResponse.json({ sent });
+  return NextResponse.json({ sent, type: "rappel" });
 }
 
 /**
@@ -163,5 +168,88 @@ async function handleHebdo(supabase: any) {
     }
   }
 
-  return NextResponse.json({ sent });
+  return NextResponse.json({ sent, type: "hebdo" });
+}
+
+/**
+ * Alertes : envoie les nouvelles offres aux abonnes.
+ * Daily pour les alertes "daily", weekly (lundi) pour les "weekly".
+ */
+async function handleAlertes() {
+  const admin = createAdminClient();
+  const now = new Date();
+  const isMonday = now.getDay() === 1;
+
+  const { data: alerts } = await admin
+    .from("job_alerts")
+    .select("*")
+    .eq("active", true);
+
+  if (!alerts || alerts.length === 0) {
+    return NextResponse.json({ sent: 0, type: "alertes", reason: "no active alerts" });
+  }
+
+  const { data: recentJobs } = await admin
+    .from("jobs")
+    .select("id, slug, title, type, sector, location, published_at, company:companies(name)")
+    .eq("status", "published")
+    .gte("published_at", new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString())
+    .order("published_at", { ascending: false });
+
+  if (!recentJobs || recentJobs.length === 0) {
+    return NextResponse.json({ sent: 0, type: "alertes", reason: "no recent jobs" });
+  }
+
+  let sent = 0;
+
+  for (const alert of alerts) {
+    if (alert.frequency === "weekly" && !isMonday) continue;
+
+    const since = alert.last_sent_at
+      ? new Date(alert.last_sent_at)
+      : new Date(now.getTime() - (alert.frequency === "weekly" ? 7 : 1) * 24 * 60 * 60 * 1000);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const matching = recentJobs.filter((j: any) => {
+      if (j.published_at && new Date(j.published_at) < since) return false;
+      let hit = false;
+      if (alert.keywords?.length) {
+        const t = (j.title as string).toLowerCase();
+        hit = alert.keywords.some((k: string) => t.includes(k.toLowerCase()));
+      }
+      if (alert.sector && j.sector === alert.sector) hit = true;
+      if (alert.contract_type && j.type === alert.contract_type) hit = true;
+      return hit;
+    });
+
+    if (matching.length === 0) continue;
+
+    const unsubUrl = `${SITE}/api/alerts?token=${alert.token}`;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const jobLines = matching.slice(0, 8).map((j: any) => {
+      const company = (j.company as { name?: string })?.name ?? "Entreprise";
+      return `${j.title} — ${company} (${j.type}, ${j.location})`;
+    });
+
+    const label = alert.keywords?.length
+      ? alert.keywords.join(", ")
+      : alert.sector ?? alert.contract_type ?? "Monaco";
+
+    const email = templates.alerteNouvellesOffres({
+      email: alert.email,
+      label,
+      jobCount: matching.length,
+      jobLines,
+      siteUrl: SITE,
+      unsubUrl,
+    });
+
+    const ok = await sendEmail({ to: alert.email, ...email });
+    if (ok) {
+      sent++;
+      await admin.from("job_alerts").update({ last_sent_at: now.toISOString() }).eq("id", alert.id);
+    }
+  }
+
+  return NextResponse.json({ sent, type: "alertes", alerts: alerts.length });
 }

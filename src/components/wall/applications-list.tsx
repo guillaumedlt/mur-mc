@@ -164,7 +164,11 @@ export function ApplicationsList() {
               key={app.id}
               app={app}
               onWithdraw={async () => {
-                await withdrawApplicationSupabase(app.id);
+                const res = await withdrawApplicationSupabase(app.id);
+                if (!res.ok) {
+                  window.alert(res.error ?? "Impossible de retirer la candidature");
+                  return;
+                }
                 refetch();
               }}
             />

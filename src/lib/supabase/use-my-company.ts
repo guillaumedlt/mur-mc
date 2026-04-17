@@ -89,12 +89,28 @@ export function useMyCompany() {
 }
 
 /**
- * Update company in Supabase.
+ * Update de la company de l'appelant via /api/company (PATCH).
+ * La route serveur verifie que l'appelant est admin/recruiter de la company.
+ * Le companyId est ignore cote serveur — on utilise toujours celui de la session
+ * pour empecher l'IDOR. Il est garde ici en argument par commodite pour le call site
+ * mais non transmis a l'API.
  */
 export async function updateCompanySupabase(
-  companyId: string,
+  _companyId: string,
   patch: Record<string, unknown>,
-): Promise<void> {
-  const supabase = createClient();
-  await supabase.from("companies").update(patch).eq("id", companyId);
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const res = await fetch("/api/company", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ patch }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { ok: false, error: data?.error ?? `Erreur ${res.status}` };
+    }
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Erreur reseau" };
+  }
 }

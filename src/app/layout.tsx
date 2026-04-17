@@ -16,7 +16,7 @@ const fraunces = Fraunces({
   subsets: ["latin"],
   axes: ["opsz", "SOFT"],
   preload: true,
-  display: "swap",
+  display: "optional",
 });
 
 const jetBrains = JetBrains_Mono({
@@ -92,6 +92,7 @@ export const viewport = {
   themeColor: "#FAFAF7",
   width: "device-width",
   initialScale: 1,
+  viewportFit: "cover" as const,
 };
 
 export default function RootLayout({

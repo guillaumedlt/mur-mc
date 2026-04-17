@@ -33,6 +33,7 @@ export function TeamManagement() {
   const user = useUser();
   const { members, invitations, loading, refetch } = useMyTeam();
   const [adding, setAdding] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   if (!user || user.role !== "employer") return null;
 
@@ -104,11 +105,21 @@ export function TeamManagement() {
                 member={m}
                 isCurrentUser={m.id === user.id}
                 onRoleChange={async (role) => {
-                  await updateMemberRole(m.id, role);
+                  setActionError(null);
+                  const res = await updateMemberRole(m.id, role);
+                  if (!res.ok) {
+                    setActionError(res.error ?? "Erreur lors du changement de role");
+                    return;
+                  }
                   refetch();
                 }}
                 onRemove={async () => {
-                  await removeMemberFromCompany(m.id);
+                  setActionError(null);
+                  const res = await removeMemberFromCompany(m.id);
+                  if (!res.ok) {
+                    setActionError(res.error ?? "Erreur lors du retrait du membre");
+                    return;
+                  }
                   refetch();
                 }}
               />
@@ -118,7 +129,12 @@ export function TeamManagement() {
                 key={inv.id}
                 invitation={inv}
                 onRevoke={async () => {
-                  await revokeInvitation(inv.id);
+                  setActionError(null);
+                  const res = await revokeInvitation(inv.id);
+                  if (!res.ok) {
+                    setActionError(res.error ?? "Erreur lors de la revocation");
+                    return;
+                  }
                   refetch();
                 }}
               />
@@ -127,13 +143,15 @@ export function TeamManagement() {
         )}
       </div>
 
+      {actionError && (
+        <div className="mt-3 rounded-xl bg-destructive/10 border border-destructive/20 px-4 py-3 text-[12.5px] text-destructive">
+          {actionError}
+        </div>
+      )}
+
       {/* Add member modal */}
       {adding && (
         <InviteModal
-          companyId={user.companyId ?? ""}
-          userId={user.id}
-          companyName={user.companyName ?? ""}
-          userName={user.name}
           onClose={() => setAdding(false)}
           onDone={() => {
             setAdding(false);
@@ -258,17 +276,9 @@ function InvitationRow({
 }
 
 function InviteModal({
-  companyId,
-  userId,
-  companyName,
-  userName,
   onClose,
   onDone,
 }: {
-  companyId: string;
-  userId: string;
-  companyName: string;
-  userName: string;
   onClose: () => void;
   onDone: () => void;
 }) {
@@ -285,10 +295,7 @@ function InviteModal({
     setSaving(true);
     setError(null);
 
-    const result = await inviteTeamMember(companyId, email.trim(), role, userId, {
-      companyName,
-      inviterName: userName,
-    });
+    const result = await inviteTeamMember(email.trim(), role);
 
     if (!result.ok) {
       setError(result.error ?? "Erreur");

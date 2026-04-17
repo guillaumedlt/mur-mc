@@ -100,6 +100,9 @@ export type EmployerApplication = {
   events: EmployerApplicationEvent[];
   /** Position dans la colonne, pour le drag&drop reorder. */
   order: number;
+  /** Motif de refus structure (enum). Rempli quand status === 'rejected'. */
+  rejectionReason?: string;
+  rejectionNote?: string;
 };
 
 export type TeamRole = "admin" | "recruiter" | "viewer";

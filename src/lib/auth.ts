@@ -118,7 +118,11 @@ export function signOut(): void {
   loaded = true;
   syncing = false;
   if (typeof window !== "undefined") {
+    // Nettoyer TOUS les stores pour eviter la fuite de donnees
+    // entre utilisateurs sur le meme navigateur.
     window.localStorage.removeItem(STORAGE_KEY);
+    window.localStorage.removeItem("mur.employer");
+    window.localStorage.removeItem("mur.candidate");
   }
   emit();
 }

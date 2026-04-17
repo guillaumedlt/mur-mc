@@ -4,10 +4,18 @@ import { CompaniesExplorer } from "@/components/wall/companies-explorer";
 import { fetchAllCompanies, fetchAllJobs } from "@/lib/supabase/queries";
 
 export const metadata: Metadata = {
-  title: "Entreprises qui recrutent à Monaco",
+  title: "Recrutement Monaco — Entreprises qui recrutent en Principaute | Mur.mc",
   description:
-    "Découvrez les entreprises monégasques qui recrutent en ce moment : banques privées, palaces, groupes de yachting, maisons de luxe, cabinets juridiques.",
+    "Decouvrez les entreprises monegasques qui recrutent en ce moment : banques privees, palaces, groupes de yachting, maisons de luxe, cabinets juridiques. Recrutement Monaco en direct.",
+  keywords: ["recrutement Monaco", "entreprises Monaco", "employeurs Monaco", "recrutement Principaute"],
   alternates: { canonical: "/entreprises" },
+  openGraph: {
+    type: "website",
+    title: "Recrutement Monaco — Entreprises qui recrutent",
+    description: "Toutes les entreprises qui recrutent en Principaute de Monaco.",
+    siteName: "Mur.mc",
+    locale: "fr_MC",
+  },
 };
 
 export const revalidate = 300;

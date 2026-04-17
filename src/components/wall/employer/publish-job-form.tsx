@@ -18,6 +18,8 @@ import type { EmployerJob } from "@/lib/employer-store";
 import { useMyJobs } from "@/lib/supabase/use-my-jobs";
 import { useMyCompany } from "@/lib/supabase/use-my-company";
 import { createClient } from "@/lib/supabase/client";
+import { useJobTemplates, saveJobTemplate } from "@/lib/supabase/use-job-templates";
+import { useMyTeam } from "@/lib/supabase/use-my-team";
 import type {
   ExperienceLevel,
   JobType,
@@ -128,6 +130,9 @@ export function PublishJobForm({ existing, onCancel }: Props) {
   const [titleEn, setTitleEn] = useState("");
   const [shortDescEn, setShortDescEn] = useState("");
   const [descriptionEn, setDescriptionEn] = useState("");
+  const [scorecardCriteriaText, setScorecardCriteriaText] = useState("");
+  // Par defaut, le recruteur connecte est assigne a ses nouvelles offres
+  const [assignedTo, setAssignedTo] = useState<string>(user?.id ?? "");
 
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
@@ -185,9 +190,70 @@ export function PublishJobForm({ existing, onCancel }: Props) {
     }
   };
 
-  const { jobs: existingJobs, loading: jobsLoading } = useMyJobs();
+  const { jobs: allExistingJobs, loading: jobsLoading } = useMyJobs();
+  // Les brouillons et les offres fermees ne decomptent pas du quota
+  const existingJobs = allExistingJobs.filter(
+    (j) => j.status === "published" || j.status === "paused",
+  );
   const { company: myCompany } = useMyCompany();
   const jobQuota = myCompany?.job_quota ?? DEFAULT_QUOTA;
+  const [saveAsDraft, setSaveAsDraft] = useState(false);
+  const { templates, refetch: refetchTemplates } = useJobTemplates();
+  const [lastTemplateId, setLastTemplateId] = useState<string>("");
+  const { members } = useMyTeam();
+
+  const applyTemplate = (tplId: string) => {
+    setLastTemplateId(tplId);
+    if (!tplId) return;
+    const tpl = templates.find((t) => t.id === tplId);
+    if (!tpl) return;
+    const p = tpl.payload as Record<string, unknown>;
+    if (typeof p.title === "string") setTitle(p.title);
+    if (typeof p.contract === "string") setContract(p.contract as JobType);
+    if (typeof p.level === "string") setLevel(p.level as ExperienceLevel);
+    if (typeof p.sector === "string") setSector(p.sector as Sector);
+    if (typeof p.location === "string") setLocation(p.location);
+    if (typeof p.remote === "string") setRemote(p.remote as typeof remote);
+    if (typeof p.workTime === "string") setWorkTime(p.workTime as WorkTime);
+    if (typeof p.lang === "string") setLang(p.lang as "fr" | "en");
+    if (typeof p.shortDesc === "string") setShortDesc(p.shortDesc);
+    if (typeof p.description === "string") setDescription(p.description);
+    if (typeof p.salaryMin === "string") setSalaryMin(p.salaryMin);
+    if (typeof p.salaryMax === "string") setSalaryMax(p.salaryMax);
+    if (Array.isArray(p.responsibilities)) setResponsibilities(p.responsibilities as string[]);
+    if (Array.isArray(p.requirements)) setRequirements(p.requirements as string[]);
+    if (Array.isArray(p.benefits)) setBenefits(p.benefits as string[]);
+    if (Array.isArray(p.tags)) setTags(p.tags as string[]);
+    if (Array.isArray(p.customQuestions)) setCustomQuestions(p.customQuestions as string[]);
+    if (typeof p.workPermitRequired === "boolean") setWorkPermitRequired(p.workPermitRequired);
+    if (typeof p.hiringPriority === "string") setHiringPriority(p.hiringPriority);
+    if (typeof p.conventionCollective === "string") setConventionCollective(p.conventionCollective);
+    if (typeof p.titleEn === "string") setTitleEn(p.titleEn);
+    if (typeof p.shortDescEn === "string") setShortDescEn(p.shortDescEn);
+    if (typeof p.descriptionEn === "string") setDescriptionEn(p.descriptionEn);
+    if (typeof p.scorecardCriteriaText === "string") setScorecardCriteriaText(p.scorecardCriteriaText);
+  };
+
+  const saveAsTemplate = async () => {
+    if (!user?.companyId) return;
+    const name = window.prompt("Nom du modele", title || "Nouveau modele");
+    if (!name || !name.trim()) return;
+    const payload = {
+      title, contract, level, sector, location, remote, workTime, lang,
+      shortDesc, description, salaryMin, salaryMax,
+      responsibilities, requirements, benefits, tags, customQuestions,
+      workPermitRequired, hiringPriority, conventionCollective,
+      titleEn, shortDescEn, descriptionEn,
+      scorecardCriteriaText,
+    };
+    const res = await saveJobTemplate(user.companyId, user.id, name.trim(), payload);
+    if (!res.ok) {
+      window.alert(res.error ?? "Echec de l'enregistrement du modele");
+      return;
+    }
+    refetchTemplates();
+    window.alert(`Modele « ${name.trim()} » enregistre.`);
+  };
 
   if (!user || user.role !== "employer") {
     return (
@@ -304,7 +370,15 @@ export function PublishJobForm({ existing, onCancel }: Props) {
       title_en: titleEn || null,
       short_description_en: shortDescEn || null,
       description_en: descriptionEn || null,
-      status: "published",
+      scorecard_criteria: (() => {
+        const arr = scorecardCriteriaText
+          .split("\n")
+          .map((l) => l.trim())
+          .filter(Boolean);
+        return arr.length > 0 ? arr : null;
+      })(),
+      assigned_to: assignedTo || null,
+      status: saveAsDraft ? "draft" : "published",
       featured: false,
     }).select("id").single();
 
@@ -395,6 +469,23 @@ export function PublishJobForm({ existing, onCancel }: Props) {
           <p className="text-[13px] text-muted-foreground mt-2">
             Quelques infos suffisent. Tu pourras affiner après publication.
           </p>
+          {!existing && templates.length > 0 && (
+            <div className="mt-4 flex items-center gap-2 flex-wrap">
+              <label className="text-[11px] uppercase tracking-[0.08em] font-semibold text-foreground/60">
+                Modele
+              </label>
+              <select
+                value={lastTemplateId}
+                onChange={(e) => applyTemplate(e.target.value)}
+                className="wall-select-pill"
+              >
+                <option value="">Partir de zero</option>
+                {templates.map((t) => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </header>
 
         <FormRow label="Titre du poste">
@@ -632,6 +723,37 @@ export function PublishJobForm({ existing, onCancel }: Props) {
           placeholder="Ex : Avez-vous un permis de travail monegasque ?"
         />
 
+        <FormRow
+          label="Criteres d'evaluation (scorecard)"
+          hint="Un critere par ligne. Laisse vide pour utiliser les 6 criteres par defaut."
+        >
+          <textarea
+            value={scorecardCriteriaText}
+            onChange={(e) => setScorecardCriteriaText(e.target.value)}
+            rows={4}
+            placeholder={`Competences techniques\nSoft skills\nAnglais professionnel\nConnaissance du secteur Monaco`}
+            className="bg-white border border-[var(--border)] rounded-xl px-3.5 py-3 text-[13px] outline-none placeholder:text-[var(--tertiary-foreground)] focus:border-[var(--accent)] focus:shadow-[0_0_0_3px_oklch(0.355_0.066_247_/_0.12)] transition-all leading-[1.6] resize-y w-full"
+          />
+        </FormRow>
+
+        <FormRow
+          label="Recruteur assigne"
+          hint="Responsable principal de cette offre. Permet de filtrer 'Mes offres'."
+        >
+          <select
+            value={assignedTo}
+            onChange={(e) => setAssignedTo(e.target.value)}
+            className="wall-select h-[38px] w-full"
+          >
+            <option value="">Aucun</option>
+            {members.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.fullName}{m.id === user.id ? " (moi)" : ""}
+              </option>
+            ))}
+          </select>
+        </FormRow>
+
         <div className="flex items-center justify-between pt-4 border-t border-[var(--border)] gap-3 flex-wrap">
           <div className="flex items-center gap-2 text-[12px] text-foreground/60">
             <Sparks width={12} height={12} strokeWidth={2} className="text-[var(--accent)]" />
@@ -647,8 +769,28 @@ export function PublishJobForm({ existing, onCancel }: Props) {
                 Annuler
               </button>
             )}
+            {!existing && (
+              <>
+                <button
+                  type="button"
+                  onClick={saveAsTemplate}
+                  className="h-11 px-4 rounded-xl border border-[var(--border)] bg-white text-[13px] text-foreground/70 hover:bg-[var(--background-alt)] transition-colors"
+                  title="Enregistrer les champs actuels comme modele reutilisable"
+                >
+                  Enregistrer comme modele
+                </button>
+                <button
+                  type="submit"
+                  onClick={() => setSaveAsDraft(true)}
+                  className="h-11 px-4 rounded-xl border border-[var(--border)] bg-white text-[13px] text-foreground/80 hover:bg-[var(--background-alt)] transition-colors"
+                >
+                  Enregistrer en brouillon
+                </button>
+              </>
+            )}
             <button
               type="submit"
+              onClick={() => setSaveAsDraft(false)}
               className="h-11 px-5 rounded-xl bg-foreground text-background text-[13.5px] font-medium hover:bg-foreground/85 transition-colors"
             >
               {existing ? "Enregistrer" : "Publier l'offre"}

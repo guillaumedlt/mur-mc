@@ -49,6 +49,9 @@ export function CommandPalette({ jobs, open, onClose }: Props) {
     <div
       className="fixed inset-0 z-50 bg-foreground/15 backdrop-blur-[2px] flex items-start justify-center pt-[12vh] px-4"
       onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Recherche rapide"
     >
       <div
         className="w-full max-w-[640px] bg-white rounded-xl border border-[var(--border)] shadow-[0_24px_60px_rgba(10,10,10,0.18)] overflow-hidden"

@@ -41,7 +41,10 @@ export async function generateMetadata(
   const { slug } = await props.params;
   const job = await fetchJobBySlug(slug);
   if (!job) {
-    return { title: "Offre introuvable" };
+    return {
+      title: "Offre introuvable",
+      robots: { index: false, follow: false },
+    };
   }
   const title = `${job.title} — ${job.company.name}`;
   const description =
@@ -49,6 +52,7 @@ export async function generateMetadata(
       ? job.shortDescription
       : `${job.title} chez ${job.company.name} à ${job.location}. ${job.type} · ${job.sector}.`;
   const url = `${SITE_URL}/jobs/${job.slug}`;
+  const isPublished = job.status === "published";
   return {
     title,
     description,
@@ -67,7 +71,10 @@ export async function generateMetadata(
       title,
       description,
     },
-    robots: { index: true, follow: true },
+    // Seules les offres "published" sont indexables. Les draft / paused /
+    // closed restent accessibles (bookmarks, partages) mais sans indexation
+    // pour eviter de polluer le SERP avec des offres inactives.
+    robots: { index: isPublished, follow: true },
   };
 }
 
@@ -129,6 +136,26 @@ function jobJsonLd(job: Job | null) {
     baseSalary,
     directApply: true,
     url: `${SITE_URL}/jobs/${job.slug}`,
+    // Google for Jobs exige validThrough. On met 90 jours apres la publication
+    // sauf si le job est ferme (dans ce cas on met la date actuelle).
+    validThrough: job.status === "closed"
+      ? new Date().toISOString()
+      : new Date(
+          new Date(job.postedAt).getTime() + 90 * 24 * 60 * 60 * 1000,
+        ).toISOString(),
+    experienceRequirements: {
+      "@type": "OccupationalExperienceRequirements",
+      monthsOfExperience: (() => {
+        const map: Record<string, number> = {
+          Junior: 0,
+          "Confirmé": 36,
+          Senior: 60,
+          Manager: 84,
+          Direction: 120,
+        };
+        return map[job.level] ?? 0;
+      })(),
+    },
     identifier: {
       "@type": "PropertyValue",
       name: "Mur.mc",

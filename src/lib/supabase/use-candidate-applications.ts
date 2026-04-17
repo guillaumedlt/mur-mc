@@ -101,7 +101,26 @@ export function useCandidateApplications() {
   return { applications, loading, refetch };
 }
 
-export async function withdrawApplicationSupabase(appId: string): Promise<void> {
+export async function withdrawApplicationSupabase(
+  appId: string,
+): Promise<{ ok: boolean; error?: string }> {
   const supabase = createClient();
-  await supabase.from("applications").delete().eq("id", appId);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { ok: false, error: "Non authentifie" };
+  }
+  // RLS `applications_candidate` bloque deja cross-user en prod, mais on filtre
+  // aussi explicitement ici en defense en profondeur — toute regression RLS
+  // future serait sans effet sans ce filtre.
+  const { error } = await supabase
+    .from("applications")
+    .delete()
+    .eq("id", appId)
+    .eq("candidate_id", user.id);
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
 }

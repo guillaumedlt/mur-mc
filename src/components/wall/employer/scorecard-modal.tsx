@@ -9,7 +9,7 @@ import {
 import { useUser } from "@/lib/auth";
 import { submitScorecard } from "@/lib/supabase/use-interviews";
 
-const CRITERIA = [
+export const DEFAULT_SCORECARD_CRITERIA = [
   "Competences techniques",
   "Soft skills / savoir-etre",
   "Langues",
@@ -29,14 +29,18 @@ const RECOMMENDATIONS = [
 type Props = {
   applicationId: string;
   candidateName: string;
+  /** Criteres custom definis sur le job. Fallback aux 6 par defaut si omis. */
+  jobCriteria?: string[] | null;
   onClose: () => void;
   onSaved: () => void;
 };
 
-export function ScorecardModal({ applicationId, candidateName, onClose, onSaved }: Props) {
+export function ScorecardModal({ applicationId, candidateName, jobCriteria, onClose, onSaved }: Props) {
   const user = useUser();
+  const activeCriteria =
+    jobCriteria && jobCriteria.length > 0 ? jobCriteria : DEFAULT_SCORECARD_CRITERIA;
   const [criteria, setCriteria] = useState(
-    CRITERIA.map((name) => ({ name, rating: 0, comment: "" })),
+    activeCriteria.map((name) => ({ name, rating: 0, comment: "" })),
   );
   const [recommendation, setRecommendation] = useState("");
   const [notes, setNotes] = useState("");
