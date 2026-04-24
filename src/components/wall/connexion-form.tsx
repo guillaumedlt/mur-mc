@@ -42,7 +42,7 @@ export function ConnexionForm({ mode }: Props) {
     try {
       if (mode === "signup") {
         // ─── Inscription ───────────────────────────────
-        const { error: signUpError } = await supabase.auth.signUp({
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -64,6 +64,37 @@ export function ConnexionForm({ mode }: Props) {
           return;
         }
 
+        // Avec autoconfirm, Supabase renvoie une session directement
+        const signedUpUser = signUpData?.user;
+        if (signedUpUser?.email_confirmed_at) {
+          const fullName = name || email.split("@")[0];
+          const parts = fullName.split(" ").filter(Boolean);
+          const initials =
+            parts.length >= 2
+              ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
+              : fullName.slice(0, 2).toUpperCase();
+
+          await supabase.from("profiles").upsert({
+            id: signedUpUser.id,
+            email,
+            full_name: fullName,
+            role,
+          }, { onConflict: "id" });
+
+          localSignIn({
+            id: signedUpUser.id,
+            name: fullName,
+            email,
+            role: role as Role,
+            initials,
+            avatarColor: role === "employer" ? "#7c1d2c" : "#1C3D5A",
+          });
+
+          router.push(role === "employer" ? "/recruteur" : "/candidat");
+          return;
+        }
+
+        // Fallback si autoconfirm desactive
         setConfirmationSent(true);
         setLoading(false);
         return;
