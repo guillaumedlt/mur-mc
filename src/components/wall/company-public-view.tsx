@@ -309,77 +309,42 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
 /* ─── Inline gallery (compact, in-flow) ─────────────── */
 
 function InlineGallery({ blocks }: { blocks: CompanyBlock[] }) {
-  const galleryBlocks = blocks.filter((b) => b.type === "gallery" && b.images && b.images.length > 0);
-  if (galleryBlocks.length === 0) return null;
-
-  const allImages = galleryBlocks.flatMap((b) => b.images ?? []);
+  const allImages = blocks
+    .filter((b) => b.type === "gallery" && b.images && b.images.length > 0)
+    .flatMap((b) => b.images ?? []);
   if (allImages.length === 0) return null;
 
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
 
-  // Layout: premiere image grande, les suivantes en grille compacte
-  const hero = allImages[0];
-  const rest = allImages.slice(1, 5);
-  const moreCount = allImages.length - 5;
-
   return (
     <>
-      <article className="bg-white border border-[var(--border)] rounded-2xl overflow-hidden">
-        <div className="px-5 sm:px-7 lg:px-9 pt-5 pb-3">
-          <p className="ed-label-sm">L&apos;entreprise en images</p>
-        </div>
-        <div className="px-3 pb-3">
-          <div className={`grid gap-1.5 ${rest.length > 0 ? "grid-cols-2" : "grid-cols-1"}`}>
-            {/* Hero image */}
+      <article className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-6 lg:py-8">
+        <p className="ed-label-sm mb-4">L&apos;entreprise en images</p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
+          {allImages.map((img, i) => (
             <button
+              key={i}
               type="button"
-              onClick={() => setLightboxIdx(0)}
-              className={`relative overflow-hidden rounded-xl bg-[var(--background-alt)] group cursor-pointer ${
-                rest.length > 0 ? "row-span-2 aspect-[4/5]" : "aspect-[16/9]"
-              }`}
+              onClick={() => setLightboxIdx(i)}
+              className="relative aspect-[4/3] overflow-hidden rounded-xl bg-[var(--background-alt)] group cursor-pointer"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={hero} alt="Photo 1" className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" />
+              <img src={img} alt={`Photo ${i + 1}`} className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" />
+              <span className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/10 transition-colors" />
             </button>
-
-            {/* Remaining images */}
-            {rest.map((img, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => setLightboxIdx(i + 1)}
-                className="relative overflow-hidden rounded-xl bg-[var(--background-alt)] aspect-[4/3] group cursor-pointer"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={img} alt={`Photo ${i + 2}`} className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" />
-                {i === rest.length - 1 && moreCount > 0 && (
-                  <span className="absolute inset-0 bg-foreground/40 flex items-center justify-center text-background font-display text-[20px]">
-                    +{moreCount}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
+          ))}
         </div>
       </article>
 
-      {/* Lightbox */}
       {lightboxIdx !== null && (
-        <div
-          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
-          onClick={() => setLightboxIdx(null)}
-        >
+        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center" onClick={() => setLightboxIdx(null)}>
           <button type="button" className="absolute top-4 right-4 size-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white z-10" onClick={() => setLightboxIdx(null)} aria-label="Fermer">
             <Xmark width={18} height={18} strokeWidth={2} />
           </button>
           {allImages.length > 1 && (
             <>
-              <button type="button" className="absolute left-4 top-1/2 -translate-y-1/2 size-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white z-10" onClick={(e) => { e.stopPropagation(); setLightboxIdx((lightboxIdx - 1 + allImages.length) % allImages.length); }} aria-label="Precedente">
-                <span className="text-[18px]">&larr;</span>
-              </button>
-              <button type="button" className="absolute right-4 top-1/2 -translate-y-1/2 size-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white z-10" onClick={(e) => { e.stopPropagation(); setLightboxIdx((lightboxIdx + 1) % allImages.length); }} aria-label="Suivante">
-                <span className="text-[18px]">&rarr;</span>
-              </button>
+              <button type="button" className="absolute left-4 top-1/2 -translate-y-1/2 size-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white z-10" onClick={(e) => { e.stopPropagation(); setLightboxIdx((lightboxIdx - 1 + allImages.length) % allImages.length); }} aria-label="Precedente"><span className="text-[18px]">&larr;</span></button>
+              <button type="button" className="absolute right-4 top-1/2 -translate-y-1/2 size-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white z-10" onClick={(e) => { e.stopPropagation(); setLightboxIdx((lightboxIdx + 1) % allImages.length); }} aria-label="Suivante"><span className="text-[18px]">&rarr;</span></button>
             </>
           )}
           {/* eslint-disable-next-line @next/next/no-img-element */}
