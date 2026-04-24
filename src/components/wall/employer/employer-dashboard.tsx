@@ -261,6 +261,50 @@ export function EmployerDashboard() {
 
         {/* Sidebar : raccourcis + activité */}
         <aside className="lg:sticky lg:top-[140px] flex flex-col gap-3">
+          {/* Plan & quota */}
+          {company && (
+            <div className="bg-white border border-[var(--border)] rounded-2xl p-5">
+              <p className="ed-label-sm mb-3">Mon forfait</p>
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <span className={`inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-[12px] font-semibold ${
+                  company.plan === "pro" ? "bg-[var(--accent)]/10 text-[var(--accent)]" :
+                  company.plan === "business" ? "bg-emerald-100 text-emerald-700" :
+                  company.plan === "custom" ? "bg-amber-100 text-amber-800" :
+                  "bg-foreground/5 text-foreground/70"
+                }`}>
+                  <Sparks width={11} height={11} strokeWidth={2} />
+                  {company.plan === "starter" ? "Starter" :
+                   company.plan === "pro" ? "Pro" :
+                   company.plan === "business" ? "Business" : "Sur mesure"}
+                </span>
+              </div>
+              <div className="flex items-baseline justify-between gap-2 mb-2">
+                <span className="text-[12.5px] text-foreground/65">Annonces utilisees</span>
+                <span className="text-[13px] font-mono font-medium text-foreground">
+                  {supabaseJobs.filter((j) => j.status === "published" || j.status === "paused").length}
+                  <span className="text-foreground/40"> / {company.job_quota}</span>
+                </span>
+              </div>
+              <div className="h-2 rounded-full bg-[var(--background-alt)] overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-[var(--accent)] transition-[width] duration-500"
+                  style={{ width: `${Math.min(100, Math.round((supabaseJobs.filter((j) => j.status === "published" || j.status === "paused").length / Math.max(1, company.job_quota)) * 100))}%` }}
+                />
+              </div>
+              {supabaseJobs.filter((j) => j.status === "published" || j.status === "paused").length >= company.job_quota && (
+                <p className="text-[11px] text-destructive mt-2">
+                  Quota atteint — passez au forfait superieur pour publier plus d&apos;offres.
+                </p>
+              )}
+              <Link
+                href="/tarifs"
+                className="mt-3 text-[11.5px] text-[var(--accent)] hover:underline underline-offset-2 inline-flex items-center gap-1"
+              >
+                Voir les forfaits <ArrowUpRight width={10} height={10} strokeWidth={2.2} />
+              </Link>
+            </div>
+          )}
+
           <div className="bg-white border border-[var(--border)] rounded-2xl p-5">
             <p className="ed-label-sm mb-3">Raccourcis</p>
             <div className="flex flex-col">

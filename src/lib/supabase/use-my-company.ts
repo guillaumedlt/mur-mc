@@ -26,6 +26,7 @@ export type MyCompany = {
   cover_url: string | null;
   blocks: unknown[];
   job_quota: number;
+  plan: string;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -52,6 +53,7 @@ function mapCompany(row: any): MyCompany {
     cover_url: row.cover_url ?? null,
     blocks: Array.isArray(row.blocks) ? row.blocks : [],
     job_quota: row.job_quota ?? 1,
+    plan: row.plan ?? "starter",
   };
 }
 
