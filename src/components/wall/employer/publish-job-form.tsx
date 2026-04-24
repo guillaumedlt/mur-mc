@@ -9,7 +9,6 @@ import {
   Lock,
   Mail,
   PlusCircle,
-  Rocket,
   Sparks,
   Xmark,
 } from "iconoir-react";
@@ -414,23 +413,6 @@ export function PublishJobForm({ existing, onCancel }: Props) {
             « {submitted.title} » est désormais visible dans ta liste d&apos;offres.
             Tu peux suivre les candidatures dans le pipeline.
           </p>
-          {/* Booster */}
-          <div className="mt-6 rounded-2xl border border-[var(--accent)]/20 bg-[var(--accent)]/[0.04] p-5 max-w-md mx-auto">
-            <div className="flex items-center gap-2 mb-3">
-              <Rocket width={16} height={16} strokeWidth={2} className="text-[var(--accent)]" />
-              <span className="text-[13px] font-semibold text-foreground">
-                Booster mon offre
-              </span>
-            </div>
-            <a
-              href="mailto:contact@mur.mc?subject=Booster%20mon%20offre"
-              className="h-9 px-4 rounded-full bg-[var(--accent)] text-background text-[12.5px] font-medium hover:bg-[var(--accent)]/85 transition-colors inline-flex items-center gap-1.5"
-            >
-              <Rocket width={12} height={12} strokeWidth={2} />
-              Nous contacter
-            </a>
-          </div>
-
           <div className="flex items-center justify-center gap-2 mt-6 flex-wrap">
             <Link
               href={`/recruteur/offres/${submitted.id}`}
