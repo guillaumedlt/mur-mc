@@ -224,7 +224,7 @@ export function CompanyEditor() {
     // Build blocks from photos + videos
     const blocks: Array<Record<string, unknown>> = [];
     if (photos.length > 0) {
-      blocks.push({ id: "gallery-1", type: "gallery", title: "Nos locaux", images: photos });
+      blocks.push({ id: "gallery-1", type: "gallery", title: "L'entreprise en images", images: photos });
     }
     for (let i = 0; i < videos.length; i++) {
       blocks.push({ id: `video-${i}`, type: "video", title: "Video", content: videos[i] });
@@ -656,7 +656,7 @@ export function CompanyEditor() {
             </div>
           </Card>
           {/* Photos */}
-          <Card title="Galerie photos">
+          <Card title="L'entreprise en images">
             <p className="text-[12px] text-muted-foreground -mt-2 mb-2">
               Montrez vos locaux, vos equipes, vos evenements — comme sur Welcome to the Jungle.
             </p>
