@@ -271,7 +271,8 @@ export function ConnexionForm({ mode, compact }: Props) {
 
   return (
     <div className={compact ? "" : "grid grid-cols-1 lg:grid-cols-5 gap-3 items-stretch"}>
-      {/* ─── Colonne gauche : pitch éditorial ──────────── */}
+      {!compact && (
+      <>  {/* ─── Colonne gauche : pitch éditorial ──────────── */}
       <aside className="lg:col-span-2 bg-white border border-[var(--border)] rounded-2xl p-6 sm:p-8 lg:p-9 flex flex-col">
         <p className="ed-label-sm">
           {mode === "signin" ? "Bon retour" : "Bienvenue"}
@@ -297,7 +298,8 @@ export function ConnexionForm({ mode, compact }: Props) {
         <p className="text-[11px] font-mono text-[var(--tertiary-foreground)] tracking-wider">
           MUR.MC · {new Date().getFullYear()}
         </p>
-      </aside>}
+      </aside>
+      </>)}
 
       {/* ─── Colonne droite : formulaire ───────────────── */}
       <main className={`${compact ? "" : "lg:col-span-3 bg-white border border-[var(--border)] rounded-2xl p-6 sm:p-8 lg:p-9"} flex flex-col`}>
