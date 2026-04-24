@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useUser } from "@/lib/auth";
 import { AdminCompanies } from "./admin-companies";
 import { AdminCVTech } from "./admin-cvtech";
@@ -37,7 +38,8 @@ export function AdminPanel() {
         <header className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-5 mb-3">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
-              <p className="ed-label-sm text-destructive">Admin Mur.mc</p>
+              <Link href="/" className="text-[12px] text-foreground/50 hover:text-foreground transition-colors">&larr; Retour au mur</Link>
+              <p className="ed-label-sm text-destructive mt-1">Admin Mur.mc</p>
               <h1 className="font-display text-[24px] sm:text-[28px] tracking-[-0.015em] text-foreground mt-1">
                 Panel d&apos;administration
               </h1>
