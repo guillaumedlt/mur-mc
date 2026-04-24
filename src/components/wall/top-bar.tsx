@@ -195,6 +195,15 @@ export function TopBar({ count, query, setQuery, onOpenPalette }: Props) {
                 >
                   Mon espace
                 </Link>
+                {user.email === "delachetg@gmail.com" && (
+                  <Link
+                    href="/admin"
+                    onClick={() => setMenuOpen(false)}
+                    className="block px-3 py-1.5 text-[13px] text-destructive font-medium hover:bg-destructive/10 rounded-lg mx-1"
+                  >
+                    Admin
+                  </Link>
+                )}
                 {user.role === "employer" && (
                   <>
                     <Link
