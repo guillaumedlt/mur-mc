@@ -13,7 +13,6 @@ import {
 } from "iconoir-react";
 import type { Company, Sector } from "@/lib/data";
 import { CompanyCard } from "./company-card";
-import { FeaturedCompanies } from "./featured-companies";
 
 type Props = {
   companies: Company[];
@@ -340,72 +339,30 @@ export function CompaniesExplorer({ companies, counts }: Props) {
           </div>
         </div>
 
-        {/* Featured hero — visible uniquement sans filtres */}
-        {!isActive && sort === "jobs" && (() => {
-          const featured = filtered.filter((c) => c.hasCover).slice(0, 3);
-          const featuredIds = new Set(featured.map((c) => c.id));
-          const standard = filtered.filter((c) => !featuredIds.has(c.id));
-
-          return (
-            <>
-              <FeaturedCompanies companies={featured} counts={counts} />
-
-              {standard.length === 0 && featured.length === 0 ? (
-                <div className="py-20 text-center">
-                  <p className="font-display italic text-[18px] text-foreground">
-                    Aucune entreprise ne correspond à ces critères.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={reset}
-                    className="mt-4 text-[13px] text-[var(--accent)] hover:underline underline-offset-2"
-                  >
-                    Élargir la recherche
-                  </button>
-                </div>
-              ) : (
-                <div className="wall-grid" data-density="standard">
-                  {standard.map((c, i) => (
-                    <CompanyCard
-                      key={c.id}
-                      company={c}
-                      jobCount={counts[c.id] ?? 0}
-                      index={i}
-                    />
-                  ))}
-                </div>
-              )}
-            </>
-          );
-        })()}
-
-        {/* Grid standard — quand des filtres sont actifs */}
-        {(isActive || sort !== "jobs") && (
-          filtered.length === 0 ? (
-            <div className="py-20 text-center">
-              <p className="font-display italic text-[18px] text-foreground">
-                Aucune entreprise ne correspond à ces critères.
-              </p>
-              <button
-                type="button"
-                onClick={reset}
-                className="mt-4 text-[13px] text-[var(--accent)] hover:underline underline-offset-2"
-              >
-                Élargir la recherche
-              </button>
-            </div>
-          ) : (
-            <div className="wall-grid" data-density="standard">
-              {filtered.map((c, i) => (
-                <CompanyCard
-                  key={c.id}
-                  company={c}
-                  jobCount={counts[c.id] ?? 0}
-                  index={i}
-                />
-              ))}
-            </div>
-          )
+        {filtered.length === 0 ? (
+          <div className="py-20 text-center">
+            <p className="font-display italic text-[18px] text-foreground">
+              Aucune entreprise ne correspond a ces criteres.
+            </p>
+            <button
+              type="button"
+              onClick={reset}
+              className="mt-4 text-[13px] text-[var(--accent)] hover:underline underline-offset-2"
+            >
+              Elargir la recherche
+            </button>
+          </div>
+        ) : (
+          <div className="wall-grid" data-density="standard">
+            {filtered.map((c, i) => (
+              <CompanyCard
+                key={c.id}
+                company={c}
+                jobCount={counts[c.id] ?? 0}
+                index={i}
+              />
+            ))}
+          </div>
         )}
       </main>
     </div>
