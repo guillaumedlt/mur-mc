@@ -6,15 +6,17 @@ import { useUser } from "@/lib/auth";
 import { AdminCompanies } from "./admin-companies";
 import { AdminCVTech } from "./admin-cvtech";
 import { AdminContacts } from "./admin-contacts";
+import { AdminStats } from "./admin-stats";
 
 const ADMIN_EMAILS = ["delachetg@gmail.com"];
 
-type Tab = "companies" | "cvtech" | "contacts";
+type Tab = "companies" | "cvtech" | "contacts" | "stats";
 
 const TABS: Array<{ key: Tab; label: string }> = [
   { key: "companies", label: "Entreprises" },
   { key: "cvtech", label: "CVTech" },
   { key: "contacts", label: "Demandes" },
+  { key: "stats", label: "Stats" },
 ];
 
 export function AdminPanel() {
@@ -66,6 +68,7 @@ export function AdminPanel() {
         {tab === "companies" && <AdminCompanies />}
         {tab === "cvtech" && <AdminCVTech />}
         {tab === "contacts" && <AdminContacts />}
+        {tab === "stats" && <AdminStats />}
       </div>
     </div>
   );
