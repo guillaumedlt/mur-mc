@@ -116,22 +116,33 @@ export function EmployerDashboard() {
       <header className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-6 lg:py-7 mb-3">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="flex items-start gap-4 min-w-0">
-            <span
-              className="size-14 rounded-2xl flex items-center justify-center text-white font-display text-[18px] font-medium ring-1 ring-black/5 shadow-[0_2px_10px_-2px_rgba(10,10,10,0.18)] shrink-0"
-              style={{
-                background: `linear-gradient(155deg, ${user.avatarColor}, #122a3f)`,
-              }}
-            >
-              {user.initials}
-            </span>
+            {company?.logo_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={company.logo_url}
+                alt={company.name}
+                className="size-14 rounded-2xl object-cover ring-1 ring-black/5 shrink-0"
+              />
+            ) : (
+              <span
+                className="size-14 rounded-2xl flex items-center justify-center text-white font-display text-[18px] font-medium ring-1 ring-black/5 shadow-[0_2px_10px_-2px_rgba(10,10,10,0.18)] shrink-0"
+                style={{
+                  background: `linear-gradient(155deg, ${company?.logo_color ?? user.avatarColor}, #122a3f)`,
+                }}
+              >
+                {company?.initials ?? user.initials}
+              </span>
+            )}
             <div className="min-w-0">
-              <p className="ed-label-sm">Mon espace recruteur</p>
+              <p className="ed-label-sm">{company?.name ?? "Mon espace recruteur"}</p>
               <h1 className="font-display text-[22px] sm:text-[26px] lg:text-[28px] tracking-[-0.015em] text-foreground mt-1">
-                Bonjour, {user.name.split(" ")[0]}.
+                Tableau de bord
               </h1>
-              <p className="text-[13px] text-muted-foreground mt-1 line-clamp-1">
-                {displayName}
-              </p>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-[12.5px] text-muted-foreground">
+                {company?.sector && <span>{company.sector}</span>}
+                {company?.location && <span>· {company.location}</span>}
+                {company?.size && <span>· {company.size} collaborateurs</span>}
+              </div>
             </div>
           </div>
           <Link
