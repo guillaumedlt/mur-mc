@@ -15,9 +15,9 @@ import { type AuthUser, type Role, signIn as localSignIn } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/client";
 
 type Mode = "signin" | "signup";
-type Props = { mode: Mode };
+type Props = { mode: Mode; compact?: boolean };
 
-export function ConnexionForm({ mode }: Props) {
+export function ConnexionForm({ mode, compact }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [role, setRole] = useState<Role>("candidate");
@@ -270,7 +270,7 @@ export function ConnexionForm({ mode }: Props) {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-5 gap-3 items-stretch">
+    <div className={compact ? "" : "grid grid-cols-1 lg:grid-cols-5 gap-3 items-stretch"}>
       {/* ─── Colonne gauche : pitch éditorial ──────────── */}
       <aside className="lg:col-span-2 bg-white border border-[var(--border)] rounded-2xl p-6 sm:p-8 lg:p-9 flex flex-col">
         <p className="ed-label-sm">
@@ -297,10 +297,10 @@ export function ConnexionForm({ mode }: Props) {
         <p className="text-[11px] font-mono text-[var(--tertiary-foreground)] tracking-wider">
           MUR.MC · {new Date().getFullYear()}
         </p>
-      </aside>
+      </aside>}
 
       {/* ─── Colonne droite : formulaire ───────────────── */}
-      <main className="lg:col-span-3 bg-white border border-[var(--border)] rounded-2xl p-6 sm:p-8 lg:p-9 flex flex-col">
+      <main className={`${compact ? "" : "lg:col-span-3 bg-white border border-[var(--border)] rounded-2xl p-6 sm:p-8 lg:p-9"} flex flex-col`}>
         {/* Toggle role */}
         <RoleToggle role={role} onChange={setRole} />
 

@@ -48,7 +48,7 @@ export function InscriptionForm() {
           <p className="text-[13.5px] text-muted-foreground mt-2 mb-6">
             Postulez aux offres de Monaco en un clic.
           </p>
-          <ConnexionForm mode="signup" />
+          <ConnexionForm mode="signup" compact />
         </>
       ) : (
         <>
