@@ -12,6 +12,7 @@ import {
   Check,
   Clock,
   Copy,
+  EditPencil,
   EuroSquare,
   Eye,
   Globe,
@@ -309,6 +310,10 @@ export function EmployerJobDetail({ id }: Props) {
               >
                 <Group width={13} height={13} strokeWidth={2} />
                 Pipeline candidats
+              </Link>
+              <Link href={`/recruteur/offres/${job.id}/modifier`} className="h-10 px-4 rounded-xl border border-[var(--accent)]/30 bg-[var(--accent)]/[0.04] text-[var(--accent)] text-[12.5px] font-medium hover:bg-[var(--accent)]/10 transition-colors flex items-center justify-center gap-2">
+                <EditPencil width={13} height={13} strokeWidth={2} />
+                Modifier l&apos;offre
               </Link>
               {job.status === "draft" ? (
                 <button

@@ -343,9 +343,7 @@ export function PublishJobForm({ existing, onCancel }: Props) {
       .replace(/(^-|-$)/g, "")
       .slice(0, 50) + "-" + Date.now().toString(36).slice(-5);
 
-    const { data: newJob } = await supabase.from("jobs").insert({
-      company_id: user.companyId,
-      slug,
+    const jobPayload = {
       title,
       type: contract,
       level,
@@ -378,14 +376,28 @@ export function PublishJobForm({ existing, onCancel }: Props) {
         return arr.length > 0 ? arr : null;
       })(),
       assigned_to: assignedTo || null,
-      status: saveAsDraft ? "draft" : "published",
-      featured: false,
-    }).select("id").single();
+    };
 
-    setSubmitted({
-      id: newJob?.id ?? "",
-      title,
-    } as EmployerJob);
+    if (existing) {
+      // UPDATE existant + bump published_at pour remonter dans les recentes
+      await supabase.from("jobs").update({
+        ...jobPayload,
+        published_at: new Date().toISOString(),
+      }).eq("id", existing.id);
+
+      setSubmitted({ id: existing.id, title } as EmployerJob);
+    } else {
+      // INSERT nouvelle offre
+      const { data: newJob } = await supabase.from("jobs").insert({
+        company_id: user.companyId,
+        slug,
+        ...jobPayload,
+        status: saveAsDraft ? "draft" : "published",
+        featured: false,
+      }).select("id").single();
+
+      setSubmitted({ id: newJob?.id ?? "", title } as EmployerJob);
+    }
   };
 
   if (submitted) {
@@ -396,7 +408,7 @@ export function PublishJobForm({ existing, onCancel }: Props) {
             <BadgeCheck width={26} height={26} strokeWidth={2} />
           </span>
           <h1 className="font-display text-[24px] sm:text-[28px] tracking-[-0.015em] text-foreground mt-4">
-            Ton offre est en ligne.
+            {existing ? "Offre mise a jour." : "Ton offre est en ligne."}
           </h1>
           <p className="text-[13.5px] text-muted-foreground mt-2 max-w-md mx-auto">
             « {submitted.title} » est désormais visible dans ta liste d&apos;offres.
