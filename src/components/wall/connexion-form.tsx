@@ -303,8 +303,6 @@ export function ConnexionForm({ mode, compact }: Props) {
 
       {/* ─── Colonne droite : formulaire ───────────────── */}
       <main className={`${compact ? "" : "lg:col-span-3 bg-white border border-[var(--border)] rounded-2xl p-6 sm:p-8 lg:p-9"} flex flex-col`}>
-        {/* Toggle role */}
-        <RoleToggle role={role} onChange={setRole} />
 
         {/* Titre + sous-titre */}
         <div className="text-center mt-6">
