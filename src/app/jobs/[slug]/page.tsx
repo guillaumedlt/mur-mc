@@ -300,7 +300,7 @@ export default async function JobPage(props: PageProps<"/jobs/[slug]">) {
                   <h3 className="font-display text-[18px] leading-tight tracking-[-0.005em]">
                     {job.company.name}
                   </h3>
-                  <p className="text-[13.5px] text-muted-foreground leading-[1.65] mt-2">
+                  <p className="text-[13.5px] text-muted-foreground leading-[1.65] mt-2 line-clamp-3">
                     {job.company.description}
                   </p>
                   <Link
