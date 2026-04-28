@@ -1,21 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import {
-  Bag,
-  Building,
-  Calendar,
-  Clock,
-  Eye,
-  Group,
-  MapPin,
-  SendMail,
-  Sparks,
-  ArrowUp,
-  ArrowDown,
-  Download,
-} from "iconoir-react";
-import { createClient } from "@/lib/supabase/client";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowUp, ArrowDown } from "iconoir-react";
 
 type Period = "7d" | "30d" | "90d" | "all";
 
@@ -31,31 +17,24 @@ type RawData = {
 export function AdminStats() {
   const [data, setData] = useState<RawData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [fetched, setFetched] = useState(false);
   const [period, setPeriod] = useState<Period>("30d");
 
-  if (!fetched) {
-    setFetched(true);
-    const supabase = createClient();
-    Promise.all([
-      supabase.from("companies").select("id, name, plan, sector, created_at"),
-      supabase.from("jobs").select("id, company_id, status, views, type, sector, level, remote, created_at, published_at"),
-      supabase.from("applications").select("id, job_id, status, source, match_score, applied_at"),
-      supabase.from("profiles").select("id, location, skills, languages, experience_years, open_to_work, created_at").eq("role", "candidate"),
-      supabase.from("job_alerts").select("id, active, frequency, created_at"),
-      supabase.from("stories").select("id, slug, created_at"),
-    ]).then(([co, jo, ap, ca, al, st]) => {
-      setData({
-        companies: co.data ?? [],
-        jobs: jo.data ?? [],
-        applications: ap.data ?? [],
-        candidates: ca.data ?? [],
-        alerts: al.data ?? [],
-        stories: st.data ?? [],
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/admin/stats")
+      .then((r) => r.json())
+      .then((d: RawData) => {
+        if (cancelled) return;
+        setData(d);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (!cancelled) setLoading(false);
       });
-      setLoading(false);
-    });
-  }
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   if (loading || !data) {
     return <div className="flex justify-center py-12"><span className="size-5 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin" /></div>;

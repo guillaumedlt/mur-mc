@@ -1,18 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowUpRight,
   Download,
-  Eye,
   Mail,
   MapPin,
   Phone,
   Search,
-  SortDown,
 } from "iconoir-react";
-import { createClient } from "@/lib/supabase/client";
 
 type Candidate = {
   id: string;
@@ -39,53 +35,28 @@ type SortKey = "recent" | "name" | "applications" | "experience";
 export function AdminCVTech() {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(true);
-  const [fetched, setFetched] = useState(false);
   const [query, setQuery] = useState("");
   const [skillFilter, setSkillFilter] = useState("");
   const [langFilter, setLangFilter] = useState("");
   const [sort, setSort] = useState<SortKey>("recent");
   const [expanded, setExpanded] = useState<string | null>(null);
 
-  if (!fetched) {
-    setFetched(true);
-    const supabase = createClient();
-    supabase
-      .from("profiles")
-      .select("*, applications(count)")
-      .eq("role", "candidate")
-      .order("created_at", { ascending: false })
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .then(({ data }: { data: any }) => {
-        setCandidates(
-          (data ?? []).map(
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (p: any) => ({
-              id: p.id,
-              fullName: p.full_name ?? "",
-              email: p.email ?? "",
-              phone: p.phone ?? null,
-              location: p.location ?? null,
-              headline: p.headline ?? null,
-              bio: p.bio ?? null,
-              skills: p.skills ?? [],
-              languages: p.languages ?? [],
-              sectors: p.sectors ?? [],
-              experienceYears: p.experience_years ?? null,
-              cvUrl: p.cv_url ?? null,
-              cvFileName: p.cv_file_name ?? null,
-              linkedinUrl: p.linkedin_url ?? null,
-              openToWork: p.open_to_work ?? false,
-              applicationCount:
-                Array.isArray(p.applications) && p.applications.length > 0
-                  ? p.applications[0]?.count ?? 0
-                  : 0,
-              createdAt: p.created_at,
-            }),
-          ),
-        );
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/admin/cvtech")
+      .then((r) => r.json())
+      .then((data: { candidates?: Candidate[] }) => {
+        if (cancelled) return;
+        setCandidates(data.candidates ?? []);
         setLoading(false);
+      })
+      .catch(() => {
+        if (!cancelled) setLoading(false);
       });
-  }
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // All unique skills and languages for filters
   const allSkills = useMemo(() => {
@@ -139,7 +110,7 @@ export function AdminCVTech() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `mur-mc-cvtech-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `montecarlowork-cvtech-${new Date().toISOString().slice(0, 10)}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -236,7 +207,7 @@ export function AdminCVTech() {
                     </div>
                   </td>
                   <td className="py-3 pr-3 text-[12px] text-foreground/65">{c.languages.join(", ") || "—"}</td>
-                  <td className="py-3 pr-3 text-center font-mono">{c.experienceYears ?? "���"}</td>
+                  <td className="py-3 pr-3 text-center font-mono">{c.experienceYears ?? "—"}</td>
                   <td className="py-3 pr-3 text-center font-mono">{c.applicationCount}</td>
                   <td className="py-3 pr-3">
                     {c.cvUrl ? (

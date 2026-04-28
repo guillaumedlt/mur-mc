@@ -8,6 +8,8 @@ import { AdminCVTech } from "./admin-cvtech";
 import { AdminContacts } from "./admin-contacts";
 import { AdminStats } from "./admin-stats";
 
+// UX-only check — la securite reelle est cote serveur dans /api/admin/* via
+// `requireAdmin()`. Source de verite : env var ADMIN_EMAILS sur Vercel.
 const ADMIN_EMAILS = ["delachetg@gmail.com"];
 
 type Tab = "companies" | "cvtech" | "contacts" | "stats";

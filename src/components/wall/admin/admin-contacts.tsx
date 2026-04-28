@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useEffect, useState } from "react";
 
 type ContactRequest = {
   id: string;
@@ -18,42 +17,33 @@ type ContactRequest = {
 export function AdminContacts() {
   const [requests, setRequests] = useState<ContactRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [fetched, setFetched] = useState(false);
 
-  if (!fetched) {
-    setFetched(true);
-    const supabase = createClient();
-    supabase
-      .from("contact_requests")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(100)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .then(({ data }: { data: any }) => {
-        setRequests(
-          (data ?? []).map(
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (r: any) => ({
-              id: r.id,
-              companyName: r.company_name,
-              contactName: r.contact_name,
-              email: r.email,
-              phone: r.phone,
-              message: r.message,
-              plan: r.plan,
-              status: r.status,
-              createdAt: r.created_at,
-            }),
-          ),
-        );
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/admin/contacts")
+      .then((r) => r.json())
+      .then((data: { requests?: ContactRequest[] }) => {
+        if (cancelled) return;
+        setRequests(data.requests ?? []);
         setLoading(false);
+      })
+      .catch(() => {
+        if (!cancelled) setLoading(false);
       });
-  }
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const updateStatus = async (id: string, status: string) => {
-    const supabase = createClient();
-    await supabase.from("contact_requests").update({ status }).eq("id", id);
-    setRequests((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
+    const res = await fetch("/api/admin/contacts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, status }),
+    });
+    if (res.ok) {
+      setRequests((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
+    }
   };
 
   if (loading) {

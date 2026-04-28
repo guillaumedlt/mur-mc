@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowUpRight, Building, SendMail } from "iconoir-react";
-import { createClient } from "@/lib/supabase/client";
+import { ArrowUpRight, SendMail } from "iconoir-react";
 
 type Company = {
   id: string;
@@ -27,65 +26,61 @@ const PLAN_OPTIONS = [
 export function AdminCompanies() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
-  const [fetched, setFetched] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteCompany, setInviteCompany] = useState("");
   const [inviteMsg, setInviteMsg] = useState("");
 
-  if (!fetched) {
-    setFetched(true);
-    const supabase = createClient();
-    supabase
-      .from("companies")
-      .select("id, name, slug, plan, job_quota, sector, created_at")
-      .order("created_at", { ascending: false })
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .then(async ({ data }: { data: any }) => {
-        const list: Company[] = [];
-        for (const c of data ?? []) {
-          const { count: memberCount } = await supabase
-            .from("profiles")
-            .select("id", { count: "exact", head: true })
-            .eq("company_id", c.id);
-          const { count: jobCount } = await supabase
-            .from("jobs")
-            .select("id", { count: "exact", head: true })
-            .eq("company_id", c.id)
-            .in("status", ["published", "paused"]);
-          list.push({
-            id: c.id,
-            name: c.name,
-            slug: c.slug,
-            plan: c.plan ?? "starter",
-            jobQuota: c.job_quota ?? 3,
-            sector: c.sector ?? "",
-            memberCount: memberCount ?? 0,
-            jobCount: jobCount ?? 0,
-            createdAt: c.created_at,
-          });
-        }
-        setCompanies(list);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/admin/companies")
+      .then((r) => r.json())
+      .then((data: { companies?: Company[] }) => {
+        if (cancelled) return;
+        setCompanies(data.companies ?? []);
         setLoading(false);
+      })
+      .catch(() => {
+        if (!cancelled) setLoading(false);
       });
-  }
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const updatePlan = async (id: string, plan: string) => {
     const preset = PLAN_OPTIONS.find((p) => p.value === plan);
-    const quota = preset?.quota;
-    const supabase = createClient();
-    if (quota !== null && quota !== undefined) {
-      await supabase.from("companies").update({ plan, job_quota: quota }).eq("id", id);
-      setCompanies((prev) => prev.map((c) => c.id === id ? { ...c, plan, jobQuota: quota } : c));
-    } else {
-      await supabase.from("companies").update({ plan }).eq("id", id);
-      setCompanies((prev) => prev.map((c) => c.id === id ? { ...c, plan } : c));
+    const res = await fetch("/api/admin/companies", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, plan }),
+    });
+    if (res.ok) {
+      setCompanies((prev) =>
+        prev.map((c) =>
+          c.id === id
+            ? {
+                ...c,
+                plan,
+                jobQuota:
+                  preset && preset.quota !== null ? preset.quota : c.jobQuota,
+              }
+            : c,
+        ),
+      );
     }
   };
 
   const updateQuota = async (id: string, quota: number) => {
-    const supabase = createClient();
-    await supabase.from("companies").update({ job_quota: quota }).eq("id", id);
-    setCompanies((prev) => prev.map((c) => c.id === id ? { ...c, jobQuota: quota } : c));
+    const res = await fetch("/api/admin/companies", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, jobQuota: quota }),
+    });
+    if (res.ok) {
+      setCompanies((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, jobQuota: quota } : c)),
+      );
+    }
   };
 
   const sendInvite = async () => {
