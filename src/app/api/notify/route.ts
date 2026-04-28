@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/send";
@@ -37,71 +38,123 @@ async function logOutboundMessage(params: {
   }
 }
 
+type ResolvedApplication = {
+  id: string;
+  candidate_id: string;
+  job_id: string;
+  job_title: string;
+  job_company_id: string;
+  company_name: string;
+  candidate_email: string;
+  candidate_name: string;
+};
+
 /**
- * Resolve the recruiter email(s) for a given job ID.
- * Finds all admin/recruiter profiles linked to the job's company.
+ * Charge l'application + jointures critiques en une requete. Utilise
+ * service_role pour ne PAS dependre des policies RLS du client (sinon une
+ * requete d'un user externe au job retournerait un row vide qui pourrait
+ * etre confondu avec "application introuvable").
+ */
+async function loadApplication(
+  applicationId: string,
+): Promise<ResolvedApplication | null> {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("applications")
+    .select(
+      `id,
+       candidate_id,
+       job:jobs(id, title, company_id, company:companies(name)),
+       candidate:profiles!applications_candidate_id_fkey(email, full_name)`,
+    )
+    .eq("id", applicationId)
+    .maybeSingle();
+
+  if (!data) return null;
+  // Supabase serialise les jointures (avec ou sans `!inner`) comme des tableaux
+  // d'un seul element pour les relations parent-vers-enfant resolues 1:1.
+  const jobRel = data.job as unknown;
+  const candidateRel = data.candidate as unknown;
+  const job = (Array.isArray(jobRel) ? jobRel[0] : jobRel) as
+    | {
+        id: string;
+        title: string;
+        company_id: string;
+        company:
+          | { name: string }
+          | { name: string }[]
+          | null;
+      }
+    | null;
+  const candidate = (Array.isArray(candidateRel) ? candidateRel[0] : candidateRel) as
+    | { email: string; full_name: string | null }
+    | null;
+  if (!job || !candidate) return null;
+  const company = Array.isArray(job.company) ? job.company[0] : job.company;
+  return {
+    id: data.id as string,
+    candidate_id: data.candidate_id as string,
+    job_id: job.id,
+    job_title: job.title,
+    job_company_id: job.company_id,
+    company_name: company?.name ?? "Entreprise",
+    candidate_email: candidate.email,
+    candidate_name: candidate.full_name ?? candidate.email.split("@")[0],
+  };
+}
+
+/** L'appelant fait-il partie de l'equipe recruteur de la company qui owns ce job ? */
+async function isCallerEmployerOfCompany(
+  supabase: SupabaseClient,
+  userId: string,
+  companyId: string,
+): Promise<boolean> {
+  const { data } = await supabase
+    .from("profiles")
+    .select("company_id, team_role, role")
+    .eq("id", userId)
+    .maybeSingle();
+  if (!data) return false;
+  if (data.role !== "employer") return false;
+  if (data.company_id !== companyId) return false;
+  return ["admin", "recruiter"].includes(data.team_role ?? "");
+}
+
+/**
+ * Resolve the recruiter email(s) for a given company.
+ * Finds all admin/recruiter profiles linked to the company.
  */
 async function resolveRecruiterEmails(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  supabase: any,
-  jobId: string,
+  companyId: string,
 ): Promise<Array<{ email: string; name: string }>> {
-  const { data: job } = await supabase
-    .from("jobs")
-    .select("company_id")
-    .eq("id", jobId)
-    .single();
-  if (!job) return [];
-
-  const { data: profiles } = await supabase
+  const admin = createAdminClient();
+  const { data: profiles } = await admin
     .from("profiles")
     .select("email, full_name")
-    .eq("company_id", job.company_id)
+    .eq("company_id", companyId)
     .in("team_role", ["admin", "recruiter"]);
 
-  return (profiles ?? []).map((p: { email: string; full_name: string }) => ({
+  return (profiles ?? []).map((p: { email: string; full_name: string | null }) => ({
     email: p.email,
     name: p.full_name ?? p.email.split("@")[0],
   }));
 }
 
 /**
- * Resolve candidate info from application ID.
- */
-async function resolveCandidateFromApp(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  supabase: any,
-  applicationId: string,
-): Promise<{ email: string; name: string; jobTitle: string; companyName: string } | null> {
-  const { data } = await supabase
-    .from("applications")
-    .select(`
-      candidate_id,
-      job:jobs(title, company:companies(name)),
-      candidate:profiles!applications_candidate_id_fkey(email, full_name)
-    `)
-    .eq("id", applicationId)
-    .single();
-
-  if (!data) return null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const c = data.candidate as any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const j = data.job as any;
-  return {
-    email: c?.email ?? "",
-    name: c?.full_name ?? "Candidat",
-    jobTitle: j?.title ?? "Offre",
-    companyName: j?.company?.name ?? "Entreprise",
-  };
-}
-
-/**
  * POST /api/notify
- * Body: { type, data }
+ * Body: { type, data: { applicationId, ... } }
  *
- * Handles all email notifications. Auto-resolves recruiter/candidate
- * emails from Supabase when not provided.
+ * Envoie des notifications email transactionnelles. L'authz est verifiee
+ * cote serveur pour chaque type :
+ *   - candidature_confirmee / nouvelle_candidature / candidat_top_match :
+ *     l'appelant doit etre le candidat de l'application
+ *   - statut_mis_a_jour / message_recruteur :
+ *     l'appelant doit etre un recruteur (admin/recruiter) de la company
+ *     qui owns le job de l'application
+ *
+ * Le client ne peut PAS spoofer l'email destinataire ni le contenu de
+ * l'application (jobTitle, companyName, candidatEmail) — tout est resolu
+ * cote serveur depuis l'applicationId.
  */
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -113,145 +166,164 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Non authentifie" }, { status: 401 });
   }
 
-  const body = await request.json();
-  const { type, data } = body;
+  let body: { type?: string; data?: Record<string, unknown> };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+  const type = typeof body?.type === "string" ? body.type : "";
+  const data = (body?.data ?? {}) as Record<string, unknown>;
+  const applicationId =
+    typeof data.applicationId === "string" ? data.applicationId : null;
+
+  if (!applicationId) {
+    return NextResponse.json(
+      { error: "applicationId required" },
+      { status: 400 },
+    );
+  }
+
+  const app = await loadApplication(applicationId);
+  if (!app) {
+    return NextResponse.json(
+      { error: "Application introuvable" },
+      { status: 404 },
+    );
+  }
 
   const results: boolean[] = [];
 
   switch (type) {
-    // ─── CANDIDAT NOTIFICATIONS ─────────────────────
+    // ─── CANDIDAT envoie a lui-meme / aux recruteurs ────────
 
     case "candidature_confirmee": {
+      if (app.candidate_id !== user.id) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
       const email = templates.candidatureConfirmee({
-        candidatName: data.candidatName,
-        jobTitle: data.jobTitle,
-        companyName: data.companyName,
-        jobUrl: `${SITE}/candidat/candidatures/${data.applicationId}`,
+        candidatName: app.candidate_name,
+        jobTitle: app.job_title,
+        companyName: app.company_name,
+        jobUrl: `${SITE}/candidat/candidatures/${app.id}`,
       });
-      results.push(await sendEmail({ to: data.candidatEmail, ...email }));
+      results.push(await sendEmail({ to: app.candidate_email, ...email }));
       break;
     }
-
-    case "statut_mis_a_jour": {
-      // Resolve candidate email from application ID if not provided
-      let candidatEmail = data.candidatEmail;
-      let candidatName = data.candidatName;
-      let jobTitle = data.jobTitle;
-      let companyName = data.companyName;
-
-      if (!candidatEmail && data.applicationId) {
-        const info = await resolveCandidateFromApp(supabase, data.applicationId);
-        if (info) {
-          candidatEmail = info.email;
-          candidatName = candidatName || info.name;
-          jobTitle = jobTitle || info.jobTitle;
-          companyName = companyName || info.companyName;
-        }
-      }
-
-      if (!candidatEmail) break;
-
-      const email = templates.statutMisAJour({
-        candidatName,
-        jobTitle,
-        companyName,
-        newStatus: data.newStatus,
-        statusLabel: data.statusLabel,
-        jobUrl: `${SITE}/candidat/candidatures/${data.applicationId}`,
-      });
-      const sent = await sendEmail({ to: candidatEmail, ...email });
-      results.push(sent);
-      if (data.applicationId) {
-        await logOutboundMessage({
-          applicationId: data.applicationId,
-          kind: `status_${data.newStatus ?? "update"}`,
-          subject: email.subject,
-          body: `Statut mis a jour : ${data.statusLabel ?? data.newStatus}`,
-          sentById: user.id,
-          sentByName: user.user_metadata?.full_name ?? "Systeme",
-          sent,
-        });
-      }
-      break;
-    }
-
-    case "message_recruteur": {
-      let candidatEmail = data.candidatEmail;
-      let candidatName = data.candidatName;
-      let jobTitle = data.jobTitle;
-      let companyName = data.companyName;
-
-      if (!candidatEmail && data.applicationId) {
-        const info = await resolveCandidateFromApp(supabase, data.applicationId);
-        if (info) {
-          candidatEmail = info.email;
-          candidatName = candidatName || info.name;
-          jobTitle = jobTitle || info.jobTitle;
-          companyName = companyName || info.companyName;
-        }
-      }
-
-      if (!candidatEmail) break;
-
-      const recruiterName = data.recruiterName || user.user_metadata?.full_name || "Recruteur";
-      const email = templates.messageRecruteur({
-        candidatName,
-        jobTitle,
-        companyName,
-        recruiterName,
-        messagePreview: data.messagePreview || "",
-        jobUrl: `${SITE}/candidat/candidatures/${data.applicationId}`,
-      });
-      const sent = await sendEmail({ to: candidatEmail, ...email });
-      results.push(sent);
-      if (data.applicationId) {
-        await logOutboundMessage({
-          applicationId: data.applicationId,
-          kind: data.kind ?? "custom",
-          subject: email.subject,
-          body: data.messagePreview || data.fullBody || "",
-          sentById: user.id,
-          sentByName: recruiterName,
-          sent,
-        });
-      }
-      break;
-    }
-
-    // ─── RECRUTEUR NOTIFICATIONS ────────────────────
 
     case "nouvelle_candidature":
     case "candidat_top_match": {
-      // Resolve recruiter emails from job
-      const recruiters = data.jobId
-        ? await resolveRecruiterEmails(supabase, data.jobId)
-        : [];
+      if (app.candidate_id !== user.id) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+      const matchScore = typeof data.matchScore === "number" ? data.matchScore : 0;
+      const candidateHeadline =
+        typeof data.candidateHeadline === "string" ? data.candidateHeadline : undefined;
 
+      const recruiters = await resolveRecruiterEmails(app.job_company_id);
       for (const rec of recruiters) {
-        const tpl = type === "candidat_top_match" && data.matchScore >= 80
-          ? templates.candidatTopMatch({
-              recruiterName: rec.name,
-              candidatName: data.candidatName,
-              jobTitle: data.jobTitle,
-              matchScore: data.matchScore,
-              candidatureUrl: `${SITE}/recruteur/candidats/${data.applicationId}`,
-            })
-          : templates.nouvelleCandidature({
-              recruiterName: rec.name,
-              candidatName: data.candidatName,
-              jobTitle: data.jobTitle,
-              candidateHeadline: data.candidateHeadline,
-              matchScore: data.matchScore,
-              candidatureUrl: `${SITE}/recruteur/candidats/${data.applicationId}`,
-            });
+        const tpl =
+          type === "candidat_top_match" && matchScore >= 80
+            ? templates.candidatTopMatch({
+                recruiterName: rec.name,
+                candidatName: app.candidate_name,
+                jobTitle: app.job_title,
+                matchScore,
+                candidatureUrl: `${SITE}/recruteur/candidats/${app.id}`,
+              })
+            : templates.nouvelleCandidature({
+                recruiterName: rec.name,
+                candidatName: app.candidate_name,
+                jobTitle: app.job_title,
+                candidateHeadline,
+                matchScore,
+                candidatureUrl: `${SITE}/recruteur/candidats/${app.id}`,
+              });
         results.push(await sendEmail({ to: rec.email, ...tpl }));
       }
       break;
     }
 
+    // ─── RECRUTEUR envoie au candidat ─────────────────────
+
+    case "statut_mis_a_jour": {
+      const ok = await isCallerEmployerOfCompany(
+        supabase,
+        user.id,
+        app.job_company_id,
+      );
+      if (!ok) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+      const newStatus = typeof data.newStatus === "string" ? data.newStatus : "";
+      const statusLabel =
+        typeof data.statusLabel === "string" ? data.statusLabel : newStatus;
+      const email = templates.statutMisAJour({
+        candidatName: app.candidate_name,
+        jobTitle: app.job_title,
+        companyName: app.company_name,
+        newStatus,
+        statusLabel,
+        jobUrl: `${SITE}/candidat/candidatures/${app.id}`,
+      });
+      const sent = await sendEmail({ to: app.candidate_email, ...email });
+      results.push(sent);
+      await logOutboundMessage({
+        applicationId: app.id,
+        kind: `status_${newStatus || "update"}`,
+        subject: email.subject,
+        body: `Statut mis a jour : ${statusLabel}`,
+        sentById: user.id,
+        sentByName: user.user_metadata?.full_name ?? "Recruteur",
+        sent,
+      });
+      break;
+    }
+
+    case "message_recruteur": {
+      const ok = await isCallerEmployerOfCompany(
+        supabase,
+        user.id,
+        app.job_company_id,
+      );
+      if (!ok) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+      const messagePreview =
+        typeof data.messagePreview === "string" ? data.messagePreview : "";
+      const fullBody =
+        typeof data.fullBody === "string" ? data.fullBody : messagePreview;
+      const kind = typeof data.kind === "string" ? data.kind : "custom";
+      const recruiterName = user.user_metadata?.full_name ?? "Recruteur";
+
+      const email = templates.messageRecruteur({
+        candidatName: app.candidate_name,
+        jobTitle: app.job_title,
+        companyName: app.company_name,
+        recruiterName,
+        messagePreview,
+        jobUrl: `${SITE}/candidat/candidatures/${app.id}`,
+      });
+      const sent = await sendEmail({ to: app.candidate_email, ...email });
+      results.push(sent);
+      await logOutboundMessage({
+        applicationId: app.id,
+        kind,
+        subject: email.subject,
+        body: fullBody,
+        sentById: user.id,
+        sentByName: recruiterName,
+        sent,
+      });
+      break;
+    }
+
     default:
-      return NextResponse.json({ error: `Unknown type: ${type}` }, { status: 400 });
+      return NextResponse.json({ error: `Unknown type` }, { status: 400 });
   }
 
-  return NextResponse.json({ sent: results.filter(Boolean).length, total: results.length });
+  return NextResponse.json({
+    sent: results.filter(Boolean).length,
+    total: results.length,
+  });
 }
