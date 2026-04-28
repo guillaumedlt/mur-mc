@@ -1,10 +1,20 @@
 import { NextResponse } from "next/server";
+import { timingSafeEqual } from "node:crypto";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/send";
 import * as templates from "@/lib/email/templates";
 
 const SITE = "https://montecarlowork.com";
+
+/** Comparaison constant-time des bearer secrets pour eviter les attaques timing. */
+function bearerMatches(headerValue: string | null, expected: string): boolean {
+  if (!headerValue) return false;
+  const a = Buffer.from(headerValue);
+  const b = Buffer.from(`Bearer ${expected}`);
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
 
 /**
  * GET /api/cron?type=rappel|hebdo
@@ -15,7 +25,7 @@ export async function GET(request: Request) {
   // Verify cron secret — bloque si CRON_SECRET n'est pas configure ou si le header ne matche pas
   const secret = request.headers.get("authorization");
   const expected = process.env.CRON_SECRET;
-  if (!expected || secret !== `Bearer ${expected}`) {
+  if (!expected || !bearerMatches(secret, expected)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

@@ -8,10 +8,22 @@ import { createClient } from "@/lib/supabase/server";
  * Supabase redirige vers /auth/callback?code=XXX après confirmation email.
  * On echange le code contre une session, puis on redirige vers la bonne page.
  */
+/** Anti open-redirect : seulement les chemins relatifs sûrs sont acceptés. */
+function safeNext(raw: string | null): string {
+  if (!raw) return "/";
+  // Doit commencer par "/" mais pas "//" ni "/\" (protocol-relative URL).
+  if (!raw.startsWith("/") || raw.startsWith("//") || raw.startsWith("/\\")) {
+    return "/";
+  }
+  // Refuser les schémas glissés (javascript:, data:, etc.) au cas où.
+  if (/^\/[a-z][a-z0-9+.-]*:/i.test(raw)) return "/";
+  return raw;
+}
+
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/";
+  const next = safeNext(searchParams.get("next"));
 
   if (code) {
     const supabase = await createClient();

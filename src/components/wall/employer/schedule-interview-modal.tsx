@@ -73,8 +73,10 @@ export function ScheduleInterviewModal({ applicationId, jobId, candidateName, on
     onScheduled();
   };
 
-  // Default to tomorrow
-  const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+  // Default to tomorrow — calcule une seule fois au mount pour eviter les re-render impurs
+  const [tomorrow] = useState(
+    () => new Date(Date.now() + 86400000).toISOString().slice(0, 10),
+  );
 
   return (
     <div className="fixed inset-0 z-50 bg-foreground/15 backdrop-blur-[2px] flex items-start justify-center pt-[8vh] px-4" onClick={onClose}>

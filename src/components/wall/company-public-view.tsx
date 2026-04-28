@@ -309,12 +309,11 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
 /* ─── Inline gallery (compact, in-flow) ─────────────── */
 
 function InlineGallery({ blocks }: { blocks: CompanyBlock[] }) {
+  const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
   const allImages = blocks
     .filter((b) => b.type === "gallery" && b.images && b.images.length > 0)
     .flatMap((b) => b.images ?? []);
   if (allImages.length === 0) return null;
-
-  const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
 
   return (
     <>
