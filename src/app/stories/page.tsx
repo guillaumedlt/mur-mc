@@ -6,12 +6,12 @@ import { StoryCard } from "@/components/wall/story-card";
 import { fetchAllJobs, fetchAllStories } from "@/lib/supabase/queries";
 import type { Story } from "@/lib/stories";
 
-const SITE_URL = "https://mur.mc";
+const SITE_URL = "https://montecarlowork.com";
 
 export const metadata: Metadata = {
   title: "Magazine — Enquetes, donnees et coulisses de l'emploi a Monaco",
   description:
-    "Le magazine Mur.mc : salaires 2026, secteurs qui recrutent, vie quotidienne en Principaute, conseils carriere. Donnees exclusives sur le marche monegasque.",
+    "Le magazine Monte Carlo Work : salaires 2026, secteurs qui recrutent, vie quotidienne en Principaute, conseils carriere. Donnees exclusives sur le marche monegasque.",
   alternates: { canonical: "/stories" },
   keywords: [
     "magazine emploi Monaco",
@@ -25,8 +25,8 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: `${SITE_URL}/stories`,
-    siteName: "Mur.mc",
-    title: "Magazine — Mur.mc",
+    siteName: "Monte Carlo Work",
+    title: "Magazine — Monte Carlo Work",
     description: "Enquetes, donnees et coulisses de l'emploi a Monaco.",
   },
 };
@@ -54,11 +54,11 @@ export default async function StoriesPage() {
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Blog",
-    name: "Magazine Mur.mc",
+    name: "Magazine Monte Carlo Work",
     url: `${SITE_URL}/stories`,
     description: "Enquetes, donnees et coulisses de l'emploi a Monaco.",
     inLanguage: "fr-FR",
-    publisher: { "@type": "Organization", name: "Mur.mc", url: SITE_URL },
+    publisher: { "@type": "Organization", name: "Monte Carlo Work", url: SITE_URL },
     blogPost: stories.map((s) => ({
       "@type": "BlogPosting",
       headline: s.title,
@@ -82,7 +82,7 @@ export default async function StoriesPage() {
             <div>
               <p className="ed-label-sm text-[var(--accent)]">Magazine</p>
               <h1 className="font-display text-[28px] sm:text-[34px] lg:text-[40px] tracking-[-0.02em] text-foreground mt-2 leading-[1.08]">
-                Le mur, raconte.
+                Monaco, raconte.
               </h1>
               <p className="text-[15px] text-muted-foreground mt-3 max-w-xl leading-[1.7]">
                 Enquetes, donnees exclusives et coulisses du marche de l&apos;emploi
@@ -143,7 +143,7 @@ export default async function StoriesPage() {
                         Restez informe sur le marche monegasque.
                       </p>
                       <p className="text-[12px] text-background/60 mt-1">
-                        contact@mur.mc
+                        contact@montecarlowork.com
                       </p>
                     </div>
                   )}
@@ -202,8 +202,8 @@ export default async function StoriesPage() {
                   Vous recrutez a Monaco ?
                 </h2>
                 <p className="text-[14px] text-background/65 mt-1.5 max-w-md">
-                  Publiez vos offres sur le mur et touchez les meilleurs talents
-                  de la Principaute.
+                  Publiez vos offres sur Monte Carlo Work et touchez les
+                  meilleurs talents de la Principaute.
                 </p>
               </div>
               <Link

@@ -334,7 +334,7 @@ export function ApplyModal({ job, user, open, onClose }: Props) {
                   className="sr-only"
                 />
                 <span className="text-[11.5px] text-foreground/70 leading-[1.5]">
-                  J&apos;accepte que mes donnees soient traitees par {job.company.name} et Mur.mc
+                  J&apos;accepte que mes donnees soient traitees par {job.company.name} et Monte Carlo Work
                   dans le cadre de cette candidature, conformement a la reglementation CCIN de Monaco.
                   Je pourrai exercer mes droits d&apos;acces, de rectification et de suppression a tout moment.
                 </span>

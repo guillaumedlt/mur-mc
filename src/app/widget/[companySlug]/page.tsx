@@ -40,7 +40,7 @@ export default async function WidgetPage(
             <ul className="murmc-list">
               {jobs.map((job) => (
                 <li key={job.id}>
-                  <a href={`https://mur.mc/jobs/${job.slug}`} target="_blank" rel="noopener noreferrer" className="murmc-job">
+                  <a href={`https://montecarlowork.com/jobs/${job.slug}`} target="_blank" rel="noopener noreferrer" className="murmc-job">
                     <div className="murmc-job-title">{job.title}</div>
                     <div className="murmc-job-meta">
                       <span>{job.type}</span>
@@ -53,8 +53,8 @@ export default async function WidgetPage(
             </ul>
           )}
 
-          <a href={`https://mur.mc/entreprises/${company.slug}`} target="_blank" rel="noopener noreferrer" className="murmc-footer">
-            Propulse par Mur.mc
+          <a href={`https://montecarlowork.com/entreprises/${company.slug}`} target="_blank" rel="noopener noreferrer" className="murmc-footer">
+            Propulse par Monte Carlo Work
           </a>
         </div>
       </body>

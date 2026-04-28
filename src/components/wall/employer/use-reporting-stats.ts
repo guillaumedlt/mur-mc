@@ -155,7 +155,7 @@ export function useReportingStats(input: Input): ReportingStats {
 
     // Sources (sur la periode)
     const sourceCounts: Record<string, number> = {};
-    if (periodApps.length > 0) sourceCounts["Mur.mc"] = periodApps.length;
+    if (periodApps.length > 0) sourceCounts["Monte Carlo Work"] = periodApps.length;
     for (const mc of periodManual) {
       const label = mc.source === "csv_import" ? "Import CSV" : mc.source === "referral" ? "Cooptation" : "Ajout manuel";
       sourceCounts[label] = (sourceCounts[label] ?? 0) + 1;

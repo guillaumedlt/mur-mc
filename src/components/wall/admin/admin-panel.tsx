@@ -28,7 +28,7 @@ export function AdminPanel() {
       <div className="min-h-screen bg-background flex items-center justify-center p-6">
         <div className="max-w-[440px] text-center">
           <h1 className="font-display text-[28px] text-foreground">Acces refuse</h1>
-          <p className="text-[14px] text-muted-foreground mt-2">Cette page est reservee aux administrateurs Mur.mc.</p>
+          <p className="text-[14px] text-muted-foreground mt-2">Cette page est reservee aux administrateurs Monte Carlo Work.</p>
         </div>
       </div>
     );
@@ -40,8 +40,8 @@ export function AdminPanel() {
         <header className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-5 mb-3">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
-              <Link href="/" className="text-[12px] text-foreground/50 hover:text-foreground transition-colors">&larr; Retour au mur</Link>
-              <p className="ed-label-sm text-destructive mt-1">Admin Mur.mc</p>
+              <Link href="/" className="text-[12px] text-foreground/50 hover:text-foreground transition-colors">&larr; Retour aux offres</Link>
+              <p className="ed-label-sm text-destructive mt-1">Admin Monte Carlo Work</p>
               <h1 className="font-display text-[24px] sm:text-[28px] tracking-[-0.015em] text-foreground mt-1">
                 Panel d&apos;administration
               </h1>

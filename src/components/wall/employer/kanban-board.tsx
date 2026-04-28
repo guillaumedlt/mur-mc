@@ -279,7 +279,7 @@ export function KanbanBoard({ jobId }: Props) {
           aria-label="Filtrer par source"
         >
           <option value="all">Toutes sources</option>
-          <option value="platform">Mur.mc</option>
+          <option value="platform">Monte Carlo Work</option>
           <option value="manual">Ajout manuel</option>
           <option value="csv_import">Import CSV</option>
           <option value="referral">Cooptation</option>

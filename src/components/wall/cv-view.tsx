@@ -249,7 +249,7 @@ export function CvView() {
 
         {/* Footer */}
         <footer className="px-8 sm:px-12 lg:px-14 py-4 border-t border-[var(--border)] flex items-center justify-between text-[9px] text-foreground/35 font-mono tracking-wider print:px-8 print:py-3">
-          <span>MUR.MC</span>
+          <span>MONTE CARLO WORK</span>
           <span>{new Date().toLocaleDateString("fr-FR")}</span>
         </footer>
       </article>

@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     : [];
   const bio = sanitizeForPrompt(body?.bio ?? "", 1000);
 
-  const systemPrompt = `Tu es un assistant carriere pour un job board a Monaco (Mur.mc).
+  const systemPrompt = `Tu es un assistant carriere pour un job board a Monaco (Monte Carlo Work).
 Tu rediges des lettres de motivation courtes, percutantes et personnalisees en francais.
 Pas de formules creuses ou trop formelles. Ton professionnel mais authentique.
 3-4 paragraphes maximum. Pas de "Madame, Monsieur" — commence directement.

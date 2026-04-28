@@ -5,9 +5,9 @@ import { fetchAllJobs } from "@/lib/supabase/queries";
 import { Shell } from "@/components/wall/shell";
 
 export const metadata: Metadata = {
-  title: "A propos — Mur.mc",
+  title: "A propos — Monte Carlo Work",
   description:
-    "Mur.mc est le premier job board dedie a la Principaute de Monaco. Toutes les offres, en direct, sans detour.",
+    "Monte Carlo Work est le premier job board dedie a la Principaute de Monaco. Toutes les offres, en direct, sans detour.",
   alternates: { canonical: "/a-propos" },
 };
 
@@ -22,7 +22,7 @@ export default async function AProposPage() {
         <article className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-8 lg:py-12">
           <p className="ed-label-sm text-[var(--accent)]">A propos</p>
           <h1 className="font-display text-[30px] sm:text-[36px] lg:text-[42px] tracking-[-0.02em] text-foreground mt-2 leading-[1.05]">
-            Le mur d&apos;offres
+            Le job board
             <br />
             de la Principaute.
           </h1>
@@ -43,7 +43,7 @@ export default async function AProposPage() {
             </p>
 
             <p>
-              Mur.mc inverse cette logique. Pas de hero marketing, pas de
+              Monte Carlo Work inverse cette logique. Pas de hero marketing, pas de
               barre de recherche geante. Tu arrives, tu vois toutes les offres,
               tu filtres, tu cliques. C&apos;est le produit, pas une vitrine.
             </p>
@@ -84,10 +84,10 @@ export default async function AProposPage() {
             <p className="text-[14px] text-foreground/80 leading-[1.7]">
               Une question, un partenariat, une idee ? Ecrivez-nous a{" "}
               <a
-                href="mailto:contact@mur.mc"
+                href="mailto:contact@montecarlowork.com"
                 className="text-[var(--accent)] hover:underline underline-offset-2"
               >
-                contact@mur.mc
+                contact@montecarlowork.com
               </a>
             </p>
           </div>

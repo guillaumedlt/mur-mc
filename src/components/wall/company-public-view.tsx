@@ -154,7 +154,7 @@ export function CompanyPublicView({ company, openings }: Props) {
               href={`/?company=${company.slug}`}
               className="text-[12.5px] text-[var(--accent)] hover:underline underline-offset-2"
             >
-              Tout voir sur le mur
+              Voir toutes les offres
             </Link>
           )}
         </div>

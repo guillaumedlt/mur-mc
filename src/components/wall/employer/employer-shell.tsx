@@ -96,7 +96,7 @@ export function EmployerShell({ children }: Props) {
             <Sparks width={24} height={24} strokeWidth={1.8} />
           </span>
           <h2 className="font-display text-[24px] tracking-[-0.015em] text-foreground">
-            Bienvenue sur Mur.mc
+            Bienvenue sur Monte Carlo Work
           </h2>
           <p className="text-[13.5px] text-muted-foreground mt-2 max-w-md mx-auto">
             Pour commencer, créez votre fiche entreprise. Ça prend moins de 2 minutes et vous pourrez ensuite publier votre première offre gratuitement.

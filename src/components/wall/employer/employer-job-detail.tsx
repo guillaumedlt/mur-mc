@@ -92,7 +92,7 @@ export function EmployerJobDetail({ id }: Props) {
     refetch();
   };
   const close = async () => {
-    if (window.confirm("Fermer cette offre ? Elle n'apparaitra plus dans le mur.")) {
+    if (window.confirm("Fermer cette offre ? Elle n'apparaitra plus parmi les offres en ligne.")) {
       await updateJobSupabase(job.id, { status: "closed" });
       refetch();
     }
@@ -380,7 +380,7 @@ export function EmployerJobDetail({ id }: Props) {
               target="_blank"
               className="text-[12.5px] text-[var(--accent)] hover:underline underline-offset-2 inline-flex items-center gap-1"
             >
-              Voir l&apos;offre sur le mur
+              Voir l&apos;offre en ligne
               <ArrowUpRight width={11} height={11} strokeWidth={2.2} />
             </Link>
           </div>

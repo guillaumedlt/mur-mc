@@ -197,7 +197,7 @@ function mapStory(row: any): Story {
     excerpt: row.excerpt ?? "",
     lead: row.lead ?? "",
     body: Array.isArray(row.body) ? row.body : [],
-    authorName: row.author_name ?? "Mur.mc",
+    authorName: row.author_name ?? "Monte Carlo Work",
     authorRole: row.author_role ?? "Rédaction",
     publishedAt: row.published_at ?? new Date().toISOString(),
     updatedAt: row.updated_at ?? undefined,

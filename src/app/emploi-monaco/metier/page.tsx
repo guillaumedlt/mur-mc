@@ -6,12 +6,12 @@ import { fetchAllJobs } from "@/lib/supabase/queries";
 import { matchJobsByKeywords } from "@/lib/seo/match-jobs";
 import { METIERS } from "./metiers";
 
-const SITE_URL = "https://mur.mc";
+const SITE_URL = "https://montecarlowork.com";
 
 export const revalidate = 300;
 
 export const metadata: Metadata = {
-  title: "Emploi par metier a Monaco — Tous les postes | Mur.mc",
+  title: "Emploi par metier a Monaco — Tous les postes | Monte Carlo Work",
   description:
     "Consultez toutes les offres d'emploi a Monaco par metier : comptable, developpeur, chef de rang, avocat, vendeur luxe, capitaine de yacht et 50+ autres.",
   keywords: [
@@ -24,9 +24,9 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: `${SITE_URL}/emploi-monaco/metier`,
-    title: "Emploi par metier a Monaco | Mur.mc",
+    title: "Emploi par metier a Monaco | Monte Carlo Work",
     description: "50+ metiers, toutes les offres d'emploi de Monaco par poste.",
-    siteName: "Mur.mc",
+    siteName: "Monte Carlo Work",
     locale: "fr_MC",
   },
 };
@@ -59,7 +59,7 @@ export default async function MetierHubPage() {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Mur.mc", item: SITE_URL },
+      { "@type": "ListItem", position: 1, name: "Monte Carlo Work", item: SITE_URL },
       { "@type": "ListItem", position: 2, name: "Emploi a Monaco", item: `${SITE_URL}/emploi-monaco` },
       { "@type": "ListItem", position: 3, name: "Par metier", item: `${SITE_URL}/emploi-monaco/metier` },
     ],

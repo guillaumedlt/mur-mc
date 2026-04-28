@@ -10,7 +10,7 @@ import { METIERS } from "../metiers";
 import { CROSS_PAGES } from "../cross";
 import { JobAlertForm } from "@/components/wall/job-alert-form";
 
-const SITE_URL = "https://mur.mc";
+const SITE_URL = "https://montecarlowork.com";
 
 export const revalidate = 300;
 
@@ -24,12 +24,12 @@ export async function generateMetadata(
   if (cross) {
     const jobs = await fetchAllJobs();
     const count = matchJobsByKeywords(jobs, cross.metier.match).filter((j) => j.sector === cross.sectorFilter).length;
-    const title = `Emploi ${cross.metier.label} ${cross.sectorLabel} a Monaco — ${count} offre${count > 1 ? "s" : ""} | Mur.mc`;
+    const title = `Emploi ${cross.metier.label} ${cross.sectorLabel} a Monaco — ${count} offre${count > 1 ? "s" : ""} | Monte Carlo Work`;
     return {
       title,
       description: `${cross.metier.description} Secteur ${cross.sectorLabel} a Monaco. ${count} offre${count > 1 ? "s" : ""} en direct.`,
       alternates: { canonical: `/emploi-monaco/metier/${slug}` },
-      openGraph: { type: "website", url: `${SITE_URL}/emploi-monaco/metier/${slug}`, title, siteName: "Mur.mc" },
+      openGraph: { type: "website", url: `${SITE_URL}/emploi-monaco/metier/${slug}`, title, siteName: "Monte Carlo Work" },
     };
   }
 
@@ -39,8 +39,8 @@ export async function generateMetadata(
   const jobs = await fetchAllJobs();
   const count = matchJobsByKeywords(jobs, metier.match).length;
 
-  const title = `Emploi ${metier.label} a Monaco — ${count} offre${count > 1 ? "s" : ""} | Mur.mc`;
-  const description = `${metier.description} ${count} offre${count > 1 ? "s" : ""} disponible${count > 1 ? "s" : ""} en ce moment. Postulez en direct sur Mur.mc.`;
+  const title = `Emploi ${metier.label} a Monaco — ${count} offre${count > 1 ? "s" : ""} | Monte Carlo Work`;
+  const description = `${metier.description} ${count} offre${count > 1 ? "s" : ""} disponible${count > 1 ? "s" : ""} en ce moment. Postulez en direct sur Monte Carlo Work.`;
 
   return {
     title,
@@ -58,7 +58,7 @@ export async function generateMetadata(
       url: `${SITE_URL}/emploi-monaco/metier/${slug}`,
       title: `Emploi ${metier.label} a Monaco (${count} offres)`,
       description: metier.description,
-      siteName: "Mur.mc",
+      siteName: "Monte Carlo Work",
       locale: "fr_MC",
     },
     twitter: { card: "summary_large_image", title, description },
@@ -97,7 +97,7 @@ export default async function MetierPage(
       breadcrumb: {
         "@type": "BreadcrumbList",
         itemListElement: [
-          { "@type": "ListItem", position: 1, name: "Mur.mc", item: SITE_URL },
+          { "@type": "ListItem", position: 1, name: "Monte Carlo Work", item: SITE_URL },
           { "@type": "ListItem", position: 2, name: "Emploi a Monaco", item: `${SITE_URL}/emploi-monaco` },
           { "@type": "ListItem", position: 3, name: `Emploi ${metier.label}`, item: `${SITE_URL}/emploi-monaco/metier/${slug}` },
         ],

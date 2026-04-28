@@ -7,7 +7,7 @@ import { ConnexionForm } from "@/components/wall/connexion-form";
 export const metadata: Metadata = {
   title: "Se connecter",
   description:
-    "Connectez-vous à Mur.mc pour postuler aux offres monégasques ou publier les vôtres.",
+    "Connectez-vous à Monte Carlo Work pour postuler aux offres monégasques ou publier les vôtres.",
   alternates: { canonical: "/connexion" },
   robots: { index: false, follow: true },
 };

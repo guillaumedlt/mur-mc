@@ -9,12 +9,12 @@ import {
 import { Shell } from "@/components/wall/shell";
 import { fetchAllJobs } from "@/lib/supabase/queries";
 
-const SITE_URL = "https://mur.mc";
+const SITE_URL = "https://montecarlowork.com";
 
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
-  title: "Travailler a Monaco : Guide complet 2026 — Mur.mc",
+  title: "Travailler a Monaco : Guide complet 2026 — Monte Carlo Work",
   description:
     "Tout savoir pour travailler a Monaco : marche de l'emploi, permis de travail, salaires, frontaliers, secteurs qui recrutent. Guide mis a jour en 2026.",
   alternates: { canonical: "/travailler-monaco" },
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     description:
       "Marche de l'emploi, permis de travail, salaires, frontaliers — le guide le plus complet pour travailler en Principaute de Monaco.",
     url: `${SITE_URL}/travailler-monaco`,
-    siteName: "Mur.mc",
+    siteName: "Monte Carlo Work",
     locale: "fr_MC",
   },
   twitter: { card: "summary_large_image" },
@@ -52,8 +52,8 @@ const FAQ_ITEMS = [
     a: "Pas d'impot sur le revenu pour les residents monegasques, un cadre de vie exceptionnel, un marche de l'emploi dynamique avec un taux de chomage quasi-nul, une securite sociale genereuse (CCSS), la proximite de la Cote d'Azur, et un acces a un reseau professionnel international unique.",
   },
   {
-    q: "Comment postuler a une offre d'emploi a Monaco sur Mur.mc ?",
-    a: "Creez un compte candidat gratuit sur Mur.mc, completez votre profil (CV, competences, langues), puis postulez en un clic aux offres qui vous interessent. Vous recevrez les mises a jour de statut par email.",
+    q: "Comment postuler a une offre d'emploi a Monaco sur Monte Carlo Work ?",
+    a: "Creez un compte candidat gratuit sur Monte Carlo Work, completez votre profil (CV, competences, langues), puis postulez en un clic aux offres qui vous interessent. Vous recevrez les mises a jour de statut par email.",
   },
 ];
 
@@ -74,7 +74,7 @@ export default async function TravaillerMonacoPage() {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Mur.mc", item: SITE_URL },
+      { "@type": "ListItem", position: 1, name: "Monte Carlo Work", item: SITE_URL },
       { "@type": "ListItem", position: 2, name: "Travailler a Monaco", item: `${SITE_URL}/travailler-monaco` },
     ],
   };
@@ -99,7 +99,7 @@ export default async function TravaillerMonacoPage() {
       <div className="max-w-[900px] mx-auto">
         {/* Breadcrumb */}
         <nav className="text-[12px] text-foreground/50 mb-3 px-1 flex items-center gap-1.5">
-          <Link href="/" className="hover:text-foreground transition-colors">Mur.mc</Link>
+          <Link href="/" className="hover:text-foreground transition-colors">Monte Carlo Work</Link>
           <span>/</span>
           <span className="text-foreground/70">Travailler a Monaco</span>
         </nav>

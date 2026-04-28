@@ -5,10 +5,10 @@ import { Shell } from "@/components/wall/shell";
 import { JobCard } from "@/components/wall/job-card";
 import { fetchAllJobs } from "@/lib/supabase/queries";
 
-const SITE_URL = "https://mur.mc";
+const SITE_URL = "https://montecarlowork.com";
 
 export const metadata: Metadata = {
-  title: "Emploi a Monaco — Toutes les offres d'emploi en Principaute | Mur.mc",
+  title: "Emploi a Monaco — Toutes les offres d'emploi en Principaute | Monte Carlo Work",
   description:
     "Trouvez votre emploi a Monaco : banque privee, hotellerie de luxe, yachting, tech, immobilier. Plus de 60 000 salaries travaillent en Principaute. Consultez les offres en direct.",
   keywords: [
@@ -25,9 +25,9 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: `${SITE_URL}/emploi-monaco`,
-    title: "Emploi a Monaco — Toutes les offres | Mur.mc",
+    title: "Emploi a Monaco — Toutes les offres | Monte Carlo Work",
     description: "Toutes les offres d'emploi de la Principaute de Monaco, en direct.",
-    siteName: "Mur.mc",
+    siteName: "Monte Carlo Work",
   },
 };
 
@@ -53,11 +53,11 @@ function seoJsonLd(jobCount: number) {
     name: "Emploi a Monaco",
     description: `${jobCount} offres d'emploi a Monaco. Banque, hotellerie, tech, yachting, luxe.`,
     url: `${SITE_URL}/emploi-monaco`,
-    isPartOf: { "@type": "WebSite", name: "Mur.mc", url: SITE_URL },
+    isPartOf: { "@type": "WebSite", name: "Monte Carlo Work", url: SITE_URL },
     breadcrumb: {
       "@type": "BreadcrumbList",
       itemListElement: [
-        { "@type": "ListItem", position: 1, name: "Mur.mc", item: SITE_URL },
+        { "@type": "ListItem", position: 1, name: "Monte Carlo Work", item: SITE_URL },
         { "@type": "ListItem", position: 2, name: "Emploi a Monaco", item: `${SITE_URL}/emploi-monaco` },
       ],
     },
@@ -72,7 +72,7 @@ function seoJsonLd(jobCount: number) {
         name: "Combien d'offres d'emploi y a-t-il a Monaco ?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: `Mur.mc reference actuellement ${jobCount} offres d'emploi actives en Principaute de Monaco, mises a jour en continu.`,
+          text: `Monte Carlo Work reference actuellement ${jobCount} offres d'emploi actives en Principaute de Monaco, mises a jour en continu.`,
         },
       },
       {
@@ -85,7 +85,7 @@ function seoJsonLd(jobCount: number) {
       },
       {
         "@type": "Question",
-        name: "Comment postuler a une offre sur Mur.mc ?",
+        name: "Comment postuler a une offre sur Monte Carlo Work ?",
         acceptedAnswer: {
           "@type": "Answer",
           text: "Creez un compte candidat gratuit, completez votre profil avec vos competences et votre CV, puis postulez en un clic. Vous recevrez les mises a jour de votre candidature par email.",
@@ -173,7 +173,7 @@ export default async function EmploiMonacoPage() {
               href="/"
               className="text-[12.5px] text-[var(--accent)] hover:underline underline-offset-2 inline-flex items-center gap-1"
             >
-              Voir le mur complet
+              Voir toutes les offres
               <ArrowUpRight width={11} height={11} strokeWidth={2.2} />
             </Link>
           </div>
@@ -211,7 +211,7 @@ export default async function EmploiMonacoPage() {
               (310+ postes) et le yachting (240+ postes saisonniers).
             </p>
             <p>
-              Mur.mc est le premier job board dedie a la Principaute de Monaco. Toutes les offres, en direct,
+              Monte Carlo Work est le premier job board dedie a la Principaute de Monaco. Toutes les offres, en direct,
               dans une interface moderne et filtrable. Creez votre profil candidat pour recevoir des recommandations
               personnalisees et postulez en un clic.
             </p>

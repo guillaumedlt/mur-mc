@@ -1,6 +1,6 @@
 import { Resend } from "resend";
 
-const FROM = "Mur.mc <notifications@mur.mc>";
+const FROM = "Monte Carlo Work <notifications@montecarlowork.com>";
 
 let resend: Resend | null = null;
 

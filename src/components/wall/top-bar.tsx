@@ -48,12 +48,12 @@ export function TopBar({ count, query, setQuery, onOpenPalette }: Props) {
   return (
     <header className="h-14 bg-white/85 backdrop-blur-md border border-[var(--border)] rounded-2xl sticky top-3 z-30 flex items-center pl-3 pr-2 sm:pl-4 sm:pr-3 gap-2 sm:gap-3 lg:gap-5 shadow-[0_1px_0_rgba(10,10,10,0.02)]">
       {/* Wordmark */}
-      <Link href="/" className="flex items-center gap-2 shrink-0">
-        <span className="size-7 rounded-[9px] bg-foreground text-background flex items-center justify-center font-display text-[15px] font-medium">
-          M
+      <Link href="/" className="flex items-center gap-2 shrink-0" aria-label="Monte Carlo Work — accueil">
+        <span className="size-7 rounded-[9px] bg-foreground text-background flex items-center justify-center font-display text-[12.5px] font-semibold tracking-[-0.02em]">
+          MC
         </span>
-        <span className="font-display text-[17px] font-medium tracking-[-0.01em] hidden sm:block">
-          Mur<span className="text-[var(--accent)]">.mc</span>
+        <span className="font-display text-[17px] font-medium tracking-[-0.01em] hidden md:block whitespace-nowrap">
+          Monte Carlo<span className="text-[var(--accent)]"> Work</span>
         </span>
       </Link>
 

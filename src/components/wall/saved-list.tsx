@@ -70,7 +70,7 @@ export function SavedList({ jobs }: Props) {
             href="/"
             className="inline-flex h-10 mt-5 px-5 rounded-full bg-foreground text-background text-[13px] items-center"
           >
-            Parcourir le mur
+            Parcourir les offres
           </Link>
         </div>
       ) : (

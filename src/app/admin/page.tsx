@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Admin — Mur.mc",
+  title: "Admin — Monte Carlo Work",
   robots: { index: false, follow: false },
 };
 

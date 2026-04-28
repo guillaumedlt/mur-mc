@@ -81,7 +81,7 @@ export default function ResetPasswordPage() {
           Nouveau mot de passe
         </h1>
         <p className="text-[13px] text-muted-foreground text-center mt-1.5">
-          Choisissez un nouveau mot de passe pour votre compte Mur.mc.
+          Choisissez un nouveau mot de passe pour votre compte Monte Carlo Work.
         </p>
 
         <div className="flex flex-col gap-3 mt-6">

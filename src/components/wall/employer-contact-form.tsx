@@ -30,7 +30,7 @@ export function EmployerContactForm({ defaultPlan }: { defaultPlan?: string }) {
           Demande envoyee
         </h2>
         <p className="text-[14px] text-muted-foreground mt-2 max-w-md mx-auto">
-          Nous avons bien recu votre demande. Un membre de l&apos;equipe Mur.mc
+          Nous avons bien recu votre demande. Un membre de l&apos;equipe Monte Carlo Work
           vous contactera sous 24h pour activer votre espace recruteur.
         </p>
       </div>
@@ -153,7 +153,7 @@ export function EmployerContactForm({ defaultPlan }: { defaultPlan?: string }) {
       </button>
 
       <p className="text-[11px] text-foreground/40 text-center">
-        Un membre de l&apos;equipe Mur.mc vous contactera sous 24h. Les candidats peuvent s&apos;inscrire directement.
+        Un membre de l&apos;equipe Monte Carlo Work vous contactera sous 24h. Les candidats peuvent s&apos;inscrire directement.
       </p>
     </form>
   );

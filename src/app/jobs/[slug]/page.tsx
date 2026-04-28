@@ -31,7 +31,7 @@ import { SaveShareButtons } from "@/components/wall/save-share-buttons";
 import { MatchPill } from "@/components/wall/match-pill";
 import { TrackView } from "@/components/wall/track-view";
 
-const SITE_URL = "https://mur.mc";
+const SITE_URL = "https://montecarlowork.com";
 
 export const revalidate = 300;
 
@@ -62,7 +62,7 @@ export async function generateMetadata(
       url,
       title,
       description,
-      siteName: "Mur.mc",
+      siteName: "Monte Carlo Work",
       locale: job.lang === "en" ? "en_US" : "fr_MC",
       publishedTime: job.postedAt,
     },
@@ -158,7 +158,7 @@ function jobJsonLd(job: Job | null) {
     },
     identifier: {
       "@type": "PropertyValue",
-      name: "Mur.mc",
+      name: "Monte Carlo Work",
       value: job.id,
     },
   };
@@ -194,7 +194,7 @@ export default async function JobPage(props: PageProps<"/jobs/[slug]">) {
           className="inline-flex items-center gap-1.5 text-[12.5px] text-foreground/55 hover:text-foreground transition-colors mb-3 px-1"
         >
           <ArrowLeft width={12} height={12} strokeWidth={2} />
-          Retour au mur
+          Retour aux offres
         </Link>
 
         {/* Hero card */}

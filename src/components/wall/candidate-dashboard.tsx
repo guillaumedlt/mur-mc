@@ -235,7 +235,7 @@ export function CandidateDashboard({ jobs }: Props) {
                   href="/"
                   className="inline-flex h-9 mt-3 px-4 rounded-full bg-foreground text-background text-[12.5px] items-center"
                 >
-                  Parcourir le mur
+                  Parcourir les offres
                 </Link>
               </div>
             ) : (
@@ -286,7 +286,7 @@ export function CandidateDashboard({ jobs }: Props) {
                 href="/"
                 className="text-[12.5px] text-[var(--accent)] hover:underline underline-offset-2"
               >
-                Voir tout le mur →
+                Voir toutes les offres →
               </Link>
             </div>
             <ul className="flex flex-col">
@@ -333,7 +333,7 @@ export function CandidateDashboard({ jobs }: Props) {
               <ActionLink
                 href="/"
                 icon={Bag}
-                label="Parcourir le mur"
+                label="Parcourir les offres"
                 hint={`${jobs.length} offres en direct`}
               />
               <ActionLink

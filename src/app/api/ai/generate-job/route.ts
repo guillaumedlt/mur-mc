@@ -55,7 +55,7 @@ export async function POST(request: Request) {
     ? `\n\nInstructions supplementaires du recruteur :\n"${freePrompt.trim()}"`
     : "";
 
-  const systemPrompt = `Tu es un expert RH senior specialise dans la redaction d'offres d'emploi pour un job board premium a Monaco (Mur.mc).
+  const systemPrompt = `Tu es un expert RH senior specialise dans la redaction d'offres d'emploi pour un job board premium a Monaco (Monte Carlo Work).
 Tu rediges en ${lang === "en" ? "anglais" : "francais"}, ton professionnel mais accessible — pas de jargon corporate creux.
 Tu connais bien le marche monegasque : banques privees, palaces, yachting, luxe, family offices.
 

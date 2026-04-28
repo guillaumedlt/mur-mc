@@ -47,7 +47,7 @@ export async function POST(request: Request) {
     ? `\nInstructions supplementaires du recruteur :\n"${freePrompt.trim()}"`
     : "";
 
-  const systemPrompt = `Tu es un expert en marque employeur pour un job board premium a Monaco (Mur.mc).
+  const systemPrompt = `Tu es un expert en marque employeur pour un job board premium a Monaco (Monte Carlo Work).
 Tu rediges des fiches entreprise inspirantes, dans le style de Welcome to the Jungle : authentiques, vivantes, pas corporate.
 
 A partir des informations fournies sur l'entreprise, genere une fiche complete et attractive.

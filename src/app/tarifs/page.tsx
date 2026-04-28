@@ -4,20 +4,20 @@ import { Check, Sparks } from "iconoir-react";
 import { Shell } from "@/components/wall/shell";
 import { fetchAllJobs } from "@/lib/supabase/queries";
 
-const SITE_URL = "https://mur.mc";
+const SITE_URL = "https://montecarlowork.com";
 
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
-  title: "Tarifs recruteur — Publiez vos offres a Monaco | Mur.mc",
+  title: "Tarifs recruteur — Publiez vos offres a Monaco | Monte Carlo Work",
   description:
-    "Decouvrez les forfaits Mur.mc pour publier vos offres d'emploi a Monaco. De 3 a 10 annonces, ou sur mesure.",
+    "Decouvrez les forfaits Monte Carlo Work pour publier vos offres d'emploi a Monaco. De 3 a 10 annonces, ou sur mesure.",
   alternates: { canonical: "/tarifs" },
   openGraph: {
     type: "website",
     url: `${SITE_URL}/tarifs`,
-    title: "Tarifs recruteur — Mur.mc",
-    siteName: "Mur.mc",
+    title: "Tarifs recruteur — Monte Carlo Work",
+    siteName: "Monte Carlo Work",
   },
 };
 
@@ -77,7 +77,7 @@ const PLANS = [
       "Account manager dedie",
       "API & integrations ATS/HRIS",
       "Marque employeur premium",
-      "Mise en avant sur le mur",
+      "Mise en avant sur Monte Carlo Work",
     ],
   },
 ];
@@ -152,8 +152,8 @@ export default async function TarifsPage() {
 
         <div className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-6 text-center text-[13.5px] text-muted-foreground">
           Des questions ? Ecrivez-nous a{" "}
-          <a href="mailto:contact@mur.mc" className="text-[var(--accent)] hover:underline underline-offset-2">
-            contact@mur.mc
+          <a href="mailto:contact@montecarlowork.com" className="text-[var(--accent)] hover:underline underline-offset-2">
+            contact@montecarlowork.com
           </a>
         </div>
       </div>

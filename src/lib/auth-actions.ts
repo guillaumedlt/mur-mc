@@ -37,7 +37,7 @@ export async function signUpAction(formData: FormData): Promise<AuthResult> {
         full_name: fullName || email.split("@")[0],
         role,
       },
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://hellowork-monaco.vercel.app"}/auth/callback`,
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://montecarlowork.com"}/auth/callback`,
     },
   });
 
@@ -108,7 +108,7 @@ export async function resetPasswordAction(
   }
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://hellowork-monaco.vercel.app"}/auth/callback?next=/reset-password`,
+    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://montecarlowork.com"}/auth/callback?next=/reset-password`,
   });
 
   if (error) {

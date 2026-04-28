@@ -57,7 +57,7 @@ export function MagazineAdmin() {
               excerpt: row.excerpt ?? "",
               lead: row.lead ?? "",
               body: Array.isArray(row.body) ? row.body : [],
-              authorName: row.author_name ?? "Mur.mc",
+              authorName: row.author_name ?? "Monte Carlo Work",
               authorRole: row.author_role ?? "Rédaction",
               publishedAt: row.published_at ?? new Date().toISOString(),
               updatedAt: row.updated_at ?? undefined,
@@ -252,7 +252,7 @@ function StoryForm({
   );
   const [excerpt, setExcerpt] = useState(story?.excerpt ?? "");
   const [lead, setLead] = useState(story?.lead ?? "");
-  const [authorName, setAuthorName] = useState(story?.authorName ?? "Mur.mc");
+  const [authorName, setAuthorName] = useState(story?.authorName ?? "Monte Carlo Work");
   const [authorRole, setAuthorRole] = useState(
     story?.authorRole ?? "Rédaction",
   );

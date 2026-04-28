@@ -27,17 +27,18 @@ const jetBrains = JetBrains_Mono({
   display: "swap",
 });
 
-const SITE_URL = "https://mur.mc";
+const SITE_URL = "https://montecarlowork.com";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Mur.mc — Toutes les offres d'emploi de Monaco, en direct",
-    template: "%s · Mur.mc",
+    default: "Monte Carlo Work — Le job board de la Principauté de Monaco",
+    template: "%s · Monte Carlo Work",
   },
   description:
-    "Le mur d'offres de la Principauté de Monaco. Toutes les annonces des banques privées, du yachting, des palaces, du luxe et de la tech monégasque, mises à jour en continu et filtrables en un clic.",
+    "Le job board de la Principauté de Monaco. Toutes les offres des banques privées, du yachting, des palaces, du luxe et de la tech monégasque, mises à jour en continu et filtrables en un clic.",
   keywords: [
+    "Monte Carlo Work",
     "emploi Monaco",
     "offres d'emploi Monaco",
     "jobs Monaco",
@@ -48,9 +49,9 @@ export const metadata: Metadata = {
     "tech Monaco",
     "Principauté de Monaco emploi",
   ],
-  authors: [{ name: "Mur.mc" }],
-  creator: "Mur.mc",
-  publisher: "Mur.mc",
+  authors: [{ name: "Monte Carlo Work" }],
+  creator: "Monte Carlo Work",
+  publisher: "Monte Carlo Work",
   category: "Recrutement",
   alternates: {
     canonical: "/",
@@ -63,16 +64,16 @@ export const metadata: Metadata = {
     type: "website",
     locale: "fr_MC",
     url: SITE_URL,
-    siteName: "Mur.mc",
-    title: "Mur.mc — Toutes les offres d'emploi de Monaco",
+    siteName: "Monte Carlo Work",
+    title: "Monte Carlo Work — Le job board de Monaco",
     description:
-      "Le mur d'offres de Monaco. Toutes les annonces, en direct, dans une grille dense et élégante. Filtrez en un clic.",
+      "Le job board de la Principauté de Monaco. Toutes les offres, en direct, dans une grille dense et élégante. Filtrez en un clic.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Mur.mc — Toutes les offres d'emploi de Monaco",
+    title: "Monte Carlo Work — Le job board de Monaco",
     description:
-      "Le mur d'offres de la Principauté de Monaco. En direct, sans détour.",
+      "Le job board de la Principauté de Monaco. En direct, sans détour.",
   },
   robots: {
     index: true,

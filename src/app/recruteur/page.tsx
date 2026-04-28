@@ -4,7 +4,7 @@ import { EmployerDashboard } from "@/components/wall/employer/employer-dashboard
 
 export const metadata: Metadata = {
   title: "Mon espace recruteur",
-  description: "Tableau de bord recruteur sur Mur.mc.",
+  description: "Tableau de bord recruteur sur Monte Carlo Work.",
   alternates: { canonical: "/recruteur" },
   robots: { index: false, follow: false },
 };

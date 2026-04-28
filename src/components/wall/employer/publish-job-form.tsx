@@ -316,7 +316,7 @@ export function PublishJobForm({ existing, onCancel }: Props) {
             Voir les forfaits
           </Link>
           <a
-            href="mailto:contact@mur.mc?subject=Upgrade%20forfait%20recruteur"
+            href="mailto:contact@montecarlowork.com?subject=Upgrade%20forfait%20recruteur"
             className="inline-flex h-10 px-5 rounded-full border border-[var(--border)] bg-white text-[13px] text-foreground/85 hover:bg-[var(--background-alt)] items-center gap-2 transition-colors"
           >
             <Mail width={14} height={14} strokeWidth={2} />
@@ -458,7 +458,7 @@ export function PublishJobForm({ existing, onCancel }: Props) {
         <header>
           <p className="ed-label-sm">{existing ? "Modifier l'offre" : "Nouvelle offre"}</p>
           <h1 className="font-display text-[24px] sm:text-[28px] tracking-[-0.015em] text-foreground mt-1">
-            {existing ? "Mettre à jour cette offre" : "Publier une offre sur le mur"}
+            {existing ? "Mettre à jour cette offre" : "Publier une offre"}
           </h1>
           <p className="text-[13px] text-muted-foreground mt-2">
             Quelques infos suffisent. Tu pourras affiner après publication.
@@ -659,7 +659,7 @@ export function PublishJobForm({ existing, onCancel }: Props) {
           )}
         </div>
 
-        <FormRow label="Accroche editoriale" hint="2-3 lignes max — l'extrait visible sur le mur. Ex : « Rejoignez notre equipe pour construire des SaaS B2B innovants. Stack moderne, equipe senior. »">
+        <FormRow label="Accroche editoriale" hint="2-3 lignes max — l'extrait visible dans la liste des offres. Ex : « Rejoignez notre equipe pour construire des SaaS B2B innovants. Stack moderne, equipe senior. »">
           <Textarea
             placeholder="Reprise d'un portefeuille de 60 familles UHNW. Équipe senior, environnement entrepreneurial."
             value={shortDesc}

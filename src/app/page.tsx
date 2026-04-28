@@ -3,12 +3,12 @@ import Link from "next/link";
 import { Wall } from "@/components/wall/wall";
 import { fetchAllJobs } from "@/lib/supabase/queries";
 
-const SITE_URL = "https://mur.mc";
+const SITE_URL = "https://montecarlowork.com";
 
 export const metadata: Metadata = {
-  title: "Emploi Monaco : Offres d'emploi en direct — Mur.mc",
+  title: "Emploi Monaco : Offres d'emploi en direct — Monte Carlo Work",
   description:
-    "Toutes les offres d'emploi de la Principaute de Monaco. Banque privee, yachting, hotellerie de luxe, tech, immobilier. Postulez en direct sur Mur.mc.",
+    "Toutes les offres d'emploi de la Principaute de Monaco. Banque privee, yachting, hotellerie de luxe, tech, immobilier. Postulez en direct sur Monte Carlo Work.",
   alternates: { canonical: "/" },
 };
 
@@ -26,11 +26,11 @@ export default async function Page() {
           __html: JSON.stringify({
             "@context": "https://schema.org",
             "@type": "WebSite",
-            name: "Mur.mc",
+            name: "Monte Carlo Work",
             url: SITE_URL,
             inLanguage: "fr-FR",
             description:
-              "Le mur d'offres de la Principaute de Monaco.",
+              "Le job board de la Principaute de Monaco.",
           }),
         }}
       />
@@ -44,11 +44,11 @@ export default async function Page() {
       {/* Section editoriale SEO — visible sous le wall, indexee par Google */}
       <section className="max-w-[1100px] mx-auto mt-3 bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 lg:px-9 py-6 lg:py-9">
         <h2 className="font-display text-[22px] sm:text-[26px] tracking-[-0.015em] text-foreground mb-4">
-          Le mur d&apos;offres de Monaco
+          Le job board de Monaco
         </h2>
         <div className="text-[14.5px] leading-[1.85] text-foreground/80 flex flex-col gap-4 max-w-3xl">
           <p>
-            Mur.mc est le premier job board dedie a la Principaute de Monaco. Nous
+            Monte Carlo Work est le premier job board dedie a la Principaute de Monaco. Nous
             rassemblons toutes les offres d&apos;emploi des entreprises monegasques — banques
             privees, groupes hotellerie de luxe, chantiers navals du yachting, maisons de
             couture, cabinets juridiques et startups tech — dans une interface dense,

@@ -83,7 +83,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error:
-          "Cette adresse email est deja rattachee a une autre entreprise sur Mur.mc.",
+          "Cette adresse email est deja rattachee a une autre entreprise sur Monte Carlo Work.",
       },
       { status: 409 },
     );
@@ -107,7 +107,7 @@ export async function POST(request: Request) {
 
   // Envoi de l'email d'invitation via Supabase Auth admin
   // (Previously this was a separate /api/invite call with anon key which silently failed)
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://mur.mc";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://montecarlowork.com";
   const inviteLink = `${siteUrl}/invitation/${inv.token}`;
 
   let emailSent = false;

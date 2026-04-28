@@ -37,7 +37,7 @@ function useJobCount(fallback: number): number {
 /**
  * Shell partagé pour toutes les pages secondaires (entreprises, fiches…) :
  * outer padding crème + TopBar floating + command palette ⌘K.
- * Pas de sidebar de filtres : on n'en a besoin que sur le mur principal.
+ * Pas de sidebar de filtres : on n'en a besoin que sur la liste principale.
  */
 export function Shell({ jobs, count, children }: Props) {
   const [query, setQuery] = useState("");

@@ -5,7 +5,7 @@ import { OnboardingWizard } from "@/components/wall/employer/onboarding-wizard";
 
 export const metadata: Metadata = {
   title: "Configuration du compte recruteur",
-  description: "Configurez votre espace recruteur sur Mur.mc.",
+  description: "Configurez votre espace recruteur sur Monte Carlo Work.",
   alternates: { canonical: "/recruteur/onboarding" },
   robots: { index: false, follow: false },
 };

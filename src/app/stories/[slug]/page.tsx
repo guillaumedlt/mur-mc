@@ -12,7 +12,7 @@ import { Shell } from "@/components/wall/shell";
 import { StoryCard } from "@/components/wall/story-card";
 import { fetchAllJobs, fetchAllStories, fetchStoryBySlug } from "@/lib/supabase/queries";
 
-const SITE_URL = "https://mur.mc";
+const SITE_URL = "https://montecarlowork.com";
 
 export const revalidate = 300;
 
@@ -35,7 +35,7 @@ export async function generateMetadata(
       url,
       title: story.title,
       description: story.excerpt,
-      siteName: "Mur.mc",
+      siteName: "Monte Carlo Work",
       locale: "fr_FR",
       publishedTime: story.publishedAt,
       modifiedTime: story.updatedAt ?? story.publishedAt,
@@ -78,7 +78,7 @@ function articleJsonLd(story: Story) {
     ],
     publisher: {
       "@type": "Organization",
-      name: "Mur.mc",
+      name: "Monte Carlo Work",
       url: SITE_URL,
       logo: {
         "@type": "ImageObject",
@@ -103,7 +103,7 @@ function breadcrumbJsonLd(story: Story) {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Mur.mc", item: SITE_URL },
+      { "@type": "ListItem", position: 1, name: "Monte Carlo Work", item: SITE_URL },
       {
         "@type": "ListItem",
         position: 2,

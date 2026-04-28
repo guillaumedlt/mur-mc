@@ -232,7 +232,7 @@ export function ConnexionForm({ mode, compact }: Props) {
         </p>
         <div className="mt-6 p-4 rounded-xl bg-[var(--background-alt)] border border-[var(--border)] text-[12.5px] text-foreground/70 leading-snug">
           Pensez a verifier vos spams. L&apos;email vient de{" "}
-          <span className="font-mono text-foreground/85">noreply@mur.mc</span>
+          <span className="font-mono text-foreground/85">notifications@montecarlowork.com</span>
         </div>
         <div className="flex items-center justify-center gap-3 mt-7 flex-wrap">
           <Link
@@ -283,7 +283,7 @@ export function ConnexionForm({ mode, compact }: Props) {
             : "Crée ton compte. Pose ton premier filtre."}
         </h1>
         <p className="text-[14px] text-muted-foreground mt-3 leading-[1.65]">
-          Mur.mc, c&apos;est le mur d&apos;offres de la Principauté. Que tu
+          Monte Carlo Work, c&apos;est le job board de la Principauté. Que tu
           cherches ta prochaine maison ou ton prochain talent, tout passe ici.
         </p>
 
@@ -296,7 +296,7 @@ export function ConnexionForm({ mode, compact }: Props) {
         <div className="flex-1 min-h-6" />
 
         <p className="text-[11px] font-mono text-[var(--tertiary-foreground)] tracking-wider">
-          MUR.MC · {new Date().getFullYear()}
+          MONTE CARLO WORK · {new Date().getFullYear()}
         </p>
       </aside>
       </>)}

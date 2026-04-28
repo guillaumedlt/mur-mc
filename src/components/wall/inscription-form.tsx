@@ -53,7 +53,7 @@ export function InscriptionForm() {
       ) : (
         <>
           <h1 className="font-display text-[24px] sm:text-[28px] tracking-[-0.015em] text-foreground">
-            Recruter sur Mur.mc
+            Recruter sur Monte Carlo Work
           </h1>
           <p className="text-[13.5px] text-muted-foreground mt-2 mb-6">
             Remplissez ce formulaire et nous activerons votre espace sous 24h.

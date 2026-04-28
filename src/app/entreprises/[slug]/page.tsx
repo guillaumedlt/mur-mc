@@ -11,7 +11,7 @@ import {
   fetchJobsForCompany,
 } from "@/lib/supabase/queries";
 
-const SITE_URL = "https://mur.mc";
+const SITE_URL = "https://montecarlowork.com";
 
 export const revalidate = 300;
 
@@ -24,14 +24,14 @@ export async function generateMetadata(
   const desc = (company.tagline || company.description || "").slice(0, 160);
   return {
     title: `${company.name} — Offres d'emploi a Monaco`,
-    description: desc || `Decouvrez ${company.name} sur Mur.mc — ${company.sector}, ${company.location}.`,
+    description: desc || `Decouvrez ${company.name} sur Monte Carlo Work — ${company.sector}, ${company.location}.`,
     alternates: { canonical: `/entreprises/${company.slug}` },
     openGraph: {
       type: "profile",
       title: company.name,
       description: desc,
       url: `${SITE_URL}/entreprises/${company.slug}`,
-      siteName: "Mur.mc",
+      siteName: "Monte Carlo Work",
       locale: "fr_MC",
       images: company.coverUrl
         ? [{ url: company.coverUrl, width: 1200, height: 630, alt: company.name }]
@@ -79,7 +79,7 @@ export default async function CompanyPage(
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Mur.mc", item: SITE_URL },
+      { "@type": "ListItem", position: 1, name: "Monte Carlo Work", item: SITE_URL },
       { "@type": "ListItem", position: 2, name: "Entreprises", item: `${SITE_URL}/entreprises` },
       { "@type": "ListItem", position: 3, name: company.name, item: `${SITE_URL}/entreprises/${company.slug}` },
     ],

@@ -1,5 +1,5 @@
 /**
- * Articles editoriaux du magazine Mur.mc.
+ * Articles editoriaux du magazine Monte Carlo Work.
  * Types et helpers — les donnees viendront de Supabase.
  */
 

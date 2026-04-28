@@ -4,7 +4,7 @@ import { PublishJobForm } from "@/components/wall/employer/publish-job-form";
 
 export const metadata: Metadata = {
   title: "Publier une offre",
-  description: "Publier une offre d'emploi sur Mur.mc.",
+  description: "Publier une offre d'emploi sur Monte Carlo Work.",
   alternates: { canonical: "/recruteur/publier" },
   robots: { index: false, follow: false },
 };

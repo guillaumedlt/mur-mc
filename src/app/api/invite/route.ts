@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Email et token requis" }, { status: 400 });
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://mur.mc";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://montecarlowork.com";
   const inviteLink = `${siteUrl}/invitation/${token}`;
 
   // Use Supabase Auth to send a custom invite email

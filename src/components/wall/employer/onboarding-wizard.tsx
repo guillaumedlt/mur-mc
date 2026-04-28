@@ -348,7 +348,7 @@ function CompanyStep({
             Creez votre entreprise
           </h2>
           <p className="text-[13.5px] text-muted-foreground mt-1">
-            Ces informations serviront a creer votre fiche publique sur le mur.
+            Ces informations serviront a creer votre fiche publique sur Monte Carlo Work.
           </p>
         </div>
       </div>

@@ -3,7 +3,7 @@ import { fetchAllCompanies, fetchAllJobs, fetchAllStories } from "@/lib/supabase
 import { METIER_SLUGS } from "./emploi-monaco/metier/metiers";
 import { CROSS_SLUGS } from "./emploi-monaco/metier/cross";
 
-const SITE_URL = "https://mur.mc";
+const SITE_URL = "https://montecarlowork.com";
 
 const SEO_SECTORS = [
   "banque-finance",

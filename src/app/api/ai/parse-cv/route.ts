@@ -37,7 +37,7 @@ export async function POST(request: Request) {
   const { sanitizeForPrompt } = await import("@/lib/ai/sanitize");
   const text = sanitizeForPrompt(rawText, 5000);
 
-  const systemPrompt = `Tu es un parseur de CV pour un job board a Monaco (Mur.mc).
+  const systemPrompt = `Tu es un parseur de CV pour un job board a Monaco (Monte Carlo Work).
 On te donne le texte brut d'un CV. Extrais les informations structurees.
 
 Reponds UNIQUEMENT en JSON valide avec cette structure :

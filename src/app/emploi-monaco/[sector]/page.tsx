@@ -7,7 +7,7 @@ import { fetchAllJobs } from "@/lib/supabase/queries";
 import { CONTRACT_MAP } from "./contracts";
 import { JobAlertForm } from "@/components/wall/job-alert-form";
 
-const SITE_URL = "https://mur.mc";
+const SITE_URL = "https://montecarlowork.com";
 
 const SECTOR_MAP: Record<string, { label: string; sector: string; description: string }> = {
   "banque-finance": {
@@ -71,8 +71,8 @@ export async function generateMetadata(
   const contract = CONTRACT_MAP[slug];
   if (contract) {
     return {
-      title: `Offre d'emploi ${contract.label} a Monaco — Emploi ${contract.label} | Mur.mc`,
-      description: `${contract.description} Postulez en direct sur Mur.mc.`,
+      title: `Offre d'emploi ${contract.label} a Monaco — Emploi ${contract.label} | Monte Carlo Work`,
+      description: `${contract.description} Postulez en direct sur Monte Carlo Work.`,
       keywords: [
         `emploi ${contract.label} Monaco`,
         `offre ${contract.label} Monaco`,
@@ -83,9 +83,9 @@ export async function generateMetadata(
       openGraph: {
         type: "website",
         url: `${SITE_URL}/emploi-monaco/${slug}`,
-        title: `Emploi ${contract.label} a Monaco | Mur.mc`,
+        title: `Emploi ${contract.label} a Monaco | Monte Carlo Work`,
         description: `Toutes les offres ${contract.label} en Principaute de Monaco.`,
-        siteName: "Mur.mc",
+        siteName: "Monte Carlo Work",
       },
     };
   }
@@ -95,8 +95,8 @@ export async function generateMetadata(
   if (!info) return { title: "Secteur introuvable", robots: { index: false } };
 
   return {
-    title: `Emploi ${info.label} a Monaco — Offres ${info.label} | Mur.mc`,
-    description: `Offres d'emploi ${info.label} a Monaco. ${info.description} Postulez en direct sur Mur.mc.`,
+    title: `Emploi ${info.label} a Monaco — Offres ${info.label} | Monte Carlo Work`,
+    description: `Offres d'emploi ${info.label} a Monaco. ${info.description} Postulez en direct sur Monte Carlo Work.`,
     keywords: [
       `emploi ${info.label.toLowerCase()} Monaco`,
       `offre ${info.label.toLowerCase()} Monaco`,
@@ -107,9 +107,9 @@ export async function generateMetadata(
     openGraph: {
       type: "website",
       url: `${SITE_URL}/emploi-monaco/${slug}`,
-      title: `Emploi ${info.label} a Monaco | Mur.mc`,
+      title: `Emploi ${info.label} a Monaco | Monte Carlo Work`,
       description: `Toutes les offres ${info.label} en Principaute de Monaco.`,
-      siteName: "Mur.mc",
+      siteName: "Monte Carlo Work",
     },
   };
 }
@@ -135,7 +135,7 @@ export default async function SectorPage(
       breadcrumb: {
         "@type": "BreadcrumbList",
         itemListElement: [
-          { "@type": "ListItem", position: 1, name: "Mur.mc", item: SITE_URL },
+          { "@type": "ListItem", position: 1, name: "Monte Carlo Work", item: SITE_URL },
           { "@type": "ListItem", position: 2, name: "Emploi a Monaco", item: `${SITE_URL}/emploi-monaco` },
           { "@type": "ListItem", position: 3, name: contract.label, item: `${SITE_URL}/emploi-monaco/${slug}` },
         ],
@@ -208,7 +208,7 @@ export default async function SectorPage(
     breadcrumb: {
       "@type": "BreadcrumbList",
       itemListElement: [
-        { "@type": "ListItem", position: 1, name: "Mur.mc", item: SITE_URL },
+        { "@type": "ListItem", position: 1, name: "Monte Carlo Work", item: SITE_URL },
         { "@type": "ListItem", position: 2, name: "Emploi a Monaco", item: `${SITE_URL}/emploi-monaco` },
         { "@type": "ListItem", position: 3, name: info.label, item: `${SITE_URL}/emploi-monaco/${slug}` },
       ],

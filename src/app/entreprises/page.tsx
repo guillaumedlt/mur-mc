@@ -4,7 +4,7 @@ import { CompaniesExplorer } from "@/components/wall/companies-explorer";
 import { fetchAllCompanies, fetchAllJobs } from "@/lib/supabase/queries";
 
 export const metadata: Metadata = {
-  title: "Recrutement Monaco — Entreprises qui recrutent en Principaute | Mur.mc",
+  title: "Recrutement Monaco — Entreprises qui recrutent en Principaute | Monte Carlo Work",
   description:
     "Decouvrez les entreprises monegasques qui recrutent en ce moment : banques privees, palaces, groupes de yachting, maisons de luxe, cabinets juridiques. Recrutement Monaco en direct.",
   keywords: ["recrutement Monaco", "entreprises Monaco", "employeurs Monaco", "recrutement Principaute"],
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     type: "website",
     title: "Recrutement Monaco — Entreprises qui recrutent",
     description: "Toutes les entreprises qui recrutent en Principaute de Monaco.",
-    siteName: "Mur.mc",
+    siteName: "Monte Carlo Work",
     locale: "fr_MC",
   },
 };

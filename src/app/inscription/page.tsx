@@ -4,9 +4,9 @@ import { Shell } from "@/components/wall/shell";
 import { InscriptionForm } from "@/components/wall/inscription-form";
 
 export const metadata: Metadata = {
-  title: "Creer un compte — Mur.mc",
+  title: "Creer un compte — Monte Carlo Work",
   description:
-    "Candidats : creez votre compte pour postuler. Recruteurs : demandez votre espace employeur.",
+    "Candidats : creez votre compte pour postuler. Recruteurs : demandez votre espace employeur sur Monte Carlo Work.",
   alternates: { canonical: "/inscription" },
   robots: { index: false, follow: true },
 };

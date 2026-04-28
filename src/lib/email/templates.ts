@@ -1,5 +1,5 @@
 /**
- * Email templates for Mur.mc notifications.
+ * Email templates for Monte Carlo Work notifications.
  * All templates return { subject, html } ready for Resend.
  */
 
@@ -15,8 +15,8 @@ function esc(s: string | number | undefined | null): string {
 }
 
 const BRAND = {
-  name: "Mur.mc",
-  url: "https://mur.mc",
+  name: "Monte Carlo Work",
+  url: "https://montecarlowork.com",
   color: "#1C3D5A",
   accentColor: "#2563eb",
 };
@@ -43,7 +43,7 @@ ${content}
 <!-- Footer -->
 <tr><td style="padding:20px 32px;background:#f9f9f8;border-top:1px solid #e5e4e0">
 <p style="margin:0;font-size:11px;color:#999;line-height:1.5">
-Cet email a ete envoye par <a href="${BRAND.url}" style="color:${BRAND.color};text-decoration:none">${BRAND.name}</a> — Le mur d'offres de Monaco.<br>
+Cet email a ete envoye par <a href="${BRAND.url}" style="color:${BRAND.color};text-decoration:none">${BRAND.name}</a> — Le job board de la Principaute de Monaco.<br>
 Pour gerer vos notifications, connectez-vous a votre espace.
 </p>
 </td></tr>
@@ -253,7 +253,7 @@ export function rapportHebdo(data: {
   return {
     subject: `Recap hebdo — ${data.companyName}`,
     html: layout(`
-      ${heading(`Votre semaine sur Mur.mc`)}
+      ${heading(`Votre semaine sur Monte Carlo Work`)}
       ${paragraph(`Bonjour ${data.recruiterName}, voici le recap de la semaine pour <strong>${data.companyName}</strong> :`)}
 
       <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px">

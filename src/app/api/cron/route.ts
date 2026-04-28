@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/send";
 import * as templates from "@/lib/email/templates";
 
-const SITE = "https://mur.mc";
+const SITE = "https://montecarlowork.com";
 
 /**
  * GET /api/cron?type=rappel|hebdo

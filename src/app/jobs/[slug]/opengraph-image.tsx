@@ -22,12 +22,14 @@ export default async function OgImage(props: {
             alignItems: "center",
             justifyContent: "center",
             background: "#FAFAF7",
-            fontSize: 40,
-            fontWeight: 600,
+            fontSize: 56,
+            fontWeight: 500,
             color: "#0A0A0A",
+            letterSpacing: "-0.025em",
+            fontFamily: "ui-serif, Georgia, serif",
           }}
         >
-          Mur.mc
+          Monte Carlo Work
         </div>
       ),
       size,
@@ -73,16 +75,23 @@ export default async function OgImage(props: {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontSize: 22,
+                fontSize: 18,
                 fontWeight: 700,
+                letterSpacing: "-0.04em",
+                fontFamily: "ui-serif, Georgia, serif",
               }}
             >
-              M
+              MC
             </div>
             <span
-              style={{ fontSize: 20, color: "#0A0A0A", fontWeight: 500 }}
+              style={{
+                fontSize: 22,
+                color: "#0A0A0A",
+                fontWeight: 500,
+                letterSpacing: "-0.015em",
+              }}
             >
-              Mur.mc
+              Monte Carlo Work
             </span>
           </div>
           <div
@@ -128,10 +137,10 @@ export default async function OgImage(props: {
           }}
         >
           <span style={{ fontSize: 16, color: "#A8A8A8" }}>
-            mur.mc/jobs/{job.slug}
+            montecarlowork.com/jobs/{job.slug}
           </span>
           <span style={{ fontSize: 16, color: "#A8A8A8" }}>
-            Le mur d&apos;offres de Monaco
+            Le job board de la Principaute de Monaco
           </span>
         </div>
       </div>

@@ -29,7 +29,7 @@ export default function NotFound() {
           </Link>
         </div>
         <p className="text-[11.5px] text-[var(--tertiary-foreground)] mt-8 font-mono">
-          MUR.MC
+          MONTE CARLO WORK
         </p>
       </div>
     </div>

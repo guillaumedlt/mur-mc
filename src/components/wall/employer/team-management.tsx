@@ -326,7 +326,7 @@ function InviteModal({
             <p className="text-[12.5px] text-muted-foreground mt-1 max-w-sm mx-auto">
               {wasLinked
                 ? `${email} a ete ajoute a votre equipe en tant que ${teamRoleLabel(role)}.`
-                : `Un email d'invitation a ete envoye a ${email}. Quand cette personne creera son compte Mur.mc, elle sera automatiquement ajoutee a votre equipe en tant que ${teamRoleLabel(role)}.`}
+                : `Un email d'invitation a ete envoye a ${email}. Quand cette personne creera son compte Monte Carlo Work, elle sera automatiquement ajoutee a votre equipe en tant que ${teamRoleLabel(role)}.`}
             </p>
             <button
               type="button"
@@ -381,7 +381,7 @@ function InviteModal({
                 </select>
               </div>
               <div className="rounded-xl bg-[var(--background-alt)] border border-[var(--border)] p-3.5 text-[12px] text-foreground/70 leading-snug">
-                Si cette personne a deja un compte Mur.mc, elle sera ajoutee directement.
+                Si cette personne a deja un compte Monte Carlo Work, elle sera ajoutee directement.
                 Sinon, une invitation en attente sera creee — elle sera automatiquement linkee
                 a votre equipe quand elle creera son compte avec cet email.
               </div>

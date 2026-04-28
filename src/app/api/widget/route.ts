@@ -53,7 +53,7 @@ export async function GET(request: Request) {
       lang: j.lang,
       description: j.short_description,
       publishedAt: j.published_at,
-      url: `https://mur.mc/jobs/${j.slug}`,
+      url: `https://montecarlowork.com/jobs/${j.slug}`,
     })),
   }, {
     headers: {

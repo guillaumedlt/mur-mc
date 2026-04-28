@@ -48,7 +48,7 @@ export async function POST(request: Request) {
     await sendEmail({
       to: "delachetg@gmail.com",
       subject: `Nouvelle demande recruteur — ${companyName} (${plan})`,
-      html: `<p><strong>${contactName}</strong> de <strong>${companyName}</strong> souhaite recruter sur Mur.mc.</p><p>Email : ${email}${phone ? " · Tel : " + phone : ""}</p><p>Forfait : ${plan}</p>${message ? "<p>Message : " + message + "</p>" : ""}`,
+      html: `<p><strong>${contactName}</strong> de <strong>${companyName}</strong> souhaite recruter sur Monte Carlo Work.</p><p>Email : ${email}${phone ? " · Tel : " + phone : ""}</p><p>Forfait : ${plan}</p>${message ? "<p>Message : " + message + "</p>" : ""}`,
     });
   } catch { /* fail-silent */ }
 
