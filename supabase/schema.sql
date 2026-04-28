@@ -365,6 +365,22 @@ create index if not exists idx_job_alerts_email on job_alerts(email);
 create index if not exists idx_job_alerts_active on job_alerts(active) where active = true;
 create index if not exists idx_job_alerts_profile on job_alerts(profile_id);
 
+-- Demandes de contact recruteur (formulaire public + admin panel, cf migration 0008)
+create table if not exists contact_requests (
+  id uuid primary key default gen_random_uuid(),
+  company_name text not null,
+  contact_name text not null,
+  email text not null,
+  phone text,
+  plan text not null default 'starter',
+  message text,
+  status text not null default 'new',
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_contact_requests_email on contact_requests(email);
+create index if not exists idx_contact_requests_status on contact_requests(status);
+
 -- ============================================================
 -- INDEX pour la performance
 -- ============================================================
@@ -429,6 +445,7 @@ alter table rate_limits enable row level security;
 alter table job_templates enable row level security;
 alter table messages enable row level security;
 alter table job_alerts enable row level security;
+alter table contact_requests enable row level security;
 
 -- Companies : lecture publique
 create policy "companies_read" on companies for select using (true);
@@ -460,9 +477,19 @@ create policy "companies_delete" on companies for delete using (
 
 -- Profiles : chaque user voit/edite le sien
 create policy "profiles_own" on profiles for all using (id = auth.uid());
--- Les recruteurs voient les profils candidats
-create policy "profiles_read_candidates" on profiles for select using (
-  role = 'candidate' or id = auth.uid()
+-- Les recruteurs voient les profils candidats. Les candidats ne voient PAS
+-- les autres candidats (defense en profondeur, RGPD).
+-- Renomme depuis "profiles_read_candidates" (migration 0008).
+create policy "profiles_read_candidates_by_employers" on profiles for select using (
+  id = auth.uid()
+  or (
+    role = 'candidate'
+    and exists (
+      select 1 from profiles me
+      where me.id = auth.uid()
+      and me.role = 'employer'
+    )
+  )
 );
 
 -- Jobs : lecture publique (publiees), CRUD par les recruteurs de l'entreprise
@@ -487,12 +514,40 @@ create policy "jobs_write" on jobs for all using (
 create policy "applications_candidate" on applications for all using (
   candidate_id = auth.uid()
 );
-create policy "applications_employer" on applications for all using (
+-- Lecture par toute l'equipe recruteur de la company qui owns le job.
+create policy "applications_employer_read" on applications for select using (
   exists (
     select 1 from jobs
     join profiles on profiles.company_id = jobs.company_id
     where jobs.id = applications.job_id
     and profiles.id = auth.uid()
+  )
+);
+-- Update/delete reserves aux admin/recruiter (les viewers en lecture seule).
+create policy "applications_employer_write" on applications for update using (
+  exists (
+    select 1 from jobs
+    join profiles on profiles.company_id = jobs.company_id
+    where jobs.id = applications.job_id
+    and profiles.id = auth.uid()
+    and profiles.team_role in ('admin', 'recruiter')
+  )
+) with check (
+  exists (
+    select 1 from jobs
+    join profiles on profiles.company_id = jobs.company_id
+    where jobs.id = applications.job_id
+    and profiles.id = auth.uid()
+    and profiles.team_role in ('admin', 'recruiter')
+  )
+);
+create policy "applications_employer_delete" on applications for delete using (
+  exists (
+    select 1 from jobs
+    join profiles on profiles.company_id = jobs.company_id
+    where jobs.id = applications.job_id
+    and profiles.id = auth.uid()
+    and profiles.team_role in ('admin', 'recruiter')
   )
 );
 
@@ -512,6 +567,8 @@ create policy "events_read" on application_events for select using (
     )
   )
 );
+-- Insert : candidat ecrit ses propres events (apply, withdraw),
+-- ou recruteur admin/recruiter peut ecrire (status changes, notes).
 create policy "events_write" on application_events for insert with check (
   exists (
     select 1 from applications
@@ -519,6 +576,10 @@ create policy "events_write" on application_events for insert with check (
     join profiles on profiles.company_id = jobs.company_id
     where applications.id = application_events.application_id
     and profiles.id = auth.uid()
+    and (
+      applications.candidate_id = auth.uid()
+      or profiles.team_role in ('admin', 'recruiter')
+    )
   )
 );
 
@@ -818,6 +879,41 @@ $$;
 create trigger trg_profiles_no_self_escalation
   before update on profiles
   for each row execute function prevent_profile_self_escalation();
+
+
+-- ============================================================
+-- Trigger anti-tampering : plan / job_quota sont admin-only
+-- (cf migration 0008). Un user employer "admin" peut update les autres
+-- colonnes de sa company mais pas plan/job_quota — seul service_role passe.
+-- ============================================================
+
+create or replace function lock_company_plan_columns()
+returns trigger language plpgsql security definer as $$
+begin
+  if auth.role() = 'service_role' then
+    return new;
+  end if;
+  if new.plan is distinct from old.plan
+     or new.job_quota is distinct from old.job_quota then
+    raise exception 'plan/job_quota are admin-only fields. Use /api/admin/companies.';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger trg_lock_company_plan
+  before update on companies
+  for each row execute function lock_company_plan_columns();
+
+
+-- ============================================================
+-- contact_requests : RLS minimale (cf migration 0008)
+-- Insert ouvert au public (formulaire /api/contact).
+-- Lecture/update reservees a service_role (route /api/admin/contacts).
+-- ============================================================
+
+create policy "contact_requests_insert_public" on contact_requests
+  for insert with check (true);
 
 
 -- ============================================================
