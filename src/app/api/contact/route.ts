@@ -2,6 +2,16 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/send";
 
+/** Echappe les caracteres HTML pour eviter l'injection dans l'email admin. */
+function esc(s: string | null | undefined): string {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const companyName = body?.companyName?.trim();
@@ -16,6 +26,15 @@ export async function POST(request: Request) {
   }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return NextResponse.json({ error: "Email invalide" }, { status: 400 });
+  }
+  // Garde-fou : taille max raisonnable pour bloquer les payloads abusifs.
+  if (
+    companyName.length > 200 ||
+    contactName.length > 200 ||
+    email.length > 200 ||
+    (message && message.length > 5000)
+  ) {
+    return NextResponse.json({ error: "Champs trop longs" }, { status: 400 });
   }
 
   const admin = createAdminClient();
@@ -41,14 +60,15 @@ export async function POST(request: Request) {
   });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("[contact.insert]", error);
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 
   try {
     await sendEmail({
       to: "delachetg@gmail.com",
       subject: `Nouvelle demande recruteur — ${companyName} (${plan})`,
-      html: `<p><strong>${contactName}</strong> de <strong>${companyName}</strong> souhaite recruter sur Monte Carlo Work.</p><p>Email : ${email}${phone ? " · Tel : " + phone : ""}</p><p>Forfait : ${plan}</p>${message ? "<p>Message : " + message + "</p>" : ""}`,
+      html: `<p><strong>${esc(contactName)}</strong> de <strong>${esc(companyName)}</strong> souhaite recruter sur Monte Carlo Work.</p><p>Email : ${esc(email)}${phone ? " · Tel : " + esc(phone) : ""}</p><p>Forfait : ${esc(plan)}</p>${message ? `<p>Message : ${esc(message)}</p>` : ""}`,
     });
   } catch { /* fail-silent */ }
 

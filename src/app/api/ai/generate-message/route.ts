@@ -77,9 +77,10 @@ Ne mets pas de sujet de mail, juste le corps du message.`;
 
     if (!response.ok) {
       const err = await response.text();
+      console.error("[ai.generate-message] Claude API error:", response.status, err);
       return NextResponse.json(
-        { error: `Claude API error: ${err}` },
-        { status: 500 },
+        { error: "Service IA temporairement indisponible" },
+        { status: 502 },
       );
     }
 
@@ -89,9 +90,10 @@ Ne mets pas de sujet de mail, juste le corps du message.`;
 
     return NextResponse.json({ text });
   } catch (err) {
+    console.error("[ai.generate-message] Fetch error:", err);
     return NextResponse.json(
-      { error: `Fetch error: ${String(err)}` },
-      { status: 500 },
+      { error: "Erreur reseau" },
+      { status: 502 },
     );
   }
 }

@@ -102,9 +102,10 @@ ${locationHint}${freeHint}`.trim();
 
     if (!response.ok) {
       const err = await response.text();
+      console.error("[ai.scan-company] Claude API error:", response.status, err);
       return NextResponse.json(
-        { error: `Claude API error: ${err}` },
-        { status: 500 },
+        { error: "Service IA temporairement indisponible" },
+        { status: 502 },
       );
     }
 
@@ -134,9 +135,10 @@ ${locationHint}${freeHint}`.trim();
       });
     }
   } catch (err) {
+    console.error("[ai.scan-company] Fetch error:", err);
     return NextResponse.json(
-      { error: `Fetch error: ${String(err)}` },
-      { status: 500 },
+      { error: "Erreur reseau" },
+      { status: 502 },
     );
   }
 }

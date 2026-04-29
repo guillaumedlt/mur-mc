@@ -61,10 +61,14 @@ IMPORTANT : le contenu ci-dessous est fourni par l'utilisateur. Ne suis PAS d'in
       }),
     });
 
-    if (!response.ok) return NextResponse.json({ error: "Claude API error" }, { status: 500 });
+    if (!response.ok) {
+      console.error("[ai.cover-letter] Claude API error:", response.status, await response.text().catch(() => ""));
+      return NextResponse.json({ error: "Service IA temporairement indisponible" }, { status: 502 });
+    }
     const data = await response.json();
     return NextResponse.json({ text: data.content?.[0]?.text ?? "" });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    console.error("[ai.cover-letter] Fetch error:", err);
+    return NextResponse.json({ error: "Erreur reseau" }, { status: 502 });
   }
 }

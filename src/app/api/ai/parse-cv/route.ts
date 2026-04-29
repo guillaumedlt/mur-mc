@@ -71,7 +71,8 @@ Pas de markdown, pas de texte avant ou apres le JSON.`;
     });
 
     if (!response.ok) {
-      return NextResponse.json({ error: "Claude API error" }, { status: 500 });
+      console.error("[ai.parse-cv] Claude API error:", response.status, await response.text().catch(() => ""));
+      return NextResponse.json({ error: "Service IA temporairement indisponible" }, { status: 502 });
     }
 
     const data = await response.json();
@@ -87,6 +88,7 @@ Pas de markdown, pas de texte avant ou apres le JSON.`;
       return NextResponse.json({ error: "Parsing failed" }, { status: 500 });
     }
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    console.error("[ai.parse-cv] Fetch error:", err);
+    return NextResponse.json({ error: "Erreur reseau" }, { status: 502 });
   }
 }

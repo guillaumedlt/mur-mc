@@ -112,9 +112,10 @@ ${salaryHint}${freeHint}`;
 
     if (!response.ok) {
       const err = await response.text();
+      console.error("[ai.generate-job] Claude API error:", response.status, err);
       return NextResponse.json(
-        { error: `Claude API error: ${err}` },
-        { status: 500 },
+        { error: "Service IA temporairement indisponible" },
+        { status: 502 },
       );
     }
 
@@ -146,9 +147,10 @@ ${salaryHint}${freeHint}`;
       );
     }
   } catch (err) {
+    console.error("[ai.generate-job] Fetch error:", err);
     return NextResponse.json(
-      { error: `Fetch error: ${String(err)}` },
-      { status: 500 },
+      { error: "Erreur reseau" },
+      { status: 502 },
     );
   }
 }

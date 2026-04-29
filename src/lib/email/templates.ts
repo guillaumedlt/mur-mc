@@ -246,30 +246,33 @@ export function rapportHebdo(data: {
   topCandidates: Array<{ name: string; jobTitle: string; score?: number }>;
   dashboardUrl: string;
 }) {
+  // Toutes les variables user-controlled (recruiterName, companyName,
+  // candidate name/jobTitle) doivent passer par esc() — elles peuvent
+  // contenir du HTML injecte par un employer (audit finding HIGH).
   const topList = data.topCandidates
-    .map((c) => `<li style="padding:4px 0;font-size:14px;color:#333">${c.name} — ${c.jobTitle}${c.score ? ` (${c.score}%)` : ""}</li>`)
+    .map((c) => `<li style="padding:4px 0;font-size:14px;color:#333">${esc(c.name)} — ${esc(c.jobTitle)}${c.score ? ` (${esc(c.score)}%)` : ""}</li>`)
     .join("");
 
   return {
-    subject: `Recap hebdo — ${data.companyName}`,
+    subject: `Recap hebdo — ${esc(data.companyName)}`,
     html: layout(`
       ${heading(`Votre semaine sur Monte Carlo Work`)}
-      ${paragraph(`Bonjour ${data.recruiterName}, voici le recap de la semaine pour <strong>${data.companyName}</strong> :`)}
+      ${paragraph(`Bonjour ${esc(data.recruiterName)}, voici le recap de la semaine pour <strong>${esc(data.companyName)}</strong> :`)}
 
       <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px">
         <tr>
           <td style="padding:16px;background:#f9f9f8;border-radius:12px;text-align:center;border:1px solid #e5e4e0">
-            <p style="margin:0;font-size:28px;font-weight:700;color:${BRAND.color}">${data.newApplications}</p>
+            <p style="margin:0;font-size:28px;font-weight:700;color:${BRAND.color}">${esc(data.newApplications)}</p>
             <p style="margin:4px 0 0;font-size:11px;color:#999;text-transform:uppercase;letter-spacing:0.08em">Candidatures</p>
           </td>
           <td width="12"></td>
           <td style="padding:16px;background:#f9f9f8;border-radius:12px;text-align:center;border:1px solid #e5e4e0">
-            <p style="margin:0;font-size:28px;font-weight:700;color:${BRAND.color}">${data.totalViews}</p>
+            <p style="margin:0;font-size:28px;font-weight:700;color:${BRAND.color}">${esc(data.totalViews)}</p>
             <p style="margin:4px 0 0;font-size:11px;color:#999;text-transform:uppercase;letter-spacing:0.08em">Vues</p>
           </td>
           <td width="12"></td>
           <td style="padding:16px;background:#f9f9f8;border-radius:12px;text-align:center;border:1px solid #e5e4e0">
-            <p style="margin:0;font-size:28px;font-weight:700;color:${BRAND.color}">${data.interviews}</p>
+            <p style="margin:0;font-size:28px;font-weight:700;color:${BRAND.color}">${esc(data.interviews)}</p>
             <p style="margin:4px 0 0;font-size:11px;color:#999;text-transform:uppercase;letter-spacing:0.08em">Entretiens</p>
           </td>
         </tr>
