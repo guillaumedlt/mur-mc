@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  checkRateLimit,
+  getClientIp,
+  ipToUuid,
+} from "@/lib/rate-limit";
 
 /**
  * POST /api/alerts — Cree une alerte email pour les nouvelles offres.
@@ -11,6 +16,20 @@ import { createAdminClient } from "@/lib/supabase/admin";
  * anonymes (juste un email). Les anonymes passent par service_role.
  */
 export async function POST(request: Request) {
+  // Anti-spam : 10 creations d'alertes par IP par 24h.
+  const rl = await checkRateLimit(
+    ipToUuid(getClientIp(request)),
+    "api.alerts.create",
+    10,
+    24 * 60 * 60,
+  );
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Trop d'alertes creees. Reessayez plus tard." },
+      { status: 429 },
+    );
+  }
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -65,7 +84,8 @@ export async function POST(request: Request) {
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("[alerts.create]", error);
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true, id: alert?.id, token: alert?.token });
@@ -89,7 +109,8 @@ export async function DELETE(request: Request) {
     .eq("token", token);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("[alerts.delete]", error);
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });

@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import {
+  checkRateLimit,
+  getClientIp,
+  ipToUuid,
+} from "@/lib/rate-limit";
 
 /**
  * POST /api/view
@@ -11,6 +16,18 @@ import { createClient } from "@/lib/supabase/server";
  * Dedup: la contrainte unique(job_id, fingerprint) ignore les doublons.
  */
 export async function POST(request: Request) {
+  // Anti-scraping : 100 vues par IP par heure (largement au-dessus du
+  // browsing legitime, mais coupe les bots qui inondent /api/view).
+  const rl = await checkRateLimit(
+    ipToUuid(getClientIp(request)),
+    "api.view",
+    100,
+    60 * 60,
+  );
+  if (!rl.allowed) {
+    return NextResponse.json({ error: "rate limited" }, { status: 429 });
+  }
+
   const body = await request.json();
   const { jobId } = body;
 

@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/send";
+import {
+  checkRateLimit,
+  getClientIp,
+  ipToUuid,
+} from "@/lib/rate-limit";
 
 /** Echappe les caracteres HTML pour eviter l'injection dans l'email admin. */
 function esc(s: string | null | undefined): string {
@@ -13,6 +18,20 @@ function esc(s: string | null | undefined): string {
 }
 
 export async function POST(request: Request) {
+  // Anti-spam : 3 demandes par IP par 24h.
+  const rl = await checkRateLimit(
+    ipToUuid(getClientIp(request)),
+    "api.contact",
+    3,
+    24 * 60 * 60,
+  );
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Trop de demandes. Reessayez plus tard." },
+      { status: 429 },
+    );
+  }
+
   const body = await request.json().catch(() => null);
   const companyName = body?.companyName?.trim();
   const contactName = body?.contactName?.trim();

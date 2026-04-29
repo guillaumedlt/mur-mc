@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import {
+  checkRateLimit,
+  getClientIp,
+  ipToUuid,
+} from "@/lib/rate-limit";
 
 /**
  * GET /api/widget?company=slug
@@ -7,6 +12,25 @@ import { createClient } from "@/lib/supabase/server";
  * Used by the embeddable widget script.
  */
 export async function GET(request: Request) {
+  // Anti-abuse : 60 requetes par IP par heure (le widget polle toutes les
+  // 5min en moyenne, donc une page legitime ne devrait jamais hit cette
+  // limite). Le cache 5min cote serveur reduit deja la pression DB.
+  const rl = await checkRateLimit(
+    ipToUuid(getClientIp(request)),
+    "api.widget",
+    60,
+    60 * 60,
+  );
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "rate limited" },
+      {
+        status: 429,
+        headers: { "Access-Control-Allow-Origin": "*" },
+      },
+    );
+  }
+
   const url = new URL(request.url);
   const companySlug = url.searchParams.get("company");
 
