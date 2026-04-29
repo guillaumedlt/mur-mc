@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useUser } from "@/lib/auth";
 import { createClient } from "./client";
 
@@ -11,46 +11,55 @@ export type JobTemplate = {
   createdAt: string;
 };
 
+const EMPTY_TEMPLATES: JobTemplate[] = [];
+
 /** Hook : charge les templates d'offres de la company du recruteur. */
 export function useJobTemplates() {
   const user = useUser();
+  const companyId = user?.companyId ?? null;
   const [templates, setTemplates] = useState<JobTemplate[]>([]);
   const [loading, setLoading] = useState(true);
-  const [fetchedFor, setFetchedFor] = useState<string | null>(null);
+  const [refetchTick, setRefetchTick] = useState(0);
 
-  const companyId = user?.companyId ?? null;
-  if (companyId !== fetchedFor) {
-    setFetchedFor(companyId);
-    if (!companyId) {
-      setTemplates([]);
-      setLoading(false);
-    } else {
-      setLoading(true);
-      const supabase = createClient();
-      supabase
-        .from("job_templates")
-        .select("id, name, payload, created_at")
-        .eq("company_id", companyId)
-        .order("created_at", { ascending: false })
+  useEffect(() => {
+    if (!companyId) return;
+    let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLoading(true);
+    const supabase = createClient();
+    supabase
+      .from("job_templates")
+      .select("id, name, payload, created_at")
+      .eq("company_id", companyId)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        if (cancelled) return;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .then(({ data }: { data: any }) => {
-          setTemplates(
-            (data ?? []).map(
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              (r: any): JobTemplate => ({
-                id: r.id,
-                name: r.name,
-                payload: r.payload ?? {},
-                createdAt: r.created_at,
-              }),
-            ),
-          );
-          setLoading(false);
-        });
-    }
+        const list = (data ?? []) as any[];
+        setTemplates(
+          list.map(
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (r: any): JobTemplate => ({
+              id: r.id,
+              name: r.name,
+              payload: r.payload ?? {},
+              createdAt: r.created_at,
+            }),
+          ),
+        );
+        setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [companyId, refetchTick]);
+
+  const refetch = () => setRefetchTick((t) => t + 1);
+
+  if (!companyId) {
+    return { templates: EMPTY_TEMPLATES, loading: false, refetch };
   }
 
-  const refetch = () => setFetchedFor(null);
   return { templates, loading, refetch };
 }
 

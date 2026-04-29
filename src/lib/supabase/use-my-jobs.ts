@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useUser } from "@/lib/auth";
 import { createClient } from "./client";
 
@@ -76,37 +76,46 @@ function mapMyJob(j: any): MyJob {
 
 /**
  * Hook client : charge les offres du recruteur connecte depuis Supabase.
+ *
+ * Le fetch est protege par un flag `cancelled` (AbortController-style) pour
+ * eviter les setState sur composants unmounted et les race conditions
+ * (changement de companyId pendant qu'une requete est in-flight).
  */
+const EMPTY_JOBS: MyJob[] = [];
+
 export function useMyJobs() {
   const user = useUser();
+  const companyId = user?.companyId ?? null;
   const [jobs, setJobs] = useState<MyJob[]>([]);
   const [loading, setLoading] = useState(true);
-  const [fetchedFor, setFetchedFor] = useState<string | null>(null);
+  const [refetchTick, setRefetchTick] = useState(0);
 
-  const companyId = user?.companyId ?? null;
-  if (companyId !== fetchedFor) {
-    setFetchedFor(companyId);
-    if (!companyId) {
-      setJobs([]);
-      setLoading(false);
-    } else {
-      setLoading(true);
-      const supabase = createClient();
-      supabase
-        .from("jobs")
-        .select("*, applications(count)")
-        .eq("company_id", companyId)
-        .order("created_at", { ascending: false })
-        .then(({ data }) => {
-          if (data) {
-            setJobs(data.map(mapMyJob));
-          }
-          setLoading(false);
-        });
-    }
+  useEffect(() => {
+    if (!companyId) return;
+    let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLoading(true);
+    const supabase = createClient();
+    supabase
+      .from("jobs")
+      .select("*, applications(count)")
+      .eq("company_id", companyId)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        if (cancelled) return;
+        if (data) setJobs(data.map(mapMyJob));
+        setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [companyId, refetchTick]);
+
+  const refetch = () => setRefetchTick((t) => t + 1);
+
+  if (!companyId) {
+    return { jobs: EMPTY_JOBS, loading: false, refetch };
   }
-
-  const refetch = () => setFetchedFor(null);
 
   return { jobs, loading, refetch };
 }
@@ -117,29 +126,34 @@ export function useMyJobs() {
 export function useMyJob(jobId: string | null) {
   const [job, setJob] = useState<MyJob | null>(null);
   const [loading, setLoading] = useState(true);
-  const [fetchedFor, setFetchedFor] = useState<string | null>(null);
+  const [refetchTick, setRefetchTick] = useState(0);
 
-  if (jobId !== fetchedFor) {
-    setFetchedFor(jobId);
-    if (!jobId) {
-      setJob(null);
-      setLoading(false);
-    } else {
-      setLoading(true);
-      const supabase = createClient();
-      supabase
-        .from("jobs")
-        .select("*, applications(count)")
-        .eq("id", jobId)
-        .single()
-        .then(({ data }) => {
-          setJob(data ? mapMyJob(data) : null);
-          setLoading(false);
-        });
-    }
+  useEffect(() => {
+    if (!jobId) return;
+    let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLoading(true);
+    const supabase = createClient();
+    supabase
+      .from("jobs")
+      .select("*, applications(count)")
+      .eq("id", jobId)
+      .single()
+      .then(({ data }) => {
+        if (cancelled) return;
+        setJob(data ? mapMyJob(data) : null);
+        setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [jobId, refetchTick]);
+
+  const refetch = () => setRefetchTick((t) => t + 1);
+
+  if (!jobId) {
+    return { job: null, loading: false, refetch };
   }
-
-  const refetch = () => setFetchedFor(null);
 
   return { job, loading, refetch };
 }

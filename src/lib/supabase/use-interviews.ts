@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useUser } from "@/lib/auth";
 import { createClient } from "./client";
 
@@ -64,35 +64,48 @@ function mapScorecard(row: any): Scorecard {
   };
 }
 
+const EMPTY_INTERVIEWS: Interview[] = [];
+const EMPTY_SCORECARDS: Scorecard[] = [];
+
 export function useInterviews(applicationId: string | null) {
   const user = useUser();
+  const userId = user?.id ?? null;
   const [interviews, setInterviews] = useState<Interview[]>([]);
   const [scorecards, setScorecards] = useState<Scorecard[]>([]);
   const [loading, setLoading] = useState(true);
-  const [fetchedFor, setFetchedFor] = useState<string | null>(null);
+  const [refetchTick, setRefetchTick] = useState(0);
 
-  const key = applicationId && user ? `${applicationId}:${user.id}` : null;
-  if (key !== fetchedFor) {
-    setFetchedFor(key);
-    if (!applicationId || !user) {
-      setInterviews([]);
-      setScorecards([]);
+  useEffect(() => {
+    if (!applicationId || !userId) return;
+    let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLoading(true);
+    const supabase = createClient();
+    Promise.all([
+      supabase.from("interviews").select("*").eq("application_id", applicationId).order("scheduled_at", { ascending: true }),
+      supabase.from("interview_scorecards").select("*").eq("application_id", applicationId).order("created_at", { ascending: false }),
+    ]).then(([intRes, scRes]) => {
+      if (cancelled) return;
+      setInterviews((intRes.data ?? []).map(mapInterview));
+      setScorecards((scRes.data ?? []).map(mapScorecard));
       setLoading(false);
-    } else {
-      setLoading(true);
-      const supabase = createClient();
-      Promise.all([
-        supabase.from("interviews").select("*").eq("application_id", applicationId).order("scheduled_at", { ascending: true }),
-        supabase.from("interview_scorecards").select("*").eq("application_id", applicationId).order("created_at", { ascending: false }),
-      ]).then(([intRes, scRes]) => {
-        setInterviews((intRes.data ?? []).map(mapInterview));
-        setScorecards((scRes.data ?? []).map(mapScorecard));
-        setLoading(false);
-      });
-    }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [applicationId, userId, refetchTick]);
+
+  const refetch = () => setRefetchTick((t) => t + 1);
+
+  if (!applicationId || !userId) {
+    return {
+      interviews: EMPTY_INTERVIEWS,
+      scorecards: EMPTY_SCORECARDS,
+      loading: false,
+      refetch,
+    };
   }
 
-  const refetch = () => setFetchedFor(null);
   return { interviews, scorecards, loading, refetch };
 }
 

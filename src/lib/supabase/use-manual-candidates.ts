@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useUser } from "@/lib/auth";
 import { createClient } from "./client";
 
@@ -72,41 +72,47 @@ function mapCandidate(row: any, i: number): ManualCandidate {
   };
 }
 
+const EMPTY_MC: ManualCandidate[] = [];
+
 export function useManualCandidates(jobId?: string | null) {
   const user = useUser();
+  const companyId = user?.companyId ?? null;
   const [candidates, setCandidates] = useState<ManualCandidate[]>([]);
   const [loading, setLoading] = useState(true);
-  const [fetchedFor, setFetchedFor] = useState<string | null>(null);
+  const [refetchTick, setRefetchTick] = useState(0);
 
-  const companyId = user?.companyId ?? null;
-  const key = companyId ? `${companyId}:${jobId ?? "all"}` : null;
+  useEffect(() => {
+    if (!companyId) return;
+    let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLoading(true);
+    const supabase = createClient();
+    let query = supabase
+      .from("manual_candidates")
+      .select("*")
+      .eq("company_id", companyId)
+      .order("created_at", { ascending: false });
 
-  if (key !== fetchedFor) {
-    setFetchedFor(key);
-    if (!companyId) {
-      setCandidates([]);
-      setLoading(false);
-    } else {
-      setLoading(true);
-      const supabase = createClient();
-      let query = supabase
-        .from("manual_candidates")
-        .select("*")
-        .eq("company_id", companyId)
-        .order("created_at", { ascending: false });
-
-      if (jobId) {
-        query = query.eq("job_id", jobId);
-      }
-
-      query.then(({ data }) => {
-        setCandidates((data ?? []).map(mapCandidate));
-        setLoading(false);
-      });
+    if (jobId) {
+      query = query.eq("job_id", jobId);
     }
-  }
 
-  const refetch = () => setFetchedFor(null);
+    query.then(({ data }) => {
+      if (cancelled) return;
+      setCandidates((data ?? []).map(mapCandidate));
+      setLoading(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [companyId, jobId, refetchTick]);
+
+  const refetch = () => setRefetchTick((t) => t + 1);
+
+  if (!companyId) {
+    return { candidates: EMPTY_MC, loading: false, refetch };
+  }
 
   return { candidates, loading, refetch };
 }

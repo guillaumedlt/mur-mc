@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useUser } from "@/lib/auth";
 import { createClient } from "./client";
 
@@ -26,83 +26,96 @@ export type PendingInvitation = {
 
 export type TeamRow = TeamMemberRow | PendingInvitation;
 
+const EMPTY_MEMBERS: TeamMemberRow[] = [];
+const EMPTY_INVITATIONS: PendingInvitation[] = [];
+
 export function useMyTeam() {
   const user = useUser();
+  const companyId = user?.companyId ?? null;
   const [members, setMembers] = useState<TeamMemberRow[]>([]);
   const [invitations, setInvitations] = useState<PendingInvitation[]>([]);
   const [loading, setLoading] = useState(true);
-  const [fetchedFor, setFetchedFor] = useState<string | null>(null);
+  const [refetchTick, setRefetchTick] = useState(0);
 
-  const companyId = user?.companyId ?? null;
-  if (companyId !== fetchedFor) {
-    setFetchedFor(companyId);
-    if (!companyId) {
-      setMembers([]);
-      setInvitations([]);
-      setLoading(false);
-    } else {
-      setLoading(true);
-      const supabase = createClient();
+  useEffect(() => {
+    if (!companyId) return;
+    let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLoading(true);
+    const supabase = createClient();
 
-      Promise.all([
-        supabase
-          .from("profiles")
-          .select("id, full_name, email, role, team_role, created_at")
-          .eq("company_id", companyId)
-          .order("created_at", { ascending: true }),
-        supabase
-          .from("team_invitations")
-          .select("*")
-          .eq("company_id", companyId)
-          .eq("status", "pending")
-          .order("created_at", { ascending: true }),
-      ]).then(([profilesRes, invitesRes]) => {
-        const palette = ["#1C3D5A", "#7c1d2c", "#0a4d3a", "#062b3e", "#6B4423"];
+    Promise.all([
+      supabase
+        .from("profiles")
+        .select("id, full_name, email, role, team_role, created_at")
+        .eq("company_id", companyId)
+        .order("created_at", { ascending: true }),
+      supabase
+        .from("team_invitations")
+        .select("*")
+        .eq("company_id", companyId)
+        .eq("status", "pending")
+        .order("created_at", { ascending: true }),
+    ]).then(([profilesRes, invitesRes]) => {
+      if (cancelled) return;
+      const palette = ["#1C3D5A", "#7c1d2c", "#0a4d3a", "#062b3e", "#6B4423"];
 
-        if (profilesRes.data) {
-          setMembers(
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            profilesRes.data.map((row: any, i: number) => {
-              const name = row.full_name ?? row.email?.split("@")[0] ?? "?";
-              const parts = name.split(/\s+/).filter(Boolean);
-              const initials =
-                parts.length >= 2
-                  ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
-                  : name.slice(0, 2).toUpperCase();
-              return {
-                id: row.id,
-                fullName: name,
-                email: row.email ?? "",
-                role: row.role ?? "employer",
-                teamRole: row.team_role ?? "viewer",
-                avatarColor: palette[i % palette.length],
-                initials,
-                createdAt: row.created_at,
-                isPending: false as const,
-              };
-            }),
-          );
-        }
-
-        if (invitesRes.data) {
-          setInvitations(
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            invitesRes.data.map((row: any) => ({
+      if (profilesRes.data) {
+        setMembers(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          profilesRes.data.map((row: any, i: number) => {
+            const name = row.full_name ?? row.email?.split("@")[0] ?? "?";
+            const parts = name.split(/\s+/).filter(Boolean);
+            const initials =
+              parts.length >= 2
+                ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
+                : name.slice(0, 2).toUpperCase();
+            return {
               id: row.id,
-              email: row.email,
-              teamRole: row.team_role,
+              fullName: name,
+              email: row.email ?? "",
+              role: row.role ?? "employer",
+              teamRole: row.team_role ?? "viewer",
+              avatarColor: palette[i % palette.length],
+              initials,
               createdAt: row.created_at,
-              isPending: true as const,
-            })),
-          );
-        }
+              isPending: false as const,
+            };
+          }),
+        );
+      }
 
-        setLoading(false);
-      });
-    }
+      if (invitesRes.data) {
+        setInvitations(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          invitesRes.data.map((row: any) => ({
+            id: row.id,
+            email: row.email,
+            teamRole: row.team_role,
+            createdAt: row.created_at,
+            isPending: true as const,
+          })),
+        );
+      }
+
+      setLoading(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [companyId, refetchTick]);
+
+  const refetch = () => setRefetchTick((t) => t + 1);
+
+  if (!companyId) {
+    return {
+      members: EMPTY_MEMBERS,
+      invitations: EMPTY_INVITATIONS,
+      loading: false,
+      refetch,
+    };
   }
-
-  const refetch = () => setFetchedFor(null);
 
   return { members, invitations, loading, refetch };
 }

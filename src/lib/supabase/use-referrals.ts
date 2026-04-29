@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useUser } from "@/lib/auth";
 import { createClient } from "./client";
 
@@ -17,48 +17,58 @@ export type Referral = {
   createdAt: string;
 };
 
+const EMPTY_REFERRALS: Referral[] = [];
+
 export function useReferrals() {
   const user = useUser();
+  const companyId = user?.companyId ?? null;
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [loading, setLoading] = useState(true);
-  const [fetchedFor, setFetchedFor] = useState<string | null>(null);
+  const [refetchTick, setRefetchTick] = useState(0);
 
-  const companyId = user?.companyId ?? null;
-  if (companyId !== fetchedFor) {
-    setFetchedFor(companyId);
-    if (!companyId) {
-      setReferrals([]);
-      setLoading(false);
-    } else {
-      setLoading(true);
-      const supabase = createClient();
-      supabase
-        .from("referrals")
-        .select("*")
-        .eq("company_id", companyId)
-        .order("created_at", { ascending: false })
+  useEffect(() => {
+    if (!companyId) return;
+    let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLoading(true);
+    const supabase = createClient();
+    supabase
+      .from("referrals")
+      .select("*")
+      .eq("company_id", companyId)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        if (cancelled) return;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .then(({ data }: { data: any }) => {
-          setReferrals(
-            (data ?? []).map((r: Record<string, unknown>) => ({
-              id: r.id,
-              companyId: r.company_id,
-              jobId: r.job_id ?? null,
-              referrerName: r.referrer_name ?? "",
-              token: r.token ?? "",
-              candidateName: r.candidate_name ?? undefined,
-              candidateEmail: r.candidate_email ?? undefined,
-              status: r.status ?? "pending",
-              notes: r.notes ?? undefined,
-              createdAt: r.created_at as string,
-            })),
-          );
-          setLoading(false);
-        });
-    }
+        const list = (data ?? []) as any[];
+        setReferrals(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          list.map((r: any) => ({
+            id: r.id,
+            companyId: r.company_id,
+            jobId: r.job_id ?? null,
+            referrerName: r.referrer_name ?? "",
+            token: r.token ?? "",
+            candidateName: r.candidate_name ?? undefined,
+            candidateEmail: r.candidate_email ?? undefined,
+            status: r.status ?? "pending",
+            notes: r.notes ?? undefined,
+            createdAt: r.created_at as string,
+          })),
+        );
+        setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [companyId, refetchTick]);
+
+  const refetch = () => setRefetchTick((t) => t + 1);
+
+  if (!companyId) {
+    return { referrals: EMPTY_REFERRALS, loading: false, refetch };
   }
 
-  const refetch = () => setFetchedFor(null);
   return { referrals, loading, refetch };
 }
 

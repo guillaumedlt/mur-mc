@@ -1,38 +1,45 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useUser } from "@/lib/auth";
 import { createClient } from "./client";
 
+const EMPTY: string[] = [];
+
 /**
  * Hook: reads and manages saved jobs from Supabase saved_jobs table.
+ *
+ * Quand l'utilisateur n'est pas connecte, on derive un return neutre
+ * (savedIds=[], loading=false) au lieu de pousser ce reset dans l'effect.
+ * Cela respecte la regle React 19 `react-hooks/set-state-in-effect` :
+ * pas de cascade render inutile, le state interne reste celui du dernier
+ * user connecte (clear par garbage collection au unmount).
  */
 export function useSavedJobs() {
   const user = useUser();
+  const userId = user?.id ?? null;
   const [savedIds, setSavedIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [fetchedFor, setFetchedFor] = useState<string | null>(null);
 
-  const userId = user?.id ?? null;
-  if (userId !== fetchedFor) {
-    setFetchedFor(userId);
-    if (!userId) {
-      setSavedIds([]);
-      setLoading(false);
-    } else {
-      setLoading(true);
-      const supabase = createClient();
-      supabase
-        .from("saved_jobs")
-        .select("job_id")
-        .eq("user_id", userId)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .then(({ data }: { data: any }) => {
-          setSavedIds((data ?? []).map((r: { job_id: string }) => r.job_id));
-          setLoading(false);
-        });
-    }
-  }
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLoading(true);
+    const supabase = createClient();
+    supabase
+      .from("saved_jobs")
+      .select("job_id")
+      .eq("user_id", userId)
+      .then(({ data }) => {
+        if (cancelled) return;
+        setSavedIds(((data ?? []) as Array<{ job_id: string }>).map((r) => r.job_id));
+        setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
 
   const toggle = async (jobId: string) => {
     if (!userId) return;
@@ -46,7 +53,19 @@ export function useSavedJobs() {
     }
   };
 
-  const isSaved = (jobId: string) => savedIds.includes(jobId);
+  if (!userId) {
+    return {
+      savedIds: EMPTY,
+      loading: false,
+      toggle,
+      isSaved: () => false,
+    };
+  }
 
-  return { savedIds, loading, toggle, isSaved };
+  return {
+    savedIds,
+    loading,
+    toggle,
+    isSaved: (jobId: string) => savedIds.includes(jobId),
+  };
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useUser } from "@/lib/auth";
 import { createClient } from "./client";
 
@@ -62,32 +62,39 @@ function mapCompany(row: any): MyCompany {
  */
 export function useMyCompany() {
   const user = useUser();
+  const companyId = user?.companyId ?? null;
   const [company, setCompany] = useState<MyCompany | null>(null);
   const [loading, setLoading] = useState(true);
-  const [fetchedFor, setFetchedFor] = useState<string | null>(null);
+  const [refetchTick, setRefetchTick] = useState(0);
 
-  const companyId = user?.companyId ?? null;
-  if (companyId !== fetchedFor) {
-    setFetchedFor(companyId);
-    if (!companyId) {
-      setCompany(null);
-      setLoading(false);
-    } else {
-      setLoading(true);
-      const supabase = createClient();
-      supabase
-        .from("companies")
-        .select("*")
-        .eq("id", companyId)
-        .single()
-        .then(({ data }) => {
-          setCompany(data ? mapCompany(data) : null);
-          setLoading(false);
-        });
-    }
+  useEffect(() => {
+    if (!companyId) return;
+    let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLoading(true);
+    const supabase = createClient();
+    supabase
+      .from("companies")
+      .select("*")
+      .eq("id", companyId)
+      .single()
+      .then(({ data }) => {
+        if (cancelled) return;
+        setCompany(data ? mapCompany(data) : null);
+        setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [companyId, refetchTick]);
+
+  const refetch = () => setRefetchTick((t) => t + 1);
+
+  if (!companyId) {
+    return { company: null, loading: false, refetch };
   }
 
-  return { company, loading, refetch: () => setFetchedFor(null) };
+  return { company, loading, refetch };
 }
 
 /**
