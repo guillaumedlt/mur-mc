@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendEmail } from "@/lib/email/send";
+import * as templates from "@/lib/email/templates";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://montecarlowork.com";
 
@@ -175,17 +177,14 @@ export async function POST(request: Request) {
 
   const inviteLink = `${SITE_URL}/invitation/${inv.token}`;
 
-  let emailSent = false;
-  try {
-    await admin.auth.admin.inviteUserByEmail(email, {
-      data: { invite_token: inv.token, role: "employer", company_name: companyName },
-      redirectTo: inviteLink,
-    });
-    emailSent = true;
-  } catch (err) {
-    console.error("[admin.companies.invite] email send:", err);
-    emailSent = false;
-  }
+  // Envoi via Resend (pas Supabase Auth) : controle total du template
+  // + pas de rate-limit Supabase Auth (3-4 emails/h en free tier).
+  const tpl = templates.invitationEntreprise({
+    companyName,
+    teamRole: "admin",
+    inviteLink,
+  });
+  const emailSent = await sendEmail({ to: email, subject: tpl.subject, html: tpl.html });
 
   if (body.fromContactRequestId) {
     await admin

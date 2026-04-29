@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAuthorizedEmployer } from "@/lib/supabase/authz";
+import { sendEmail } from "@/lib/email/send";
+import * as templates from "@/lib/email/templates";
 
 /**
  * POST /api/team/invite
@@ -105,23 +107,29 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: invErr?.message ?? "Erreur" }, { status: 500 });
   }
 
-  // Envoi de l'email d'invitation via Supabase Auth admin
-  // (Previously this was a separate /api/invite call with anon key which silently failed)
+  // Envoi de l'email d'invitation via Resend (pas Supabase Auth :
+  // rate-limite 3-4/h en free tier + on perd le branding Monte Carlo Work).
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://montecarlowork.com";
   const inviteLink = `${siteUrl}/invitation/${inv.token}`;
 
-  let emailSent = false;
-  try {
-    await admin.auth.admin.inviteUserByEmail(email, {
-      data: { invite_token: inv.token, role: "employer" },
-      redirectTo: inviteLink,
-    });
-    emailSent = true;
-  } catch {
-    // Si l'envoi echoue, l'invitation reste valide : l'user peut naviguer
-    // manuellement sur inviteLink. On retourne le lien pour affichage.
-    emailSent = false;
-  }
+  // Resoudre le nom de la company pour le template (UX)
+  const { data: company } = await admin
+    .from("companies")
+    .select("name")
+    .eq("id", companyId)
+    .maybeSingle();
+  const companyName = company?.name ?? "votre entreprise";
+
+  const tpl = templates.invitationEntreprise({
+    companyName,
+    teamRole,
+    inviteLink,
+  });
+  const emailSent = await sendEmail({
+    to: email,
+    subject: tpl.subject,
+    html: tpl.html,
+  });
 
   return NextResponse.json({
     ok: true,

@@ -71,6 +71,39 @@ function badge(text: string, color = BRAND.accentColor): string {
   return `<span style="display:inline-block;padding:4px 12px;background:${color}15;color:${color};border-radius:20px;font-size:12px;font-weight:600">${text}</span>`;
 }
 
+// ─── ADMIN / INVITATION RECRUTEUR ───────────────────
+
+/**
+ * Email d'invitation a une nouvelle entreprise (admin Monte Carlo Work
+ * cree la fiche entreprise et invite le contact a finaliser son compte).
+ */
+export function invitationEntreprise(data: {
+  companyName: string;
+  teamRole: "admin" | "recruiter" | "viewer";
+  inviteLink: string;
+}) {
+  const roleLabel =
+    data.teamRole === "admin"
+      ? "administrateur"
+      : data.teamRole === "recruiter"
+        ? "recruteur"
+        : "lecteur";
+  return {
+    subject: `Bienvenue sur Monte Carlo Work — finalisez votre compte ${esc(data.companyName)}`,
+    html: layout(`
+      ${heading(`Votre espace recruteur est pret`)}
+      ${paragraph(`Bonjour,`)}
+      ${paragraph(`Nous avons cree la fiche entreprise <strong>${esc(data.companyName)}</strong> sur Monte Carlo Work. Il vous reste une derniere etape : finaliser votre compte ${roleLabel} pour pouvoir publier vos offres.`)}
+      ${paragraph(`Cliquez sur le bouton ci-dessous pour creer votre mot de passe et acceder a votre espace :`)}
+      <div style="text-align:center;padding:8px 0 16px">
+        ${button("Finaliser mon compte", data.inviteLink)}
+      </div>
+      ${paragraph(`<span style="font-size:12px;color:#888">Ou copiez-collez ce lien dans votre navigateur :<br><a href="${data.inviteLink}" style="color:${BRAND.color};word-break:break-all">${data.inviteLink}</a></span>`)}
+      ${paragraph(`<span style="font-size:12px;color:#888">Le lien est valide 30 jours. Si vous ne reconnaissez pas cette invitation, vous pouvez ignorer cet email — le compte ne sera pas active.</span>`)}
+    `),
+  };
+}
+
 // ─── CANDIDAT TEMPLATES ─────────────────────────────
 
 export function candidatureConfirmee(data: {
