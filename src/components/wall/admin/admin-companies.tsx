@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowUpRight, SendMail } from "iconoir-react";
+import { ArrowUpRight, Building, PlusCircle, SendMail } from "iconoir-react";
 
 type Company = {
   id: string;
@@ -26,9 +26,19 @@ const PLAN_OPTIONS = [
 export function AdminCompanies() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Invite a un recruteur dans une company existante
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteCompany, setInviteCompany] = useState("");
   const [inviteMsg, setInviteMsg] = useState("");
+
+  // Cree une nouvelle company + admin par invitation
+  const [newCompanyName, setNewCompanyName] = useState("");
+  const [newCompanyEmail, setNewCompanyEmail] = useState("");
+  const [newCompanySector, setNewCompanySector] = useState("");
+  const [newCompanyPlan, setNewCompanyPlan] = useState("starter");
+  const [newCompanyMsg, setNewCompanyMsg] = useState("");
+  const [newCompanySubmitting, setNewCompanySubmitting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -99,15 +109,119 @@ export function AdminCompanies() {
     } catch { setInviteMsg("Erreur reseau"); }
   };
 
+  const createCompanyAndInvite = async () => {
+    if (!newCompanyName.trim() || !newCompanyEmail.trim()) {
+      setNewCompanyMsg("Nom de la societe et email requis.");
+      return;
+    }
+    setNewCompanySubmitting(true);
+    setNewCompanyMsg("Creation et envoi de l'invitation...");
+    try {
+      const res = await fetch("/api/admin/companies/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          companyName: newCompanyName.trim(),
+          email: newCompanyEmail.trim(),
+          sector: newCompanySector.trim() || undefined,
+          plan: newCompanyPlan,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setNewCompanyMsg(data?.error ?? "Erreur");
+        return;
+      }
+      setNewCompanyMsg(
+        data.linked
+          ? `Entreprise creee, compte existant rattache directement.`
+          : `Entreprise creee, invitation envoyee a ${newCompanyEmail.trim()}${
+              data.inviteLink ? " — " + data.inviteLink : ""
+            }`,
+      );
+      setNewCompanyName("");
+      setNewCompanyEmail("");
+      setNewCompanySector("");
+      // Refetch companies
+      const refresh = await fetch("/api/admin/companies");
+      const j = await refresh.json();
+      setCompanies(j.companies ?? []);
+    } catch {
+      setNewCompanyMsg("Erreur reseau");
+    } finally {
+      setNewCompanySubmitting(false);
+    }
+  };
+
   if (loading) {
     return <div className="flex justify-center py-12"><span className="size-5 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin" /></div>;
   }
 
   return (
     <div className="flex flex-col gap-3">
+      {/* Cree une nouvelle societe + invite l'admin */}
+      <div className="bg-white border border-[var(--accent)]/30 rounded-2xl px-5 sm:px-7 py-5 ring-1 ring-[var(--accent)]/10">
+        <p className="ed-label-sm text-[var(--accent)] mb-1 inline-flex items-center gap-1.5">
+          <Building width={11} height={11} strokeWidth={2.2} /> Nouvelle entreprise
+        </p>
+        <p className="text-[12.5px] text-foreground/60 mb-3">
+          Cree la fiche entreprise et envoie une invitation par email a l&apos;admin
+          pour finaliser son inscription.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <input
+            type="text"
+            value={newCompanyName}
+            onChange={(e) => setNewCompanyName(e.target.value)}
+            placeholder="Nom de la societe"
+            className="h-10 px-3 rounded-xl border border-[var(--border)] bg-white text-[13px] outline-none focus:border-[var(--accent)]"
+          />
+          <input
+            type="email"
+            value={newCompanyEmail}
+            onChange={(e) => setNewCompanyEmail(e.target.value)}
+            placeholder="email du contact admin"
+            className="h-10 px-3 rounded-xl border border-[var(--border)] bg-white text-[13px] outline-none focus:border-[var(--accent)]"
+          />
+          <input
+            type="text"
+            value={newCompanySector}
+            onChange={(e) => setNewCompanySector(e.target.value)}
+            placeholder="Secteur (ex: Banque & Finance)"
+            className="h-10 px-3 rounded-xl border border-[var(--border)] bg-white text-[13px] outline-none focus:border-[var(--accent)]"
+          />
+          <select
+            value={newCompanyPlan}
+            onChange={(e) => setNewCompanyPlan(e.target.value)}
+            className="h-10 px-3 rounded-xl border border-[var(--border)] bg-white text-[13px]"
+          >
+            {PLAN_OPTIONS.map((p) => (
+              <option key={p.value} value={p.value}>
+                Plan {p.label}
+                {p.quota !== null ? ` — ${p.quota} offres` : ""}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="flex items-center gap-3 mt-3 flex-wrap">
+          <button
+            type="button"
+            onClick={createCompanyAndInvite}
+            disabled={newCompanySubmitting}
+            className="h-10 px-4 rounded-xl bg-foreground text-background text-[13px] font-medium hover:bg-foreground/85 disabled:opacity-60 inline-flex items-center gap-2"
+          >
+            <PlusCircle width={13} height={13} strokeWidth={2} />
+            Creer et inviter
+          </button>
+          {newCompanyMsg && (
+            <p className="text-[12px] text-muted-foreground flex-1 break-all">{newCompanyMsg}</p>
+          )}
+        </div>
+      </div>
+
       {/* Invite recruteur */}
       <div className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 py-5">
-        <p className="ed-label-sm mb-3">Inviter un recruteur</p>
+        <p className="ed-label-sm mb-3">Inviter un recruteur dans une entreprise existante</p>
         <div className="flex flex-wrap gap-2 items-end">
           <select value={inviteCompany} onChange={(e) => setInviteCompany(e.target.value)} className="h-10 px-3 rounded-xl border border-[var(--border)] bg-white text-[13px] min-w-[200px]">
             <option value="">Entreprise...</option>
