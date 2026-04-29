@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   BadgeCheck,
@@ -30,37 +30,38 @@ export function InvitationForm({ token }: { token: string }) {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
 
-  // Load invitation data from Supabase
-  const [fetched, setFetched] = useState(false);
-  if (!fetched) {
-    setFetched(true);
-    const supabase = createClient();
-    supabase
-      .from("team_invitations")
-      .select("id, email, team_role, company_id, companies(name)")
-      .eq("token", token)
-      .eq("status", "pending")
-      .single()
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .then(({ data }: { data: any }) => {
-        if (data) {
-          const companyName =
-            data.companies && typeof data.companies === "object" && "name" in data.companies
-              ? data.companies.name
-              : "Entreprise";
-          setInvitation({
-            id: data.id,
-            email: data.email,
-            teamRole: data.team_role,
-            companyId: data.company_id,
-            companyName,
-          });
-        } else {
+  // Load invitation data via API serveur (RLS sur team_invitations bloque
+  // les non-membres, ce qui est le cas du destinataire avant qu'il ne se
+  // soit cree un profile dans la company).
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/invitation/${encodeURIComponent(token)}`)
+      .then(async (res) => {
+        if (cancelled) return;
+        if (!res.ok) {
           setInvitation(null);
+          setLoading(false);
+          return;
         }
+        const data = await res.json();
+        setInvitation({
+          id: data.id,
+          email: data.email,
+          teamRole: data.teamRole,
+          companyId: data.companyId,
+          companyName: data.companyName,
+        });
+        setLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setInvitation(null);
         setLoading(false);
       });
-  }
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
 
   if (loading) {
     return (
@@ -117,96 +118,74 @@ export function InvitationForm({ token }: { token: string }) {
     setSaving(true);
 
     const supabase = createClient();
+    const fullName = name.trim() || invitation.email.split("@")[0];
 
-    // Create the account
-    const { data, error: signUpError } = await supabase.auth.signUp({
+    // Etape 1 : creer / connecter l'auth user
+    let userId: string | null = null;
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email: invitation.email,
       password,
       options: {
-        data: {
-          full_name: name.trim() || invitation.email.split("@")[0],
-          role: "employer",
-        },
+        data: { full_name: fullName, role: "employer" },
         emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
 
     if (signUpError) {
       if (signUpError.message.includes("already registered")) {
-        // Account exists — try to sign in instead
-        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-          email: invitation.email,
-          password,
-        });
-
-        if (signInError) {
-          setError("Ce compte existe deja. Utilisez votre mot de passe habituel ou connectez-vous normalement.");
-          setSaving(false);
-          return;
-        }
-
-        if (signInData.user) {
-          // Link to company
-          await supabase.from("profiles").update({
-            company_id: invitation.companyId,
-            team_role: invitation.teamRole,
-          }).eq("id", signInData.user.id);
-
-          // Accept invitation
-          await supabase.from("team_invitations").update({ status: "accepted" }).eq("id", invitation.id);
-
-          const fullName = name.trim() || signInData.user.user_metadata?.full_name || invitation.email.split("@")[0];
-          const parts = fullName.split(" ").filter(Boolean);
-          const initials = parts.length >= 2
-            ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
-            : fullName.slice(0, 2).toUpperCase();
-
-          localSignIn({
-            id: signInData.user.id,
-            name: fullName,
+        const { data: signInData, error: signInError } =
+          await supabase.auth.signInWithPassword({
             email: invitation.email,
-            role: "employer",
-            initials,
-            avatarColor: "#7c1d2c",
-            companyId: invitation.companyId,
-            companyName: invitation.companyName,
+            password,
           });
-
+        if (signInError || !signInData.user) {
+          setError(
+            "Ce compte existe deja. Utilisez votre mot de passe habituel ou connectez-vous normalement.",
+          );
           setSaving(false);
-          setDone(true);
           return;
         }
+        userId = signInData.user.id;
+      } else {
+        setError(signUpError.message);
+        setSaving(false);
+        return;
       }
-      setError(signUpError.message);
+    } else {
+      userId = signUpData.user?.id ?? null;
+    }
+
+    if (!userId) {
+      setError("Erreur inattendue lors de la creation du compte.");
       setSaving(false);
       return;
     }
 
-    const user = data.user;
-    if (!user) {
-      setError("Erreur inattendue.");
+    // Etape 2 : appel serveur pour le link profile + invitation accepted
+    // (bypass des triggers et RLS qui bloquent le client).
+    const acceptRes = await fetch(
+      `/api/invitation/${encodeURIComponent(token)}/accept`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fullName }),
+      },
+    );
+    if (!acceptRes.ok) {
+      const data = await acceptRes.json().catch(() => ({}));
+      setError(data?.error ?? "Erreur lors de la liaison a l'entreprise.");
       setSaving(false);
       return;
     }
 
-    // Link profile to company
-    await supabase.from("profiles").update({
-      company_id: invitation.companyId,
-      team_role: invitation.teamRole,
-      full_name: name.trim() || invitation.email.split("@")[0],
-    }).eq("id", user.id);
-
-    // Accept invitation
-    await supabase.from("team_invitations").update({ status: "accepted" }).eq("id", invitation.id);
-
-    const fullName = name.trim() || invitation.email.split("@")[0];
     const parts = fullName.split(" ").filter(Boolean);
-    const initials = parts.length >= 2
-      ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
-      : fullName.slice(0, 2).toUpperCase();
+    const initials =
+      parts.length >= 2
+        ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
+        : fullName.slice(0, 2).toUpperCase();
 
     const authUser: AuthUser = {
-      id: user.id,
+      id: userId,
       name: fullName,
       email: invitation.email,
       role: "employer",
