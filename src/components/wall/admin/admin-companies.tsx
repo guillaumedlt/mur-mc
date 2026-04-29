@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowUpRight, Building, PlusCircle, SendMail } from "iconoir-react";
+import { ArrowUpRight, Building, PlusCircle, Refresh, SendMail, Xmark } from "iconoir-react";
 
 type Company = {
   id: string;
@@ -14,6 +14,18 @@ type Company = {
   memberCount: number;
   jobCount: number;
   createdAt: string;
+};
+
+type Invitation = {
+  id: string;
+  email: string;
+  teamRole: string;
+  status: string;
+  createdAt: string;
+  expiresAt: string | null;
+  companyId: string;
+  companyName: string;
+  inviteLink: string;
 };
 
 const PLAN_OPTIONS = [
@@ -40,6 +52,12 @@ export function AdminCompanies() {
   const [newCompanyMsg, setNewCompanyMsg] = useState("");
   const [newCompanySubmitting, setNewCompanySubmitting] = useState(false);
 
+  // Invitations en attente
+  const [invitations, setInvitations] = useState<Invitation[]>([]);
+  const [invitationsLoading, setInvitationsLoading] = useState(true);
+  const [invActionId, setInvActionId] = useState<string | null>(null);
+  const [invFlash, setInvFlash] = useState<string | null>(null);
+
   useEffect(() => {
     let cancelled = false;
     fetch("/api/admin/companies")
@@ -56,6 +74,80 @@ export function AdminCompanies() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/admin/invitations")
+      .then((r) => r.json())
+      .then((data: { invitations?: Invitation[] }) => {
+        if (cancelled) return;
+        setInvitations(data.invitations ?? []);
+        setInvitationsLoading(false);
+      })
+      .catch(() => {
+        if (!cancelled) setInvitationsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const refreshInvitations = async () => {
+    const res = await fetch("/api/admin/invitations");
+    const data = await res.json();
+    setInvitations(data.invitations ?? []);
+  };
+
+  const resendInvitation = async (inv: Invitation) => {
+    setInvActionId(inv.id);
+    setInvFlash(null);
+    try {
+      const res = await fetch("/api/admin/invitations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ invitationId: inv.id, action: "resend" }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setInvFlash(`Erreur : ${data?.error ?? "inconnue"}`);
+        return;
+      }
+      setInvFlash(
+        data.emailSent
+          ? `Invitation renvoyee a ${inv.email}.`
+          : `Email non envoye. Lien : ${data.inviteLink ?? inv.inviteLink}`,
+      );
+    } catch {
+      setInvFlash("Erreur reseau");
+    } finally {
+      setInvActionId(null);
+    }
+  };
+
+  const revokeInvitation = async (inv: Invitation) => {
+    if (!window.confirm(`Revoquer l'invitation de ${inv.email} pour ${inv.companyName} ?`)) return;
+    setInvActionId(inv.id);
+    try {
+      const res = await fetch("/api/admin/invitations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ invitationId: inv.id, action: "revoke" }),
+      });
+      if (res.ok) {
+        await refreshInvitations();
+        setInvFlash(`Invitation de ${inv.email} revoquee.`);
+      }
+    } finally {
+      setInvActionId(null);
+    }
+  };
+
+  const copyInviteLink = (inv: Invitation) => {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(inv.inviteLink).catch(() => {});
+      setInvFlash(`Lien copie pour ${inv.email}`);
+    }
+  };
 
   const updatePlan = async (id: string, plan: string) => {
     const preset = PLAN_OPTIONS.find((p) => p.value === plan);
@@ -217,6 +309,92 @@ export function AdminCompanies() {
             <p className="text-[12px] text-muted-foreground flex-1 break-all">{newCompanyMsg}</p>
           )}
         </div>
+      </div>
+
+      {/* Invitations en attente */}
+      <div className="bg-white border border-[var(--border)] rounded-2xl px-5 sm:px-7 py-5">
+        <div className="flex items-center justify-between gap-2 flex-wrap mb-3">
+          <p className="ed-label-sm inline-flex items-center gap-1.5">
+            <SendMail width={11} height={11} strokeWidth={2.2} />
+            Invitations en attente ({invitations.length})
+          </p>
+          <button
+            type="button"
+            onClick={refreshInvitations}
+            className="text-[11px] text-foreground/55 hover:text-foreground inline-flex items-center gap-1"
+          >
+            <Refresh width={10} height={10} strokeWidth={2} />
+            Actualiser
+          </button>
+        </div>
+        {invFlash && (
+          <div className="mb-3 px-3 py-2 rounded-xl bg-[var(--accent)]/[0.04] border border-[var(--accent)]/20 text-[12.5px] text-foreground/85 break-all">
+            {invFlash}
+          </div>
+        )}
+        {invitationsLoading ? (
+          <p className="text-[12px] text-muted-foreground">Chargement...</p>
+        ) : invitations.length === 0 ? (
+          <p className="text-[12.5px] text-muted-foreground italic">
+            Aucune invitation en attente.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-[13px]">
+              <thead>
+                <tr className="text-left text-[10.5px] uppercase tracking-[0.06em] text-foreground/50 border-b border-[var(--border)]">
+                  <th className="pb-2 pr-3">Email</th>
+                  <th className="pb-2 pr-3">Entreprise</th>
+                  <th className="pb-2 pr-3">Role</th>
+                  <th className="pb-2 pr-3">Envoyee le</th>
+                  <th className="pb-2">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {invitations.map((inv) => (
+                  <tr key={inv.id} className="border-b border-[var(--border)] last:border-0">
+                    <td className="py-2.5 pr-3 font-mono text-[12px] text-foreground/85">{inv.email}</td>
+                    <td className="py-2.5 pr-3 text-foreground/75">{inv.companyName}</td>
+                    <td className="py-2.5 pr-3 text-foreground/65">{inv.teamRole}</td>
+                    <td className="py-2.5 pr-3 font-mono text-[11px] text-foreground/50">
+                      {new Date(inv.createdAt).toLocaleDateString("fr-FR")}
+                    </td>
+                    <td className="py-2.5">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={() => resendInvitation(inv)}
+                          disabled={invActionId === inv.id}
+                          className="h-7 px-2.5 rounded-full bg-foreground text-background text-[11px] font-medium hover:bg-foreground/85 disabled:opacity-60 inline-flex items-center gap-1"
+                        >
+                          <Refresh width={10} height={10} strokeWidth={2.2} />
+                          {invActionId === inv.id ? "..." : "Renvoyer"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => copyInviteLink(inv)}
+                          className="h-7 px-2.5 rounded-full border border-[var(--border)] bg-white text-[11px] text-foreground/80 hover:bg-[var(--background-alt)] inline-flex items-center gap-1"
+                          title={inv.inviteLink}
+                        >
+                          Copier le lien
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => revokeInvitation(inv)}
+                          disabled={invActionId === inv.id}
+                          className="h-7 px-2.5 rounded-full bg-red-50 text-red-700 text-[11px] font-medium hover:bg-red-100 disabled:opacity-60 inline-flex items-center gap-1"
+                        >
+                          <Xmark width={10} height={10} strokeWidth={2.2} />
+                          Revoquer
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Invite recruteur */}
