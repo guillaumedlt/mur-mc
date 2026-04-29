@@ -1,9 +1,78 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft } from "iconoir-react";
 import { useMyJob } from "@/lib/supabase/use-my-jobs";
 import { PublishJobForm } from "./publish-job-form";
+import type {
+  EmployerJob,
+  EmployerJobStatus,
+} from "@/lib/employer-store";
+import type {
+  ExperienceLevel,
+  JobType,
+  Sector,
+  WorkTime,
+} from "@/lib/data";
+
+type RawJob = {
+  id: string;
+  slug: string;
+  title: string;
+  type: string;
+  level: string;
+  sector: string;
+  location: string;
+  remote: string;
+  work_time: string;
+  lang: string | null;
+  languages: string[];
+  salary_min: number | null;
+  salary_max: number | null;
+  short_description: string;
+  description: string;
+  responsibilities: string[];
+  requirements: string[];
+  benefits: string[];
+  tags: string[];
+  status: string;
+  views: number;
+  created_at: string;
+  updated_at: string;
+};
+
+/**
+ * Mappe une row Supabase `jobs` vers le shape attendu par PublishJobForm.
+ * Les valeurs string brutes de la DB sont contraintes via les unions
+ * typees de @/lib/data + employer-store.
+ */
+function mapDbJobToEmployerJob(j: RawJob): EmployerJob {
+  return {
+    id: j.id,
+    companyId: "",
+    slug: j.slug,
+    title: j.title,
+    type: j.type as JobType,
+    level: j.level as ExperienceLevel,
+    sector: j.sector as Sector,
+    location: j.location,
+    remote: j.remote as EmployerJob["remote"],
+    workTime: j.work_time as WorkTime,
+    lang: (j.lang ?? "fr") as "fr" | "en",
+    languages: j.languages,
+    salaryMin: j.salary_min ?? undefined,
+    salaryMax: j.salary_max ?? undefined,
+    shortDescription: j.short_description,
+    description: j.description,
+    responsibilities: j.responsibilities,
+    requirements: j.requirements,
+    benefits: j.benefits,
+    tags: j.tags,
+    status: j.status as EmployerJobStatus,
+    views: j.views,
+    createdAt: j.created_at,
+    updatedAt: j.updated_at,
+  };
+}
 
 export function EditJobPage({ jobId }: { jobId: string }) {
   const { job, loading } = useMyJob(jobId);
@@ -27,33 +96,7 @@ export function EditJobPage({ jobId }: { jobId: string }) {
     );
   }
 
-  // Map MyJob to the shape expected by PublishJobForm's existing prop
-  const existing = {
-    id: job.id,
-    companyId: "",
-    slug: job.slug,
-    title: job.title,
-    type: job.type as any,
-    level: job.level as any,
-    sector: job.sector as any,
-    location: job.location,
-    remote: job.remote as any,
-    workTime: job.work_time as any,
-    lang: (job.lang ?? "fr") as any,
-    languages: job.languages,
-    salaryMin: job.salary_min ?? undefined,
-    salaryMax: job.salary_max ?? undefined,
-    shortDescription: job.short_description,
-    description: job.description,
-    responsibilities: job.responsibilities,
-    requirements: job.requirements,
-    benefits: job.benefits,
-    tags: job.tags,
-    status: job.status as any,
-    views: job.views,
-    createdAt: job.created_at,
-    updatedAt: job.updated_at,
-  };
+  const existing = mapDbJobToEmployerJob(job as RawJob);
 
   return (
     <PublishJobForm

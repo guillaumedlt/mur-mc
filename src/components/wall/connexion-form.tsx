@@ -20,7 +20,11 @@ type Props = { mode: Mode; compact?: boolean };
 export function ConnexionForm({ mode, compact }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [role, setRole] = useState<Role>("candidate");
+  // Pour ConnexionForm seul, le role est toujours candidate. Le flux
+  // employer passe par EmployerContactForm (cf inscription-form.tsx).
+  // Type elargi a `Role` pour conserver les checks role === "employer"
+  // dans les branches du flux d'auth (mortes mais defensives).
+  const role = "candidate" as Role;
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -410,58 +414,6 @@ export function ConnexionForm({ mode, compact }: Props) {
           )}
         </p>
       </main>
-    </div>
-  );
-}
-
-/* ─────────────── Toggle de rôle ─────────────── */
-
-function RoleToggle({
-  role,
-  onChange,
-}: {
-  role: Role;
-  onChange: (r: Role) => void;
-}) {
-  return (
-    <div
-      className="relative grid grid-cols-2 p-1 rounded-full bg-[var(--background-alt)] border border-[var(--border)] w-full max-w-[360px] mx-auto"
-      role="tablist"
-      aria-label="Type de compte"
-    >
-      {/* Indicateur sliding */}
-      <span
-        className="absolute top-1 bottom-1 rounded-full bg-foreground transition-[left] duration-300 ease-out"
-        style={{
-          width: "calc(50% - 4px)",
-          left: role === "candidate" ? "4px" : "calc(50% + 0px)",
-        }}
-        aria-hidden
-      />
-      <button
-        type="button"
-        role="tab"
-        aria-selected={role === "candidate"}
-        onClick={() => onChange("candidate")}
-        className={`relative z-10 h-9 inline-flex items-center justify-center gap-1.5 text-[12.5px] font-medium transition-colors ${
-          role === "candidate" ? "text-background" : "text-foreground/70"
-        }`}
-      >
-        <UserIcon width={13} height={13} strokeWidth={2} />
-        Je cherche un job
-      </button>
-      <button
-        type="button"
-        role="tab"
-        aria-selected={role === "employer"}
-        onClick={() => onChange("employer")}
-        className={`relative z-10 h-9 inline-flex items-center justify-center gap-1.5 text-[12.5px] font-medium transition-colors ${
-          role === "employer" ? "text-background" : "text-foreground/70"
-        }`}
-      >
-        <Building width={13} height={13} strokeWidth={2} />
-        Je recrute
-      </button>
     </div>
   );
 }

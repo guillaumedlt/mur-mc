@@ -91,7 +91,6 @@ export function CompanyEditor() {
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [aiPrompt, setAiPrompt] = useState("");
-  const [showAiPrompt, setShowAiPrompt] = useState(false);
 
   // Logo & cover as data URLs (local preview before save)
   const [logoPreview, setLogoPreview] = useState<string | null>(null);

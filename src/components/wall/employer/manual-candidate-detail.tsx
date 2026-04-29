@@ -51,15 +51,18 @@ export function ManualCandidateDetail({ id }: Props) {
   const { jobs } = useMyJobs();
   const mc = candidates.find((c) => c.id === id);
 
-  // Events timeline
+  // Events timeline. AbortController pour eviter les setState sur unmount.
   const [events, setEvents] = useState<CandidateEvent[]>([]);
-  const [eventsLoaded, setEventsLoaded] = useState(false);
   useEffect(() => {
-    if (id && !eventsLoaded) {
-      setEventsLoaded(true);
-      fetchCandidateEvents(id).then(setEvents);
-    }
-  }, [id, eventsLoaded]);
+    if (!id) return;
+    let cancelled = false;
+    fetchCandidateEvents(id).then((data) => {
+      if (!cancelled) setEvents(data);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
   const reloadEvents = () => fetchCandidateEvents(id).then(setEvents);
 

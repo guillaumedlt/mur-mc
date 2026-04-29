@@ -418,7 +418,6 @@ function DraggableHeader({
         )}
       </div>
       {canResize && (
-        // eslint-disable-next-line jsx-a11y/no-static-element-interactions, jsx-a11y/no-noninteractive-element-interactions
         <div
           onMouseDown={onResizeMouseDown}
           onTouchStart={onResizeTouchStart}

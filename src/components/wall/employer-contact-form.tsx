@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { BadgeCheck, Building, Mail, Phone, SendMail, Sparks } from "iconoir-react";
+import { BadgeCheck, Building, Mail, Phone, SendMail } from "iconoir-react";
 
 const PLANS = [
   { value: "starter", label: "Starter", desc: "3 annonces", price: "Gratuit" },

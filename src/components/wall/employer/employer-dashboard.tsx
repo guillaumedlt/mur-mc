@@ -107,8 +107,6 @@ export function EmployerDashboard() {
   );
 
   if (!user) return null;
-  const displayName =
-    company?.tagline ?? user.companyName ?? "Console recruteur";
 
   return (
     <div className="max-w-[1100px] mx-auto">

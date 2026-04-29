@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "iconoir-react";
-import type { Company } from "@/lib/data";
 import { Shell } from "@/components/wall/shell";
 import { CompanyPublicView } from "@/components/wall/company-public-view";
 import {

@@ -10,7 +10,6 @@ import {
   Globe,
   Group,
   MapPin,
-  PlaySolid,
   Sparks,
   Xmark,
 } from "iconoir-react";

@@ -136,7 +136,6 @@ export function PublishJobForm({ existing, onCancel }: Props) {
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [freePrompt, setFreePrompt] = useState("");
-  const [showPrompt, setShowPrompt] = useState(false);
 
   const generateWithAi = async () => {
     if (!title.trim()) return;

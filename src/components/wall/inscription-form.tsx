@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Bag, Building, Mail, Phone, Search, SendMail, Sparks, BadgeCheck } from "iconoir-react";
+import { Building, Search } from "iconoir-react";
 import { ConnexionForm } from "./connexion-form";
 import { EmployerContactForm } from "./employer-contact-form";
 
