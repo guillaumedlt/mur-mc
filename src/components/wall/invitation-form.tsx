@@ -95,18 +95,20 @@ export function InvitationForm({ token }: { token: string }) {
       <div className="max-w-[500px] mx-auto bg-white border border-[var(--border)] rounded-2xl p-8 sm:p-10 text-center">
         <BadgeCheck width={28} height={28} strokeWidth={2} className="text-[var(--accent)] inline-block" />
         <h2 className="font-display text-[24px] tracking-[-0.015em] text-foreground mt-4">
-          Bienvenue dans l&apos;equipe
+          Bienvenue chez {invitation.companyName}
         </h2>
         <p className="text-[13.5px] text-muted-foreground mt-2 max-w-sm mx-auto">
-          Votre compte a ete cree et vous avez rejoint <strong>{invitation.companyName}</strong> en tant que{" "}
-          <strong>{roleLabel(invitation.teamRole)}</strong>.
+          Votre compte recruteur est cree. Vous etes{" "}
+          <strong>{roleLabel(invitation.teamRole)}</strong> de votre entreprise sur
+          Monte Carlo Work — vous pouvez publier des offres et gerer vos
+          candidatures.
         </p>
         <Link
           href="/recruteur"
           className="inline-flex h-10 mt-5 px-5 rounded-full bg-foreground text-background text-[13px] font-medium items-center gap-2"
         >
           <Sparks width={14} height={14} strokeWidth={2} />
-          Acceder au dashboard
+          Acceder a mon espace recruteur
         </Link>
       </div>
     );
@@ -211,8 +213,9 @@ export function InvitationForm({ token }: { token: string }) {
           Rejoindre {invitation.companyName}
         </h1>
         <p className="text-[13.5px] text-muted-foreground mt-2">
-          Vous avez ete invite en tant que <strong>{roleLabel(invitation.teamRole)}</strong>.
-          Creez votre compte pour acceder a l&apos;espace recruteur.
+          Vous avez ete invite a rejoindre l&apos;equipe recruteur en tant que{" "}
+          <strong>{roleLabel(invitation.teamRole)}</strong>. Creez votre compte
+          pour publier des offres et gerer vos candidatures.
         </p>
       </div>
 
@@ -296,7 +299,7 @@ export function InvitationForm({ token }: { token: string }) {
 
 function roleLabel(r: string): string {
   switch (r) {
-    case "admin": return "Administrateur";
+    case "admin": return "Responsable de l'equipe";
     case "recruiter": return "Recruteur";
     case "viewer": return "Lecteur";
     default: return r;
